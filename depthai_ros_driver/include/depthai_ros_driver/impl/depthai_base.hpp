@@ -232,7 +232,7 @@ bool DepthAIBase<Node>::defaultCameraInfo(
 
     const auto& name = req.name;
     auto& nh = this->getPrivateNodeHandle();
-    const auto uri = "package://depthai_ros_driver/params/camera/default/" + name + ".yaml";
+    const auto uri = _camera_param_uri + "default/" + name + ".yaml";
     if (_defaultManager == nullptr) {
         _defaultManager =
                 std::make_unique<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, "_default"}, name, uri);
@@ -263,6 +263,7 @@ void DepthAIBase<Node>::onInit() {
     };
 
     get_param(nh, std::string{}, "camera_name", _camera_name);
+    get_param(nh, std::string{}, "camera_param_uri", _camera_param_uri);
     get_param(nh, std::string{}, "calibration_file", _calib_file);
     get_param(nh, std::string{}, "cmd_file", _cmd_file);
     get_param(nh, std::string{}, "blob_file", _blob_file);
@@ -285,6 +286,10 @@ void DepthAIBase<Node>::onInit() {
     get_param(nh, int{}, "nn_engines", _nn_engines);
 
     get_param(nh, int{}, "queue_size", _queue_size);
+
+    if (_camera_param_uri.back() != '/') {
+        _camera_param_uri += "/";
+    }
 
     prepareStreamConfig();
 
@@ -318,7 +323,8 @@ void DepthAIBase<Node>::prepareStreamConfig() {
 
     auto set_camera_info_pub = [&](const Stream& id) {
         const auto& name = _topic_name[id];
-        const auto uri = "package://depthai_ros_driver/params/camera/" + _camera_name + "/" + name + ".yaml";
+
+        const auto uri = _camera_param_uri + _camera_name + "/" + name + ".yaml";
         _camera_info_manager[id] =
                 std::make_unique<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, name}, name, uri);
         _camera_info_publishers[id] = std::make_unique<ros::Publisher>(

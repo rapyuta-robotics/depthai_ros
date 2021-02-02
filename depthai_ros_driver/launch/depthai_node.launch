@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="ns" default="depthai"/>
+  <arg name="node_name" default="driver"/>
+
+  <arg name="queue_size" default="1"/>
+
+  <arg name="camera_name" default="bw1097"/>
+  <arg name="camera_param_uri" default="package://depthai_ros_driver/params/camera/"
+    doc="Location of parameters is {camera_param_uri}/{camera_name}/{stream}.yaml"/>
+
+  <arg name="cmd_file" default="$(find depthai_ros_driver)/resources/depthai.cmd"/>
+  <arg name="calibration_file" default="$(find depthai_ros_driver)/resources/calibration/$(arg camera_name)/depthai.calib"/>
+  <arg name="blob_file" default="$(find depthai_ros_driver)/resources/mobilenet_ssd.blob"/>
+  <arg name="blob_file_config" default="$(find depthai_ros_driver)/resources/mobilenet-ssd.json"/>
+
+  <arg name="force_usb2" default="false"/>
+  <arg name="sync_video_meta" default="false"/>
+  <arg name="compute_bbox_depth" default="false"/>
+  <arg name="full_fov_nn" default="true"/>
+
+  <arg name="rgb_height" default="1080"/>
+  <arg name="rgb_fps" default="30"/>
+  <arg name="depth_height" default="720"/>
+  <arg name="depth_fps" default="30"/>
+  <arg name="shaves" default="14"/>
+  <arg name="cmx_slices" default="14"/>
+  <arg name="nn_engines" default="2"/>
+
+  <arg name="use_gdb" default="false"/>
+  <arg name="launch_prefix" value="/usr/bin/gdb --args" if="$(arg use_gdb)"/>
+  <arg name="launch_prefix" value="" unless="$(arg use_gdb)"/>
+
+  <!--
+  Possible streams:
+  * 'left' - left mono camera preview
+  * 'right' - right mono camera preview
+  * 'previewout' - preview of stream sent to the NN
+  * 'metaout' - CNN output tensors
+  * 'depth' - the raw depth map, disparity converted to real life distance
+  * 'disparity' - disparity map, the diaparity between left and right cameras, in pixels
+  * 'disparity_color' - disparity map colorized
+  * 'meta_d2h' - device metadata stream
+  * 'video' - H.264/H.265 encoded color camera frames
+  * 'jpegout' - JPEG encoded color camera frames
+  * 'object_tracker' - Object tracker results
+  -->
+  <arg name="stream_list" default="[left, right, metaout, previewout, disparity, disparity_color, depth, video]"/>
+
+  <!-- Launch the Depthai node -->
+  <group ns="$(arg ns)">
+    <node pkg="depthai_ros_driver" type="depthai_ros_driver" name="$(arg node_name)" output="screen" launch-prefix="$(arg launch_prefix)">
+      <param name="camera_name" value="$(arg camera_name)"/>
+
+      <param name="cmd_file" value="$(arg cmd_file)"/>
+      <param name="calibration_file" value="$(arg calibration_file)"/>
+      <param name="blob_file" value="$(arg blob_file)"/>
+      <param name="blob_file_config" value="$(arg blob_file_config)"/>
+      <rosparam param="stream_list" subst_value="True">$(arg stream_list)</rosparam>
+
+      <param name="sync_video_meta" value="$(arg sync_video_meta)"/>
+      <param name="compute_bbox_depth" value="$(arg compute_bbox_depth)"/>
+      <param name="full_fov_nn" value="$(arg full_fov_nn)"/>
+      <param name="force_usb2" value="$(arg force_usb2)"/>
+
+      <param name="depth_fps" value="$(arg depth_fps)"/>
+      <param name="depth_height" value="$(arg depth_height)"/>
+      <param name="rgb_fps" value="$(arg rgb_fps)"/>
+      <param name="rgb_height" value="$(arg rgb_height)"/>
+
+      <param name="shaves" value="$(arg shaves)"/>
+      <param name="cmx_slices" value="$(arg cmx_slices)"/>
+      <param name="nn_engines" value="$(arg nn_engines)"/>
+
+      <param name="queue_size" value="$(arg queue_size)"/>
+    </node>
+  </group>
+
+  <!-- Publish tf -->
+  <param name="robot_description" command="$(find xacro)/xacro '$(find depthai_ros_driver)/urdf/$(arg camera_name).urdf.xacro'"/>
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
+    <param name="tf_prefix" value=""/>
+  </node>
+</launch>
