@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>node_interface</name>
+  <version>0.0.0</version>
+  <description>Allows simple creation of nodes and nodelets</description>
+
+  <maintainer email="kunal.tyagi@rapyuta-robotics.com">Kunal Tyagi</maintainer>
+  <author>Kunal Tyagi</author>
+
+  <license>MPLv2</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>image_transport</depend>
+  <depend>roscpp</depend>
+</package>
