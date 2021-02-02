@@ -1,0 +1,23 @@
+camera_matrix:
+  cols: 3
+  data: [407.0791419839262, 0.0, 146.48143830132693, 0.0, 395.7158899022375, 150.33592280236581,
+    0.0, 0.0, 1.0]
+  rows: 3
+camera_name: previewout
+distortion_coefficients:
+  cols: 5
+  data: [0.2686293287261275, -1.5493142764085195, 0.00019527185930693876, -0.002212024905423716,
+    2.730289671429885]
+  rows: 1
+distortion_model: plumb_bob
+image_height: 300
+image_width: 300
+projection_matrix:
+  cols: 3
+  data: [407.0791419839262, 0.0, 146.48143830132693, 0.0, 0.0, 395.7158899022375, 150.33592280236581,
+    0.0, 0.0, 0.0, 1.0, 0.0]
+  rows: 4
+rectification_matrix:
+  cols: 3
+  data: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+  rows: 3
