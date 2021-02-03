@@ -1,6 +1,6 @@
 # DepthAI ROS
 
-This package facilitates the integration of DepthAI and compatible hardware with ROS. List of compatible hardwares can be found [here](https://docs.luxonis.com/en/latest/)
+This package facilitates the integration of DepthAI and compatible hardware with ROS. List of compatible hardwares can be found [here](https://docs.luxonis.com/en/latest/). This package is based on the Gen 1 API for DepthAI and provides an interface for ROS (not ROS2).
 
 This meta-package contains the following packages:
 * depthai_ros_driver
@@ -29,6 +29,7 @@ $ git clone --recursive https://github.com/rapyuta-robotics/depthai_ros.git
 For older versions of git, one of the following processes might be needed:
 * Use `--recurse-submodules` instead of `--recursive`
 * Clone without any flags and then grab the submodules using `git submodule update --init --recursive`
+* Prepare MobileNetSSD compatible model (blob and json file). Once issue #5 is resolved, this will not be necessary for a default model. Due to limitations of Gen1 API used in the ROS driver, a model is required to run it.
 
 # Usage
 0. Compile using `cmake build depthai_ros` or your preferred `cmake_build` or `colcon` process
@@ -36,6 +37,7 @@ For older versions of git, one of the following processes might be needed:
     ```
     roslaunch depthai_ros_driver depthai_{node,nodelet}.launch
     ```
+3. Custom models can be provided using `blob_file` and `blob_file_config` arguments to the launch file. If an argument `A` needs value `B`, the syntax is `roslaunch <launch_file> A:=B`
 2. Get the relevant details using:
     ```
     $ rostopic list /depthai
