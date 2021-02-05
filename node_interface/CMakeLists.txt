@@ -1,7 +1,8 @@
-cmake_minimum_required (VERSION 2.8.3)
+cmake_minimum_required (VERSION 3.10.2)  # CMake version in Ubuntu 18.04 LTS
 
-cmake_policy (SET CMP0048 NEW)
-cmake_policy (SET CMP0076 NEW)
+if (POLICY CMP0076)
+  cmake_policy (SET CMP0076 NEW)
+endif ()
 
 project (node_interface VERSION 0.1.0 LANGUAGES CXX)
 
