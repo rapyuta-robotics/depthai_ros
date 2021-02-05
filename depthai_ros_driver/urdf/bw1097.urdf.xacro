@@ -1,59 +1,73 @@
 <?xml version="1.0"?>
 
 <robot name="bw1097" xmlns:xacro="http://ros.org/wiki/xacro">
-  <link name="base_link"/>
-
-  <xacro:property name="name" value="oakd"/>
-  <xacro:property name="parent" value="base_link"/>
+  <link name="depthai_base"/>
 
   <!-- The following values are approximate, and the camera node
     publishing TF values with actual calibrated camera extrinsic values -->
-  <xacro:property name="oakd_depth_to_left_offset" value="0.090"/>
-  <xacro:property name="oakd_depth_to_right_offset" value="0.0"/>
-  <xacro:property name="oakd_depth_to_rgb_offset" value="0.070"/>
+  <xacro:property name="left_to_right" value="0.090"/>
+  <xacro:property name="left_to_rgb" value="0.020"/>
 
-  <!-- TODO Correct this -->
   <!-- The following offset is relative the the physical screw mount -->
-  <xacro:property name="oakd_depth_px" value="-0.045"/>
-  <xacro:property name="oakd_depth_py" value="-0.00"/>
-  <xacro:property name="oakd_depth_pz" value="0.02"/>
+  <xacro:property name="screw_to_left_offset_x" value="0.0"/>
+  <xacro:property name="screw_to_left_offset_y" value="0.082"/>
+  <xacro:property name="screw_to_left_offset_z" value="0.003"/>
+
+  <!-- Macro for in-place rotation -->
+  <xacro:property name="M_PI" value="3.1415926535897931" />
+  <xacro:macro name="in_place_rotate" params="joint_name parent child">
+    <joint name="${joint_name}" type="fixed">
+      <origin xyz="0 0 0" rpy="${-M_PI/2} 0 ${-M_PI/2}"/>
+      <parent link="${parent}"/>
+      <child link="${child}"/>
+    </joint>
+    <link name="${child}"/>
+  </xacro:macro>
+
+  <!-- Macro for identity tranform -->
+  <xacro:macro name="identity" params="joint_name parent child">
+    <joint name="${joint_name}" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${parent}"/>
+      <child link="${child}"/>
+    </joint>
+    <link name="${child}"/>
+  </xacro:macro>
 
   <!-- camera body, with origin at screw mount -->
-  <joint name="${name}_joint" type="fixed">
-    <origin xyz="0 0 0" rpy="0 0 0"/>
-    <parent link="${parent}"/>
-    <child link="${name}_screw_frame" />
+  <joint name="tr_screw2left_cam" type="fixed">
+    <origin xyz="${screw_to_left_offset_x} ${screw_to_left_offset_y} ${screw_to_left_offset_z}" rpy="0 0 0"/>
+    <parent link="depthai_base"/>
+    <child link="left_camera" />
   </joint>
-  <link name="${name}_screw_frame"/>
+  <link name="left_camera"/>
 
-  <joint name="${name}_link_joint" type="fixed">
-    <origin xyz="${oakd_depth_px} ${oakd_depth_py} ${oakd_depth_pz}" rpy="0 0 0"/>
-    <parent link="${name}_screw_frame"/>
-    <child link="${name}_link" />
+  <!-- right camera wrt left camera -->
+  <joint name="left_cam2right_cam" type="fixed">
+    <origin xyz="0 -${left_to_right} 0" rpy="0 0 0" />
+    <parent link="left_camera" />
+    <child link="right_camera" />
   </joint>
-  <link name="${name}_link"/>
+  <link name="right_camera"/>
 
-  <!-- camera left joints and link -->
-  <joint name="${name}_left_joint" type="fixed">
-    <origin xyz="${oakd_depth_to_left_offset} 0 0" rpy="0 0 0" />
-    <parent link="${name}_link" />
-    <child link="${name}_left_frame" />
+  <!-- rgb camera wrt left camera -->
+  <joint name="left_cam2rgb_cam" type="fixed">
+    <origin xyz="0 ${-left_to_rgb} 0" rpy="0 0 0" />
+    <parent link="left_camera" />
+    <child link="rgb_camera" />
   </joint>
-  <link name="${name}_left_frame"/>
+  <link name="rgb_camera"/>
 
-  <!-- camera right joints and link -->
-  <joint name="${name}_right_joint" type="fixed">
-    <origin xyz="${oakd_depth_to_right_offset} 0 0" rpy="0 0 0" />
-    <parent link="${name}_link" />
-    <child link="${name}_right_frame" />
-  </joint>
-  <link name="${name}_right_frame"/>
+  <!-- Rotate the camera frames in place to get optical frames -->
+  <xacro:in_place_rotate joint_name="left_cam2left" parent="left_camera" child="left"/>
+  <xacro:in_place_rotate joint_name="rgb_cam2rgb" parent="rgb_camera" child="rgb"/>
+  <xacro:in_place_rotate joint_name="right_cam2right" parent="right_camera" child="right"/>
 
-  <!-- camera rgb joints and link -->
-  <joint name="${name}_rgb_joint" type="fixed">
-    <origin xyz="${oakd_depth_to_rgb_offset} 0 0" rpy="0 0 0" />
-    <parent link="${name}_link" />
-    <child link="${name}_rgb_frame" />
-  </joint>
-  <link name="${name}_rgb_frame"/>
+  <!-- Trivial optical frames -->
+  <xacro:identity joint_name="left2rectified_left" parent="left" child="rectified_left"/>
+  <xacro:identity joint_name="right2rectified_right" parent="right" child="rectified_right"/>
+  <xacro:identity joint_name="right2depth" parent="right" child="depth"/>
+  <xacro:identity joint_name="depth2depth_raw" parent="depth" child="depth_raw"/>
+  <xacro:identity joint_name="right2disparity" parent="right" child="disparity"/>
+  <xacro:identity joint_name="disparity2disparity_color" parent="disparity" child="disparity_color"/>
 </robot>
