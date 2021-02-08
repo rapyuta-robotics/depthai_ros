@@ -32,7 +32,7 @@ For older versions of git, one of the following processes might be needed:
 * Prepare MobileNetSSD compatible model (blob and json file). Once issue #5 is resolved, this will not be necessary for a default model. Due to limitations of Gen1 API used in the ROS driver, a model is required to run it.
 
 # Usage
-0. Compile using `cmake build depthai_ros` or your preferred `cmake_build` or `colcon` process
+0. Compile using `cmake build depthai_ros` or your preferred `cmake_build_isolated` or `colcon` process. `catkin_build` will **not build** the package successfully.
 1. Launch the node or nodelet by appropriately choosing the correct launch file and parameters:
     ```
     roslaunch depthai_ros_driver depthai_{node,nodelet}.launch
