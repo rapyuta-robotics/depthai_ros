@@ -29,8 +29,9 @@ The proposed solution will take advantage of nodelets in ROS, and will provide i
 ### Bringup
 Since Gen2 allows a custom pipeline to be built, the Gen1 approach doesn't fit anymore. In order to allow them, we'll need a [pluginlib](http://wiki.ros.org/pluginlib) approach. A tututorial for writing and loading custom plugins is located [here](http://wiki.ros.org/pluginlib/Tutorials/Writing%20and%20Using%20a%20Simple%20Plugin).
 
-A custom baseclass, say `depthai_ros_driver::Pipeline` could be used for loading custom pipelines from custom classes with a name (that can be runtime modifiable using a parameter). The class will need to provide the details of `camera_streams`, `control_streams`, `input_streams` and `tensor_streams`:
+A custom baseclass, say `depthai_ros_driver::Pipeline` could be used for loading custom pipelines from custom classes with a name (that can be runtime modifiable using a parameter). The class will need to provide the details of different streams like:
 * `camera_streams`: list of cameras that need to be published. The driver will use them for accessing images and converting them to ROS messages.
+* `raw_video_streams`, `compressed_video_streams`: list of streams with specialization of transport protocol to make it more efficient to convert to ROS messages
 * `control_streams`: list of cameras that need to be controlled. The driver will use them for adjusting the RoI, exposure time, gain, white balance, etc.
 * `input_streams`: list of flat-tensors that the driver will send to the camera (virtual cameras). This will allow for testing as well as using the Movidius chip for custom workloads
 * `tensor_streams`: list of flat-tensors that the driver will read from the camera and publish for decoding as needed
