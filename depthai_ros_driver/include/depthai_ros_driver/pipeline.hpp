@@ -3,7 +3,7 @@
 #include <depthai/pipeline/Node.hpp>
 #include <depthai/pipeline/Pipeline.hpp>
 
-namespace depthai {
+namespace rr {
 struct Pipeline {
     using NodeConstPtr = std::shared<const dai::Node>;
 
@@ -47,4 +47,4 @@ struct Pipeline {
      */
     virtual std::vector<NodeConstPtr> getTensorOutStreams() = 0;
 };
-}  // namespace depthai
+}  // namespace rr
