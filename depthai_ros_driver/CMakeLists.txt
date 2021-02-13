@@ -38,13 +38,16 @@ set (PKG_DEPS
 find_package (catkin REQUIRED COMPONENTS ${PKG_DEPS})
 
 find_package (OpenCV REQUIRED)
-find_package (Boost REQUIRED COMPONENTS system)
+find_package (Boost REQUIRED)
 
 hunter_add_package(range-v3)
 find_package(range-v3 REQUIRED)
 
 # Add depthai-core dependency
 add_subdirectory (${DEPTHAI_CORE} depthai-core)
+
+hunter_add_package(range-v3)
+find_package(range-v3 REQUIRED)
 
 catkin_package (
     INCLUDE_DIRS include
