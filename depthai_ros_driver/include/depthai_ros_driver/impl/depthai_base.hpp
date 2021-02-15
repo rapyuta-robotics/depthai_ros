@@ -91,6 +91,8 @@ void DepthAIBase<Node>::publishImageMsg(const HostDataPacket& packet, Stream typ
     switch (type) {
         case Stream::LEFT:
         case Stream::RIGHT:
+        case Stream::RECTIFIED_LEFT:
+        case Stream::RECTIFIED_RIGHT:
         case Stream::DISPARITY:
             cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
             encoding = "mono8";
