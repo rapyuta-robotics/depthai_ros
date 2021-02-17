@@ -1,0 +1,40 @@
+name: Build CI
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.images }}
+    strategy:
+      matrix:
+        images: [ros:noetic-perception, ros:melodic-perception, ros:kinetic-perception]
+        # compiler: ["/usr/bin/g++", "/usr/bin/clang++"]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+        path: catkin_ws/src/
+    - name: 'Install dependencies'
+      run: |
+        apt update
+        apt install libusb-1.0-0{,-dev}
+    - name: 'Cache hunter files'
+      id: cache-hunter
+      uses: actions/cache@v2
+      with:
+        path: ~/.hunter
+        key: ${{ matrix.images }}-hunter
+    - name: 'Setup catkin'
+      run: |
+        source /opt/ros/*/setup.bash
+        cd catkin_ws/src
+        catkin_init_workspace
+    - name: 'Build'
+        source /opt/ros/*/setup.bash
+        cd catkin_ws
+        catkin_make_isolated --install
