@@ -8,33 +8,58 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  build:
-    runs-on: ${{ matrix.images }}
-    strategy:
-      matrix:
-        images: [ros:noetic-perception, ros:melodic-perception, ros:kinetic-perception]
-        # compiler: ["/usr/bin/g++", "/usr/bin/clang++"]
+  clone:
+    # separate clone + artifact job because the action wants git 2.18
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
-        path: catkin_ws/src/
+        path: catkin_ws/src/${{ github.repository }}
+    - uses: actions/upload-artifact@v2
+      with:
+        name: workspace
+        path: catkin_ws
+        if-no-files-found: error
+  build:
+    needs: clone
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.images }}
+    strategy:
+      matrix:
+        images: ['ros:noetic-perception', 'ros:melodic-perception']
+        # compiler: ["/usr/bin/g++", "/usr/bin/clang++"]
+    steps:
     - name: 'Install dependencies'
+      shell: bash
       run: |
         apt update
-        apt install libusb-1.0-0{,-dev}
+        apt install -y libusb-1.0-0{,-dev}
+    - uses: actions/download-artifact@v2
+      with:
+        name: workspace
+        path: catkin_ws
     - name: 'Cache hunter files'
       id: cache-hunter
       uses: actions/cache@v2
       with:
         path: ~/.hunter
         key: ${{ matrix.images }}-hunter
+    - name: "Debug"
+      run: |
+        pwd
+        ls -al .
+        # ls -al src/${{ github.repository }}
     - name: 'Setup catkin'
+      shell: bash
       run: |
         source /opt/ros/*/setup.bash
         cd catkin_ws/src
         catkin_init_workspace
-    - name: 'Build'
+    - name: 'Build and install'
+      shell: bash
+      run: |
         source /opt/ros/*/setup.bash
         cd catkin_ws
         catkin_make_isolated --install
