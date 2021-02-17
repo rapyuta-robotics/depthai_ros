@@ -56,45 +56,107 @@ protected:
      */
     virtual std::vector<std::string> getCameraNodeNames() const { return {"MonoCamera", "ColorCamera"}; }
 
-    /////////////////////
-    std::vector<NodeConstPtr> getRawOutputs() const { return filterNodesByName({"XLinkOut"}); }
-    std::vector<NodeConstPtr> getRawInputs() const { return filterNodesByName({"XLinkIn"}); }
-
     /**
-     * @brief returns the raw streams exposed by the ROS interface
+     * @brief Get the nodes with raw video streams output exposed by the ROS interface
+     *
+     * @return std::vector<NodeConstPtr>
      */
-    std::vector<NodeConstPtr> getRawVideoStreams() {
-        // camera.{video,preview} is linked with XLinkOut
-        const auto& cameras = getCameras();
-        const auto& outputNodes = getRawOutputs();
-        for (const auto& kv : getPipeline().getConnectionMap()) {
-            // filter connections with:
-            // input == {video, preview}
-            // no link with VideoEncoder
-            // link with XLinkOut
-        }
-        return {};
-    }
+    virtual std::vector<NodeConstPtr> getRawVideoStreams();
 
     /**
-     * @brief returns the compressed streams exposed by the ROS interface
+     * @brief Get the nodes with compressed video streams exposed by the ROS interface
+     *
+     * @return std::vector<NodeConstPtr>
      */
     virtual std::vector<NodeConstPtr> getCompressedVideoStreams() = 0;
 
     /**
-     * @brief returns the camera control streams exposed by the ROS interface
+     * @brief Get the nodes with camera control streams exposed by the ROS interface
+     *
+     * @return std::vector<NodeConstPtr>
      */
     virtual std::vector<NodeConstPtr> getControlStreams() = 0;
 
     /**
-     * @brief returns the streams required to pass information into the device, via ROS interface
+     * @brief Get the nodes with streams required to pass information into the device, via ROS interface
+     *
+     * @return std::vector<NodeConstPtr>
      */
     virtual std::vector<NodeConstPtr> getInputStreams() = 0;
 
     /**
-     * @brief returns the streams that return a tensor, for interfacing with ROS
+     * @brief Get the nodes with streams that return a tensor, for interfacing with ROS
+     *
+     * @return std::vector<NodeConstPtr>
      */
     virtual std::vector<NodeConstPtr> getTensorOutStreams() = 0;
+
+    /////////////////////
+    std::vector<NodeConstPtr> getRawOutputs() const { return filterNodesByName({"XLinkOut"}); }
+    std::vector<NodeConstPtr> getRawInputs() const { return filterNodesByName({"XLinkIn"}); }
+
+    enum class Recurse { CONTINUE, FAIL, SUCCESS };
+
+    template <class Functor>
+    const NodeConstPtr& recurseUntil(const NodeConstPtr& nodePtr, Functor&& f) {
+        const auto& connections = getPipeline().getConnectionMap();
+        const auto& nodes = getPipeline().getNodeMap();
+
+        bool select = false;
+        for (const auto& connection : connections[nodePtr->id]) {
+            const auto& prev_node = nodes[connection.outputId];
+            const auto result = f(prev_node);
+            switch (result) {
+                case Recurse::FAIL:
+                    continue;
+                case Recurse::SUCCESS:
+                    return nodePtr;
+                case Recurse::CONTINUE:
+                    // @TODO: This
+                    if (recurseUntil(prev_node, f) == nullptr) {
+                        continue;
+                    }
+                    return nodePtr;
+            }
+        }
+        return nullptr;
+    }
+    Recurse rawStreamCondition(const NodeConstPtr& node) {
+        {
+            // auto validConnection = [](Node::{In,Out}put put) {
+            //     const auto& inp_type = put.possibleDatatypes;
+            //     const auto& valid_input = std::find_if(inp_type.cbegin(), inp_type.cend(), [](const auto& dataType) {
+            //         // the connection should be able to handle images
+            //         return dai::isDatatypeSubclassOf(dataType, dai::DatatypeEnum::ImgFrame);
+            //     });
+            //     return valid_input != inp_type.cend();
+            // }
+            if (valid_input == inp_type.cend()) {
+                continue;
+            }
+            if (node.getName() == "VideoEncoder") {
+                // This path is not good
+                return Recurse::FAILED;
+            }
+            if (node.getName() == "ColorCamera" || node.getName() == "MonoCamera") {
+                // select node
+                return Recurse::SUCCESS;
+            }
+            recurseNodes(f);
+        }
+    }
+
+    virtual std::vector<NodeConstPtr> getRawVideoStreams() {
+        // camera.{video,preview} is linked with XLinkOut
+        const auto& cameras = getCameras();
+        const auto& outputNodes = getRawOutputs();
+
+        for (input : node.getInputs()) {
+            // This input can take
+            // store the node connected to somehow...
+        }
+        return {};
+    }
 
     /**
      * @brief filters the nodes in the pipeline based on requested node types
