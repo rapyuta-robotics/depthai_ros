@@ -3,13 +3,17 @@
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 
+#include <pluginlib/class_loader.h>
+#include <depthai_ros_driver/pipeline.hpp>
+
 #include <depthai_ros_driver/depthai_base.hpp>
+
 
 namespace rr {
 template <class Node>
 void DepthAIBase<Node>::disparityConfCb(const std_msgs::Float32::ConstPtr& msg) {
     if ((msg->data >= 0.0) && (msg->data <= 255.0)) {
-        _depthai->send_disparity_confidence_threshold(msg->data);
+        //_depthai->send_disparity_confidence_threshold(msg->data);
     } else {
         ROS_ERROR_NAMED(this->getName(), "Disparity confidence value:%f, is invalid", msg->data);
     }
@@ -18,208 +22,214 @@ void DepthAIBase<Node>::disparityConfCb(const std_msgs::Float32::ConstPtr& msg) 
 template <class Node>
 void DepthAIBase<Node>::afCtrlCb(const depthai_ros_msgs::AutoFocusCtrl msg) {
     if (msg.trigger_auto_focus) {
-        _depthai->request_af_trigger();
+        //_depthai->request_af_trigger();
     }
     if ((msg.auto_focus_mode >= 0) && (msg.auto_focus_mode <= 4)) {
-        _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(msg.auto_focus_mode));
+        //_depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(msg.auto_focus_mode));
     } else {
         ROS_ERROR_NAMED(this->getName(), "Invalid Auto Focus mode requested");
     }
 }
 
-template <class Node>
-void DepthAIBase<Node>::publishObjectInfoMsg(const dai::Detections& detections, const ros::Time& stamp) {
-    const auto* pubPtr = _stream_publishers[Stream::META_OUT].get();
-    if (pubPtr == nullptr || pubPtr->getNumSubscribers() <= 0) {
-        return;  // No subscribers
-    }
+// template <class Node>
+// void DepthAIBase<Node>::publishObjectInfoMsg(const dai::Detections& detections, const ros::Time& stamp) {
+//     const auto* pubPtr = _stream_publishers[Stream::META_OUT].get();
+//     if (pubPtr == nullptr || pubPtr->getNumSubscribers() <= 0) {
+//         return;  // No subscribers
+//     }
 
-    depthai_ros_msgs::Object object;
-    depthai_ros_msgs::Objects msg;
-    msg.objects.reserve(detections.detection_count);
+//     depthai_ros_msgs::Object object;
+//     depthai_ros_msgs::Objects msg;
+//     msg.objects.reserve(detections.detection_count);
 
-    for (int i = 0; i < detections.detection_count; ++i) {
-        object.label_id = detections.detections[i].label;
-        object.confidence = detections.detections[i].confidence;
-        object.bb.x_min = detections.detections[i].x_min;
-        object.bb.y_min = detections.detections[i].y_min;
-        object.bb.x_max = detections.detections[i].x_max;
-        object.bb.y_max = detections.detections[i].y_max;
+//     for (int i = 0; i < detections.detection_count; ++i) {
+//         object.label_id = detections.detections[i].label;
+//         object.confidence = detections.detections[i].confidence;
+//         object.bb.x_min = detections.detections[i].x_min;
+//         object.bb.y_min = detections.detections[i].y_min;
+//         object.bb.x_max = detections.detections[i].x_max;
+//         object.bb.y_max = detections.detections[i].y_max;
 
-        if (_compute_bbox_depth) {
-            object.bb.depth_x = detections.detections[i].depth_x;
-            object.bb.depth_y = detections.detections[i].depth_y;
-            object.bb.depth_z = detections.detections[i].depth_z;
-        }
-        msg.objects.push_back(object);
-    }
+//         if (_compute_bbox_depth) {
+//             object.bb.depth_x = detections.detections[i].depth_x;
+//             object.bb.depth_y = detections.detections[i].depth_y;
+//             object.bb.depth_z = detections.detections[i].depth_z;
+//         }
+//         msg.objects.push_back(object);
+//     }
 
-    msg.header.stamp = stamp;
-    pubPtr->publish(msg);
-}
+//     msg.header.stamp = stamp;
+//     pubPtr->publish(msg);
+// }
 
-template <class Node>
-void DepthAIBase<Node>::publishImageMsg(const HostDataPacket& packet, Stream type, const ros::Time& stamp) {
-    const auto* camInfoPubPtr = _camera_info_publishers[type].get();
-    const auto* pubPtr = _stream_publishers[type].get();
+// template <class Node>
+// void DepthAIBase<Node>::publishImageMsg(const HostDataPacket& packet, Stream type, const ros::Time& stamp) {
+//     const auto* camInfoPubPtr = _camera_info_publishers[type].get();
+//     const auto* pubPtr = _stream_publishers[type].get();
 
-    std_msgs::Header header;
-    header.stamp = stamp;
-    header.frame_id = packet.stream_name;
+//     std_msgs::Header header;
+//     header.stamp = stamp;
+//     header.frame_id = packet.stream_name;
 
-    if (camInfoPubPtr->getNumSubscribers() > 0) {
-        const auto cameraInfo =
-                boost::make_shared<sensor_msgs::CameraInfo>(_camera_info_manager[type]->getCameraInfo());
-        cameraInfo->header = header;
-        camInfoPubPtr->publish(cameraInfo);
-    }
+//     if (camInfoPubPtr->getNumSubscribers() > 0) {
+//         const auto cameraInfo =
+//                 boost::make_shared<sensor_msgs::CameraInfo>(_camera_info_manager[type]->getCameraInfo());
+//         cameraInfo->header = header;
+//         camInfoPubPtr->publish(cameraInfo);
+//     }
 
-    if (pubPtr == nullptr || pubPtr->getNumSubscribers() <= 0) {
-        return;  // No subscribers
-    }
+//     if (pubPtr == nullptr || pubPtr->getNumSubscribers() <= 0) {
+//         return;  // No subscribers
+//     }
 
-    cv_bridge::CvImage cvImg;
-    cvImg.header = std::move(header);
-    std::string encoding = "";
+//     cv_bridge::CvImage cvImg;
+//     cvImg.header = std::move(header);
+//     std::string encoding = "";
 
-    const int rows = packet.dimensions[0];
-    const int cols = packet.dimensions[1];
+//     const int rows = packet.dimensions[0];
+//     const int cols = packet.dimensions[1];
 
-    // cv::Mat needs `void *` not `const void *`
-    auto* data = const_cast<uint8_t*>(packet.getData());
+//     // cv::Mat needs `void *` not `const void *`
+//     auto* data = const_cast<uint8_t*>(packet.getData());
 
-    switch (type) {
-        case Stream::LEFT:
-        case Stream::RIGHT:
-        case Stream::DISPARITY:
-            cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
-            encoding = "mono8";
-            break;
-        case Stream::PREVIEW_OUT: {
-            std::vector<cv::Mat> toMerge(3);
-            const auto offset = cols * cols;
-            for (int i = 0; i < 3; ++i) {
-                toMerge[i] = cv::Mat(cols, cols, CV_8UC1, data + i * offset);
-            }
-            cv::merge(toMerge, cvImg.image);
-            encoding = "bgr8";
-            break;
-        }
-        case Stream::JPEG_OUT:
-        case Stream::VIDEO: {
-            const auto img = boost::make_shared<sensor_msgs::CompressedImage>();
-            img->header = std::move(cvImg.header);
-            img->format = "jpeg";
-            img->data.assign(packet.data->cbegin(), packet.data->cend());
-            pubPtr->publish(img);
-            return;
-        }
-        case Stream::DEPTH:
-        case Stream::DISPARITY_COLOR: {
-            const int ndim = packet.dimensions.size();
-            const int elemSize = packet.elem_size;
+//     switch (type) {
+//         case Stream::LEFT:
+//         case Stream::RIGHT:
+//         case Stream::DISPARITY:
+//             cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
+//             encoding = "mono8";
+//             break;
+//         case Stream::PREVIEW_OUT: {
+//             std::vector<cv::Mat> toMerge(3);
+//             const auto offset = cols * cols;
+//             for (int i = 0; i < 3; ++i) {
+//                 toMerge[i] = cv::Mat(cols, cols, CV_8UC1, data + i * offset);
+//             }
+//             cv::merge(toMerge, cvImg.image);
+//             encoding = "bgr8";
+//             break;
+//         }
+//         case Stream::JPEG_OUT:
+//         case Stream::VIDEO: {
+//             const auto img = boost::make_shared<sensor_msgs::CompressedImage>();
+//             img->header = std::move(cvImg.header);
+//             img->format = "jpeg";
+//             img->data.assign(packet.data->cbegin(), packet.data->cend());
+//             pubPtr->publish(img);
+//             return;
+//         }
+//         case Stream::DEPTH:
+//         case Stream::DISPARITY_COLOR: {
+//             const int ndim = packet.dimensions.size();
+//             const int elemSize = packet.elem_size;
 
-            if (ndim == 2) {
-                if (elemSize == 1) {
-                    cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
-                    encoding = "mono8";
-                } else {  // depth
-                    cv::Mat bgrImg;
-                    cv::Mat monoImg(rows, cols, CV_8UC1, data);
-                    cv::applyColorMap(monoImg, bgrImg, cv::COLORMAP_HOT);
-                    // cv::applyColorMap(monoImg, bgrImg, cv::COLORMAP_JET);
-                    cvImg.image = bgrImg;
-                    encoding = "bgr8";
-                }
-            } else {  // disparity_color
-                cvImg.image = cv::Mat(rows, cols, CV_8UC3, data);
-                encoding = "bgr8";
-            }
-            break;
-        }
-        default:  // should be unreachable
-            return;
-    }
+//             if (ndim == 2) {
+//                 if (elemSize == 1) {
+//                     cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
+//                     encoding = "mono8";
+//                 } else {  // depth
+//                     cv::Mat bgrImg;
+//                     cv::Mat monoImg(rows, cols, CV_8UC1, data);
+//                     cv::applyColorMap(monoImg, bgrImg, cv::COLORMAP_HOT);
+//                     // cv::applyColorMap(monoImg, bgrImg, cv::COLORMAP_JET);
+//                     cvImg.image = bgrImg;
+//                     encoding = "bgr8";
+//                 }
+//             } else {  // disparity_color
+//                 cvImg.image = cv::Mat(rows, cols, CV_8UC3, data);
+//                 encoding = "bgr8";
+//             }
+//             break;
+//         }
+//         default:  // should be unreachable
+//             return;
+//     }
 
-    const sensor_msgs::ImagePtr msg = cvImg.toImageMsg();
-    msg->encoding = encoding;
-    pubPtr->publish(msg);
-}
-
-template <class Node>
-void DepthAIBase<Node>::getPackets() {
-    if (_request_jpegout) {
-        _depthai->request_jpeg();
-    }
-
-    if (_pipeline != NULL) {
-        tie(_nnet_packet, _data_packet) = _pipeline->getAvailableNNetAndDataPackets(_depthai_block_read);
-    }
-}
-
-template <class Node>
-void DepthAIBase<Node>::processPacketsAndPub() {
-    ros::Time stamp = ros::Time::now();
-    auto get_ts = [&](double camera_ts) {
-        if (_depthai_ts_offset == -1) {
-            _depthai_ts_offset = camera_ts;
-            _stamp = stamp;
-        }
-        return _stamp + ros::Duration(camera_ts - _depthai_ts_offset);
-    };
-
-    if (_nnet_packet.size() != 0) {
-        for (const std::shared_ptr<NNetPacket>& packet : _nnet_packet) {
-            auto detections = packet->getDetectedObjects();
-            if (detections == nullptr) {
-                continue;
-            }
-            auto meta_data = packet->getMetadata();
-            const auto seq_num = meta_data->getSequenceNum();
-            const auto ts = meta_data->getTimestamp();
-            const auto sync_ts = get_ts(ts);
-            ROS_DEBUG_NAMED(this->getName(), "Stream: metaout, Original TS: %f, SeqNum: %d, Synced TS: %f", ts, seq_num,
-                    sync_ts.toSec());
-            publishObjectInfoMsg(*detections.get(), sync_ts);
-        }
-    }
-
-    if (_data_packet.size() != 0) {
-        for (const std::shared_ptr<HostDataPacket>& packet : _data_packet) {
-            if (packet == nullptr) {
-                // just a sanity check to prevent null dereference
-                continue;
-            }
-            const auto& name = packet->stream_name;
-            const auto stream = std::find(_stream_name.cbegin(), _stream_name.cend(), name);
-            if (stream == _stream_name.end()) {
-                ROS_WARN_THROTTLE_NAMED(10, this->getName(), "Stream: %s is not implemented", name.c_str());
-                continue;
-            }
-
-            const auto index = std::distance(_stream_name.cbegin(), stream);
-            if (index == Stream::VIDEO) {
-                // workaround for the bug in DepthAI-Core library
-                publishImageMsg(*(packet.get()), static_cast<Stream>(index), stamp);
-                continue;
-            }
-
-            auto meta_data = packet->getMetadata();
-            const auto seq_num = meta_data->getSequenceNum();
-            const auto ts = meta_data->getTimestamp();
-            const auto sync_ts = get_ts(ts);
-            ROS_DEBUG_NAMED(this->getName(), "Stream: %s, Original TS: %f, SeqNum: %d, Synced TS: %f",
-                    packet->stream_name.c_str(), ts, seq_num, sync_ts.toSec());
-            publishImageMsg(*(packet.get()), static_cast<Stream>(index), sync_ts);
-        }
-    }
-}
+//     const sensor_msgs::ImagePtr msg = cvImg.toImageMsg();
+//     msg->encoding = encoding;
+//     pubPtr->publish(msg);
+// }
 
 template <class Node>
 void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
-    getPackets();
-    processPacketsAndPub();
+    // if (_request_jpegout) {
+    //     _depthai->request_jpeg();
+    // }
+
+    // if (_pipeline != NULL) {
+    //     tie(_nnet_packet, _data_packet) = _pipeline->getAvailableNNetAndDataPackets(_depthai_block_read);
+    // }
+
+    const auto& data_output_queue = _stereo_pipeline->getDataOutputQueue();
+    const auto& imgFrame = data_output_queue->get<dai::ImgFrame>();
+    if(imgFrame){
+        // printf("Frame - w: %d, h: %d\n", imgFrame->getWidth(), imgFrame->getHeight());
+        cv::Mat frame = cv::Mat(imgFrame->getHeight(), imgFrame->getWidth(), CV_8UC3, imgFrame->getData().data());
+        cv::imshow("preview", frame);
+        int key = cv::waitKey(1);
+        if (key == 'q'){
+            return;
+        }
+    } else {
+        std::cout << "Not ImgFrame" << std::endl;
+    }
+
+    // ros::Time stamp = ros::Time::now();
+    // auto get_ts = [&](double camera_ts) {
+    //     if (_depthai_ts_offset == -1) {
+    //         _depthai_ts_offset = camera_ts;
+    //         _stamp = stamp;
+    //     }
+    //     return _stamp + ros::Duration(camera_ts - _depthai_ts_offset);
+    // };
+
+    // if (_nnet_packet.size() != 0) {
+    //     for (const std::shared_ptr<NNetPacket>& packet : _nnet_packet) {
+    //         auto detections = packet->getDetectedObjects();
+    //         if (detections == nullptr) {
+    //             continue;
+    //         }
+    //         auto meta_data = packet->getMetadata();
+    //         const auto seq_num = meta_data->getSequenceNum();
+    //         const auto ts = meta_data->getTimestamp();
+    //         const auto sync_ts = get_ts(ts);
+    //         ROS_DEBUG_NAMED(this->getName(), "Stream: metaout, Original TS: %f, SeqNum: %d, Synced TS: %f", ts, seq_num,
+    //                 sync_ts.toSec());
+    //         publishObjectInfoMsg(*detections.get(), sync_ts);
+    //     }
+    // }
+
+    // if (_data_packet.size() != 0) {
+    //     for (const std::shared_ptr<HostDataPacket>& packet : _data_packet) {
+    //         if (packet == nullptr) {
+    //             // just a sanity check to prevent null dereference
+    //             continue;
+    //         }
+    //         const auto& name = packet->stream_name;
+    //         const auto stream = std::find(_stream_name.cbegin(), _stream_name.cend(), name);
+    //         if (stream == _stream_name.end()) {
+    //             ROS_WARN_THROTTLE_NAMED(10, this->getName(), "Stream: %s is not implemented", name.c_str());
+    //             continue;
+    //         }
+
+    //         const auto index = std::distance(_stream_name.cbegin(), stream);
+    //         if (index == Stream::VIDEO) {
+    //             // workaround for the bug in DepthAI-Core library
+    //             publishImageMsg(*(packet.get()), static_cast<Stream>(index), stamp);
+    //             continue;
+    //         }
+
+    //         auto meta_data = packet->getMetadata();
+    //         const auto seq_num = meta_data->getSequenceNum();
+    //         const auto ts = meta_data->getTimestamp();
+    //         const auto sync_ts = get_ts(ts);
+    //         ROS_DEBUG_NAMED(this->getName(), "Stream: %s, Original TS: %f, SeqNum: %d, Synced TS: %f",
+    //                 packet->stream_name.c_str(), ts, seq_num, sync_ts.toSec());
+    //         publishImageMsg(*(packet.get()), static_cast<Stream>(index), sync_ts);
+    //     }
+    // }
 }
+
 template <class Node>
 bool DepthAIBase<Node>::defaultCameraInfo(
         depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res) {
@@ -293,19 +303,18 @@ void DepthAIBase<Node>::onInit() {
 
     prepareStreamConfig();
 
-    // device init
-    _depthai = std::make_unique<Device>("", _force_usb2);
 
-    _available_streams = _depthai->get_available_streams();
-    _nn2depth_map = _depthai->get_nn_to_depth_bbox_mapping();
-
-    for (const auto& stream : _available_streams) {
-        std::cout << "Available Streams: " << stream << std::endl;
+    pluginlib::ClassLoader<rr::Pipeline> pipeline_loader("depthai_ros_driver", "rr::Pipeline");
+    std::string plugin_name = "depthai_ros_driver/StereoPipeline";
+    try {
+        _stereo_pipeline = pipeline_loader.createInstance(plugin_name);
+        _stereo_pipeline->configure();
+    }
+    catch(pluginlib::PluginlibException &ex) {
+        ROS_ERROR("failed to load the plugin. Error: %s", ex.what());
     }
 
-    _pipeline = _depthai->create_pipeline(_pipeline_config_json);
-
-    _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
+    _pipeline = _stereo_pipeline->getPipeline();
 
     _cameraReadTimer = nh.createTimer(ros::Duration(1. / 500), &DepthAIBase::cameraReadCb, this);
 }

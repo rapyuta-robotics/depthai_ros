@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.8.3)
 
 cmake_policy (SET CMP0048 NEW)
-cmake_policy (SET CMP0076 NEW)
+# cmake_policy (SET CMP0076 NEW)
 
 project (node_interface VERSION 0.1.0 LANGUAGES CXX)
 

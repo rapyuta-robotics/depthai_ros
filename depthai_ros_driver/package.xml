@@ -30,6 +30,7 @@
 
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml"/>
+    <depthai_ros_driver plugin="${prefix}/pipeline_plugins.xml"/>
   </export>
 
 </package>

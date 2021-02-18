@@ -44,7 +44,7 @@ find_package(range-v3 REQUIRED)
 
 catkin_package (
     INCLUDE_DIRS include
-    LIBRARIES ${PACKAGE_NAME}_nodelet
+    # LIBRARIES ${PACKAGE_NAME}_nodelet
     CATKIN_DEPENDS camera_info_manager cv_bridge image_transport nodelet roscpp sensor_msgs node_interface
     DEPENDS Boost
 )
@@ -62,31 +62,35 @@ include_directories (SYSTEM
 )
 
 # internal library, not to be exported
-# add_library (${PROJECT_NAME}_lib src/depthai_base.cpp)
-# target_link_libraries (${PROJECT_NAME}_lib
-#     ${catkin_LIBRARIES}
-#     ${OpenCV_LIBRARIES}
-#     ${Boost_LIBRARIES}
-#     depthai-core
-# )
-# add_dependencies (${PROJECT_NAME}_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_library(${PROJECT_NAME}_pipeline src/pipeline.cpp)
+add_library (${PROJECT_NAME}_lib src/depthai_base.cpp)
+target_link_libraries (${PROJECT_NAME}_lib
+    ${catkin_LIBRARIES}
+    ${OpenCV_LIBRARIES}
+    ${Boost_LIBRARIES}
+    depthai-core
+)
+add_dependencies (${PROJECT_NAME}_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_library (${PROJECT_NAME}_pipeline src/pipeline.cpp src/pipelines/stereo_pipeline.cpp)
 target_link_libraries (${PROJECT_NAME}_pipeline
     ${catkin_LIBRARIES}
     ${OpenCV_LIBRARIES}
     ${Boost_LIBRARIES}
     depthai-core
 )
-add_dependencies (${PROJECT_NAME}_pipeline ${catkin_EXPORTED_TARGETS})
+target_link_libraries (${PROJECT_NAME}_pipeline
+    depthai-core
+)
+# add_dependencies (${PROJECT_NAME}_pipeline ${catkin_EXPORTED_TARGETS})
 
 # add_library (${PROJECT_NAME}_nodelet src/depthai_nodelet.cpp)
 # target_link_libraries (${PROJECT_NAME}_nodelet
 #     ${PROJECT_NAME}_lib
 # )
-# add_executable (${PROJECT_NAME} src/depthai_node.cpp)
-# target_link_libraries (${PROJECT_NAME}
-#     ${PROJECT_NAME}_lib
-# )
+add_executable (${PROJECT_NAME} src/depthai_node.cpp)
+target_link_libraries (${PROJECT_NAME}
+    ${PROJECT_NAME}_lib
+)
 
 #############
 ## Install ##
@@ -104,4 +108,4 @@ install (DIRECTORY launch resources scripts urdf params
     USE_SOURCE_PERMISSIONS
 )
 
-install (FILES nodelet_plugins.xml DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+# install (FILES nodelet_plugins.xml DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

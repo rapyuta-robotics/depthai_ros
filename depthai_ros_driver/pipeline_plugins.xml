@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<library path="lib/libdepthai_ros_driver_pipeline">
+    <class name="depthai_ros_driver/StereoPipeline" type="depthai_ros_driver::StereoPipeline" base_class_type="rr::Pipeline">
+        <description>
+        Pipeline for stereo streams of DepthAI
+        </description>
+    </class>
+</library>
