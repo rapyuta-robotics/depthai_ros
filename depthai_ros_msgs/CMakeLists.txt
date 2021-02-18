@@ -17,7 +17,7 @@ add_message_files (
   BoundingBox.msg
   Object.msg
   Objects.msg
-  AutoFocusCtrl.msg
+  FocusControlCommand.msg
 )
 
 ## Generate services in the 'srv' folder

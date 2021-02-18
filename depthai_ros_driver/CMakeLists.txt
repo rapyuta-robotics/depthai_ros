@@ -70,23 +70,48 @@ include_directories (SYSTEM
 )
 
 # internal library, not to be exported
-# add_library (${PROJECT_NAME}_lib src/depthai_base.cpp)
-# target_link_libraries (${PROJECT_NAME}_lib
-#     ${catkin_LIBRARIES}
-#     ${OpenCV_LIBRARIES}
-#     ${Boost_LIBRARIES}
-#     depthai-core
-# )
-# add_dependencies (${PROJECT_NAME}_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_library (${PROJECT_NAME}_control_lib
+    src/control/focus_control.cpp
+)
+target_link_libraries (${PROJECT_NAME}_control_lib
+    depthai-core
+)
+
+add_library (${PROJECT_NAME}_lib src/depthai_base.cpp)
+target_link_libraries (${PROJECT_NAME}_lib
+    ${catkin_LIBRARIES}
+    ${OpenCV_LIBRARIES}
+    ${Boost_LIBRARIES}
+    depthai-core
+    ${PROJECT_NAME}_control_lib
+)
+add_dependencies (${PROJECT_NAME}_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_library (${PROJECT_NAME}_pipeline
+    src/pipelines/preview_pipeline.cpp
+    src/pipelines/stereo_pipeline.cpp
+    src/pipelines/mobilenet_ssd_pipeline.cpp
+    src/pipelines/multicam_pipeline.cpp
+)
+target_link_libraries (${PROJECT_NAME}_pipeline
+    ${catkin_LIBRARIES}
+    ${OpenCV_LIBRARIES}
+    ${Boost_LIBRARIES}
+    depthai-core
+)
+target_link_libraries (${PROJECT_NAME}_pipeline
+    depthai-core
+)
+# add_dependencies (${PROJECT_NAME}_pipeline ${catkin_EXPORTED_TARGETS})
 
 # add_library (${PROJECT_NAME}_nodelet src/depthai_nodelet.cpp)
 # target_link_libraries (${PROJECT_NAME}_nodelet
 #     ${PROJECT_NAME}_lib
 # )
-# add_executable (${PROJECT_NAME} src/depthai_node.cpp)
-# target_link_libraries (${PROJECT_NAME}
-#     ${PROJECT_NAME}_lib
-# )
+add_executable (${PROJECT_NAME} src/depthai_node.cpp)
+target_link_libraries (${PROJECT_NAME}
+    ${PROJECT_NAME}_lib
+)
 
 add_library(gen2_ros_queue src/dai_utils.cpp)
 target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai-core range-v3)

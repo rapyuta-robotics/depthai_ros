@@ -5,29 +5,18 @@
   <arg name="manager" default="true"/>
   <arg name="manager_name" default="$(arg ns)_manager"/>
 
-  <arg name="queue_size" default="1"/>
-
   <arg name="camera_name" default="bw1097"/>
   <arg name="camera_param_uri" default="package://depthai_ros_driver/params/camera/"
     doc="Location of parameters is {camera_param_uri}/{camera_name}/{stream}.yaml"/>
+
+  <arg name="pipeline_name" default="depthai_ros_driver/MulticamPipeline"/>
 
   <arg name="cmd_file" default="$(find depthai_ros_driver)/resources/depthai.cmd"/>
   <arg name="calibration_file" default="$(find depthai_ros_driver)/resources/calibration/$(arg camera_name)/depthai.calib"/>
   <arg name="blob_file" default="$(find depthai_ros_driver)/resources/mobilenet_ssd.blob"/>
   <arg name="blob_file_config" default="$(find depthai_ros_driver)/resources/mobilenet-ssd.json"/>
 
-  <arg name="force_usb2" default="false"/>
-  <arg name="sync_video_meta" default="false"/>
-  <arg name="compute_bbox_depth" default="false"/>
-  <arg name="full_fov_nn" default="true"/>
-
-  <arg name="rgb_height" default="1080"/>
-  <arg name="rgb_fps" default="30"/>
-  <arg name="depth_height" default="720"/>
-  <arg name="depth_fps" default="30"/>
-  <arg name="shaves" default="14"/>
-  <arg name="cmx_slices" default="14"/>
-  <arg name="nn_engines" default="2"/>
+  <arg name="config_file" default="$(find depthai_ros_driver)/params/depthai_node.yaml"/>
 
   <!--
   Possible streams:
@@ -53,28 +42,17 @@
     <!-- Launch the Depthai nodelet on the requested manager -->
     <node pkg="nodelet" type="nodelet" name="$(arg node_name)" args="load depthai_ros_driver/DepthAI $(arg manager_name)">
       <param name="camera_name" value="$(arg camera_name)"/>
+      <param name="camera_param_uri" value="$(arg camera_param_uri)"/>
+
+      <param name="pipeline_name" value="$(arg pipeline_name)"/>
 
       <param name="cmd_file" value="$(arg cmd_file)"/>
       <param name="calibration_file" value="$(arg calibration_file)"/>
       <param name="blob_file" value="$(arg blob_file)"/>
       <param name="blob_file_config" value="$(arg blob_file_config)"/>
+
+      <rosparam file="$(arg config_file)" command="load"/>
       <rosparam param="stream_list" subst_value="True">$(arg stream_list)</rosparam>
-
-      <param name="sync_video_meta" value="$(arg sync_video_meta)"/>
-      <param name="compute_bbox_depth" value="$(arg compute_bbox_depth)"/>
-      <param name="full_fov_nn" value="$(arg full_fov_nn)"/>
-      <param name="force_usb2" value="$(arg force_usb2)"/>
-
-      <param name="depth_fps" value="$(arg depth_fps)"/>
-      <param name="depth_height" value="$(arg depth_height)"/>
-      <param name="rgb_fps" value="$(arg rgb_fps)"/>
-      <param name="rgb_height" value="$(arg rgb_height)"/>
-
-      <param name="shaves" value="$(arg shaves)"/>
-      <param name="cmx_slices" value="$(arg cmx_slices)"/>
-      <param name="nn_engines" value="$(arg nn_engines)"/>
-
-      <param name="queue_size" value="$(arg queue_size)"/>
     </node>
   </group>
 

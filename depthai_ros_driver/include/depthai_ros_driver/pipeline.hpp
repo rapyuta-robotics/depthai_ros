@@ -7,6 +7,7 @@
 #include <depthai/pipeline/Node.hpp>
 #include <depthai/pipeline/Pipeline.hpp>
 
+
 namespace rr {
 class Pipeline {
 protected:
