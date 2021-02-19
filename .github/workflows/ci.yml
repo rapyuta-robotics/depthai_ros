@@ -60,6 +60,7 @@ jobs:
     - name: 'Build and install'
       shell: bash
       run: |
+        export PYTHONIOENCODING=utf8  # from github.com/docker/compose/issues/2576
         source /opt/ros/*/setup.bash
         cd catkin_ws
         catkin_make_isolated --install
