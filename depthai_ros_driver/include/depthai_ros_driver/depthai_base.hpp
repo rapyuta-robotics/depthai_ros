@@ -40,6 +40,8 @@
 #include <depthai_ros_driver/pipeline.hpp>
 
 namespace rr {
+using ImageFramePtr = std::shared_ptr<dai::ImgFrame>;
+using ImageFrameConstPtr = std::shared_ptr<dai::ImgFrame const>;
 
 template <class Node>
 class DepthAIBase : public Node {
@@ -130,7 +132,7 @@ private:
     std::vector<std::string> _stream_list = {"video", "left", "depth"};
 
     ros::Time _stamp;
-    double _depthai_ts_offset = -1;  // sadly, we don't have a way of measuring drift
+    // double _depthai_ts_offset = -1;  // sadly, we don't have a way of measuring drift
 
     std::map<std::string, int> _nn2depth_map;
     // std::list<std::shared_ptr<NNetPacket>> _nnet_packet;
@@ -143,7 +145,7 @@ private:
     void afCtrlCb(const depthai_ros_msgs::AutoFocusCtrl msg);
     void disparityConfCb(const std_msgs::Float32::ConstPtr& msg);
 
-    // void publishImageMsg(const HostDataPacket& packet, Stream type, const ros::Time& stamp);
+    void publishImageMsg(ImageFramePtr frame, Stream type, const std::string& stream_name, ros::Time& stamp);
     // void publishObjectInfoMsg(const dai::Detections& detections, const ros::Time& stamp);
     void publishCameraInfo(ros::Time stamp);
 

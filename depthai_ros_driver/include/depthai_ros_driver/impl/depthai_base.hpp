@@ -10,6 +10,8 @@
 
 
 namespace rr {
+
+
 template <class Node>
 void DepthAIBase<Node>::disparityConfCb(const std_msgs::Float32::ConstPtr& msg) {
     if ((msg->data >= 0.0) && (msg->data <= 255.0)) {
@@ -62,93 +64,100 @@ void DepthAIBase<Node>::afCtrlCb(const depthai_ros_msgs::AutoFocusCtrl msg) {
 //     pubPtr->publish(msg);
 // }
 
-// template <class Node>
-// void DepthAIBase<Node>::publishImageMsg(const HostDataPacket& packet, Stream type, const ros::Time& stamp) {
-//     const auto* camInfoPubPtr = _camera_info_publishers[type].get();
-//     const auto* pubPtr = _stream_publishers[type].get();
+template <class Node>
+void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, const std::string& stream_name, ros::Time& stamp) {
 
-//     std_msgs::Header header;
-//     header.stamp = stamp;
-//     header.frame_id = packet.stream_name;
+    const auto* camInfoPubPtr = _camera_info_publishers[type].get();
+    const auto* pubPtr = _stream_publishers[type].get();
 
-//     if (camInfoPubPtr->getNumSubscribers() > 0) {
-//         const auto cameraInfo =
-//                 boost::make_shared<sensor_msgs::CameraInfo>(_camera_info_manager[type]->getCameraInfo());
-//         cameraInfo->header = header;
-//         camInfoPubPtr->publish(cameraInfo);
-//     }
+    // https://answers.ros.org/question/336045/how-to-convert-a-stdchronohigh_resolution_clock-to-rostime/
+    // const auto& tstamp = frame->getTimestamp();
+    // int32_t sec = std::chrono::duration_cast<std::chrono::seconds>(tstamp - start).count();
+    // int32_t nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(tstamp - start).count() % 1000000000UL;
+    // ros::Time stamp(sec, nsec);
 
-//     if (pubPtr == nullptr || pubPtr->getNumSubscribers() <= 0) {
-//         return;  // No subscribers
-//     }
+    std_msgs::Header header;
+    header.stamp = stamp;
+    header.frame_id = stream_name;
 
-//     cv_bridge::CvImage cvImg;
-//     cvImg.header = std::move(header);
-//     std::string encoding = "";
+    if (camInfoPubPtr->getNumSubscribers() > 0) {
+        const auto cameraInfo =
+                boost::make_shared<sensor_msgs::CameraInfo>(_camera_info_manager[type]->getCameraInfo());
+        cameraInfo->header = header;
+        camInfoPubPtr->publish(cameraInfo);
+    }
 
-//     const int rows = packet.dimensions[0];
-//     const int cols = packet.dimensions[1];
+    if (pubPtr == nullptr || pubPtr->getNumSubscribers() <= 0) {
+        return;  // No subscribers
+    }
 
-//     // cv::Mat needs `void *` not `const void *`
-//     auto* data = const_cast<uint8_t*>(packet.getData());
+    cv_bridge::CvImage cvImg;
+    cvImg.header = std::move(header);
+    std::string encoding = "";
 
-//     switch (type) {
-//         case Stream::LEFT:
-//         case Stream::RIGHT:
-//         case Stream::DISPARITY:
-//             cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
-//             encoding = "mono8";
-//             break;
-//         case Stream::PREVIEW_OUT: {
-//             std::vector<cv::Mat> toMerge(3);
-//             const auto offset = cols * cols;
-//             for (int i = 0; i < 3; ++i) {
-//                 toMerge[i] = cv::Mat(cols, cols, CV_8UC1, data + i * offset);
-//             }
-//             cv::merge(toMerge, cvImg.image);
-//             encoding = "bgr8";
-//             break;
-//         }
-//         case Stream::JPEG_OUT:
-//         case Stream::VIDEO: {
-//             const auto img = boost::make_shared<sensor_msgs::CompressedImage>();
-//             img->header = std::move(cvImg.header);
-//             img->format = "jpeg";
-//             img->data.assign(packet.data->cbegin(), packet.data->cend());
-//             pubPtr->publish(img);
-//             return;
-//         }
-//         case Stream::DEPTH:
-//         case Stream::DISPARITY_COLOR: {
-//             const int ndim = packet.dimensions.size();
-//             const int elemSize = packet.elem_size;
+    const int rows = frame->getWidth();
+    const int cols = frame->getHeight();
 
-//             if (ndim == 2) {
-//                 if (elemSize == 1) {
-//                     cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
-//                     encoding = "mono8";
-//                 } else {  // depth
-//                     cv::Mat bgrImg;
-//                     cv::Mat monoImg(rows, cols, CV_8UC1, data);
-//                     cv::applyColorMap(monoImg, bgrImg, cv::COLORMAP_HOT);
-//                     // cv::applyColorMap(monoImg, bgrImg, cv::COLORMAP_JET);
-//                     cvImg.image = bgrImg;
-//                     encoding = "bgr8";
-//                 }
-//             } else {  // disparity_color
-//                 cvImg.image = cv::Mat(rows, cols, CV_8UC3, data);
-//                 encoding = "bgr8";
-//             }
-//             break;
-//         }
-//         default:  // should be unreachable
-//             return;
-//     }
+    // cv::Mat needs `void *` not `const void *`
+    auto* data = const_cast<uint8_t*>(frame->getData().data());
 
-//     const sensor_msgs::ImagePtr msg = cvImg.toImageMsg();
-//     msg->encoding = encoding;
-//     pubPtr->publish(msg);
-// }
+    switch (type) {
+        case Stream::LEFT:
+        case Stream::RIGHT:
+        case Stream::DISPARITY:
+            cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
+            encoding = "mono8";
+            break;
+        case Stream::PREVIEW_OUT: {
+            std::vector<cv::Mat> toMerge(3);
+            const auto offset = cols * cols;
+            for (int i = 0; i < 3; ++i) {
+                toMerge[i] = cv::Mat(cols, cols, CV_8UC1, data + i * offset);
+            }
+            cv::merge(toMerge, cvImg.image);
+            encoding = "bgr8";
+            break;
+        }
+        case Stream::JPEG_OUT:
+        case Stream::VIDEO: {
+            const auto img = boost::make_shared<sensor_msgs::CompressedImage>();
+            img->header = std::move(cvImg.header);
+            img->format = "jpeg";
+            img->data = frame->getData();
+            pubPtr->publish(img);
+            return;
+        }
+        case Stream::DEPTH:
+        case Stream::DISPARITY_COLOR: {
+            const int ndim = 2; // packet.dimensions.size();
+            const int elemSize = 1; // packet.elem_size;  <- subpixel
+
+            if (ndim == 2) {
+                if (elemSize == 1) {
+                    cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
+                    encoding = "mono8";
+                } else {  // depth
+                    cv::Mat bgrImg;
+                    cv::Mat monoImg(rows, cols, CV_8UC1, data);
+                    cv::applyColorMap(monoImg, bgrImg, cv::COLORMAP_HOT);
+                    // cv::applyColorMap(monoImg, bgrImg, cv::COLORMAP_JET);
+                    cvImg.image = bgrImg;
+                    encoding = "bgr8";
+                }
+            } else {  // disparity_color  <- ??
+                cvImg.image = cv::Mat(rows, cols, CV_8UC3, data);
+                encoding = "bgr8";
+            }
+            break;
+        }
+        default:  // should be unreachable
+            return;
+    }
+
+    const sensor_msgs::ImagePtr msg = cvImg.toImageMsg();
+    msg->encoding = encoding;
+    pubPtr->publish(msg);
+}
 
 template <class Node>
 void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
@@ -160,19 +169,42 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
     //     tie(_nnet_packet, _data_packet) = _pipeline->getAvailableNNetAndDataPackets(_depthai_block_read);
     // }
 
+    ros::Time stamp = ros::Time::now();
+    // auto get_ts = [&](double camera_ts) {
+    //     if (_depthai_ts_offset == -1) {
+    //         _depthai_ts_offset = camera_ts;
+    //         _stamp = stamp;
+    //     }
+    //     return _stamp + ros::Duration(camera_ts - _depthai_ts_offset);
+    // };
+
     const auto& imgFrame = _data_output_queue["preview"]->get<dai::ImgFrame>();
     const auto& dispFrame = _data_output_queue["disparity"]->get<dai::ImgFrame>();
 
+    // if (_nnet_packet.size() != 0) {
+    //     for (const std::shared_ptr<NNetPacket>& packet : _nnet_packet) {
+    //         auto detections = packet->getDetectedObjects();
+    //         if (detections == nullptr) {
+    //             continue;
+    //         }
+    //         auto meta_data = packet->getMetadata();
+    //         const auto seq_num = meta_data->getSequenceNum();
+    //         const auto ts = meta_data->getTimestamp();
+    //         const auto sync_ts = get_ts(ts);
+    //         ROS_DEBUG_NAMED(this->getName(), "Stream: metaout, Original TS: %f, SeqNum: %d, Synced TS: %f", ts, seq_num,
+    //                 sync_ts.toSec());
+    //         publishObjectInfoMsg(*detections.get(), sync_ts);
+    //     }
+    // }
+
     if(imgFrame){
-        // printf("Frame - w: %d, h: %d\n", imgFrame->getWidth(), imgFrame->getHeight());
-        cv::Mat frame = cv::Mat(imgFrame->getHeight(), imgFrame->getWidth(), CV_8UC3, imgFrame->getData().data());
-        cv::imshow("preview", frame);
-        int key = cv::waitKey(1);
-        if (key == 'q'){
-            return;
-        }
-    } else {
-        std::cout << "Not ImgFrame" << std::endl;
+        publishImageMsg(imgFrame, Stream::PREVIEW_OUT, "previewout", stamp);
+        // cv::Mat frame = cv::Mat(imgFrame->getHeight(), imgFrame->getWidth(), CV_8UC3, imgFrame->getData().data());
+        // cv::imshow("preview", frame);
+        // int key = cv::waitKey(1);
+        // if (key == 'q'){
+        //     return;
+        // }
     }
 
     if(dispFrame){
@@ -194,32 +226,6 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
     } else {
         std::cout << "Not DepthFrame" << std::endl;
     }
-
-
-    // ros::Time stamp = ros::Time::now();
-    // auto get_ts = [&](double camera_ts) {
-    //     if (_depthai_ts_offset == -1) {
-    //         _depthai_ts_offset = camera_ts;
-    //         _stamp = stamp;
-    //     }
-    //     return _stamp + ros::Duration(camera_ts - _depthai_ts_offset);
-    // };
-
-    // if (_nnet_packet.size() != 0) {
-    //     for (const std::shared_ptr<NNetPacket>& packet : _nnet_packet) {
-    //         auto detections = packet->getDetectedObjects();
-    //         if (detections == nullptr) {
-    //             continue;
-    //         }
-    //         auto meta_data = packet->getMetadata();
-    //         const auto seq_num = meta_data->getSequenceNum();
-    //         const auto ts = meta_data->getTimestamp();
-    //         const auto sync_ts = get_ts(ts);
-    //         ROS_DEBUG_NAMED(this->getName(), "Stream: metaout, Original TS: %f, SeqNum: %d, Synced TS: %f", ts, seq_num,
-    //                 sync_ts.toSec());
-    //         publishObjectInfoMsg(*detections.get(), sync_ts);
-    //     }
-    // }
 
     // if (_data_packet.size() != 0) {
     //     for (const std::shared_ptr<HostDataPacket>& packet : _data_packet) {
