@@ -160,8 +160,9 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
     //     tie(_nnet_packet, _data_packet) = _pipeline->getAvailableNNetAndDataPackets(_depthai_block_read);
     // }
 
-    const auto& data_output_queue = _stereo_pipeline->getDataOutputQueue();
-    const auto& imgFrame = data_output_queue->get<dai::ImgFrame>();
+    const auto& imgFrame = _data_output_queue["preview"]->get<dai::ImgFrame>();
+    const auto& dispFrame = _data_output_queue["disparity"]->get<dai::ImgFrame>();
+
     if(imgFrame){
         // printf("Frame - w: %d, h: %d\n", imgFrame->getWidth(), imgFrame->getHeight());
         cv::Mat frame = cv::Mat(imgFrame->getHeight(), imgFrame->getWidth(), CV_8UC3, imgFrame->getData().data());
@@ -173,6 +174,27 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
     } else {
         std::cout << "Not ImgFrame" << std::endl;
     }
+
+    if(dispFrame){
+        static int count = 0;
+        constexpr bool subpixel = false;
+        constexpr int maxDisp = 96;
+
+        cv::Mat disp(dispFrame->getHeight(), dispFrame->getWidth(),
+                subpixel ? CV_16UC1 : CV_8UC1, dispFrame->getData().data());
+        disp.convertTo(disp, CV_8UC1, 255.0 / maxDisp); // Extend disparity range
+        cv::imshow("disparity", disp);
+        cv::waitKey(1);
+        std::cout << "disparity " << count << std::endl;
+        count++;
+
+        // if (key == 'q'){
+        //     return;
+        // }
+    } else {
+        std::cout << "Not DepthFrame" << std::endl;
+    }
+
 
     // ros::Time stamp = ros::Time::now();
     // auto get_ts = [&](double camera_ts) {
@@ -309,12 +331,42 @@ void DepthAIBase<Node>::onInit() {
     try {
         _stereo_pipeline = pipeline_loader.createInstance(plugin_name);
         _stereo_pipeline->configure();
+
     }
     catch(pluginlib::PluginlibException &ex) {
         ROS_ERROR("failed to load the plugin. Error: %s", ex.what());
     }
 
     _pipeline = _stereo_pipeline->getPipeline();
+
+    const auto cameras = _stereo_pipeline->getCameras();
+    for (const auto cam: cameras) {
+        ROS_INFO("camera");
+        std::cout << "    " << cam->getName() << ": " << cam->id << std::endl;
+        // const auto outputs = cam->getOutputs();
+        // for (const auto& out: outputs) {
+        //     std::cout << "    out" << std::endl;
+        //     for (const auto& con: out.getConnections()) {
+        //         std::cout << "        " << con.inputName << ", " << con.outputName << std::endl;
+        //     }
+        // }
+    }
+
+    // device init
+    _depthai = std::make_unique<dai::Device>(_pipeline);
+    _depthai->startPipeline();
+
+    _data_output_queue["preview"] = _depthai->getOutputQueue("preview");
+    _data_output_queue["disparity"] = _depthai->getOutputQueue("disparity", 8, false);
+
+    // _available_streams = _depthai->get_available_streams();
+    // _nn2depth_map = _depthai->get_nn_to_depth_bbox_mapping();
+
+    // for (const auto& stream : _available_streams) {
+    //     std::cout << "Available Streams: " << stream << std::endl;
+    // }
+
+    // _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
 
     _cameraReadTimer = nh.createTimer(ros::Duration(1. / 500), &DepthAIBase::cameraReadCb, this);
 }

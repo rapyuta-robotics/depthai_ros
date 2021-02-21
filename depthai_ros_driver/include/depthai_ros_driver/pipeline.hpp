@@ -10,17 +10,8 @@
 
 namespace rr {
 class Pipeline {
-protected: // delete
-    std::shared_ptr<dai::DataOutputQueue> _data_output_queue; // delete
-public: // delete
-    const std::shared_ptr<dai::DataOutputQueue>& getDataOutputQueue() const { return _data_output_queue; };
-
-
-
 protected:
     dai::Pipeline _pipeline;
-
-    std::unique_ptr<dai::Device> _depthai;
 
 public:
     using NodeConstPtr = std::shared_ptr<const dai::Node>;

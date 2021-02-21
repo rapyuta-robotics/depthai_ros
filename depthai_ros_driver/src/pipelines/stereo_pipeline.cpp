@@ -4,10 +4,16 @@
 #include <depthai_ros_driver/pipeline.hpp>
 
 #include <depthai/pipeline/node/ColorCamera.hpp>
+#include <depthai/pipeline/node/DetectionNetwork.hpp>
+#include <depthai/pipeline/node/ImageManip.hpp>
 #include <depthai/pipeline/node/MonoCamera.hpp>
+#include <depthai/pipeline/node/NeuralNetwork.hpp>
+#include <depthai/pipeline/node/SPIOut.hpp>
+#include <depthai/pipeline/node/StereoDepth.hpp>
+#include <depthai/pipeline/node/SystemLogger.hpp>
+#include <depthai/pipeline/node/VideoEncoder.hpp>
 #include <depthai/pipeline/node/XLinkIn.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
-
 
 namespace depthai_ros_driver
 {
@@ -21,31 +27,90 @@ protected:
     void onConfigure() {
         // _pipeline = _depthai->create_pipeline(_pipeline_config_json);
 
-        auto colorCam = _pipeline.create<dai::node::ColorCamera>();
-        auto xlinkOut = _pipeline.create<dai::node::XLinkOut>();
-        xlinkOut->setStreamName("preview");
+        bool withDepth = true;
 
+        auto colorCam = _pipeline.create<dai::node::ColorCamera>();
+        auto monoLeft  = _pipeline.create<dai::node::MonoCamera>();
+        auto monoRight = _pipeline.create<dai::node::MonoCamera>();
+        auto stereo    = withDepth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
+
+        auto xoutColor = _pipeline.create<dai::node::XLinkOut>();
+        auto xoutLeft  = _pipeline.create<dai::node::XLinkOut>();
+        auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
+        auto xoutDisp  = _pipeline.create<dai::node::XLinkOut>();
+        auto xoutDepth = _pipeline.create<dai::node::XLinkOut>();
+        auto xoutRectifL = _pipeline.create<dai::node::XLinkOut>();
+        auto xoutRectifR = _pipeline.create<dai::node::XLinkOut>();
+
+        // XLinkOut
+        xoutColor->setStreamName("preview");
+        xoutLeft->setStreamName("left");
+        xoutRight->setStreamName("right");
+        if (withDepth) {
+            xoutDisp->setStreamName("disparity");
+            xoutDepth->setStreamName("depth");
+            xoutRectifL->setStreamName("rectified_left");
+            xoutRectifR->setStreamName("rectified_right");
+        }
+
+        // Color camera
         colorCam->setPreviewSize(300, 300);
         colorCam->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
         colorCam->setInterleaved(true);
 
-        // Link plugins CAM -> XLINK
-        colorCam->preview.link(xlinkOut->input);
+        colorCam->preview.link(xoutColor->input);
 
-        // device init
-        _depthai = std::make_unique<dai::Device>(_pipeline);
+        // MonoCamera
+        monoLeft->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
+        monoLeft->setBoardSocket(dai::CameraBoardSocket::LEFT);
+        //monoLeft->setFps(5.0);
+        monoRight->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
+        monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
+        //monoRight->setFps(5.0);
 
-        _depthai->startPipeline();
-        _data_output_queue = _depthai->getOutputQueue("preview");
+        bool outputDepth = false;
+        bool outputRectified = true;
+        bool lrcheck  = false;
+        bool extended = false;
+        bool subpixel = false;
 
-        // _available_streams = _depthai->get_available_streams();
-        // _nn2depth_map = _depthai->get_nn_to_depth_bbox_mapping();
+        int maxDisp = 96;
+        if (extended) maxDisp *= 2;
+        if (subpixel) maxDisp *= 32; // 5 bits fractional disparity
 
-        // for (const auto& stream : _available_streams) {
-        //     std::cout << "Available Streams: " << stream << std::endl;
-        // }
+        if (withDepth) {
+            // StereoDepth
+            stereo->setOutputDepth(outputDepth);
+            stereo->setOutputRectified(outputRectified);
+            stereo->setConfidenceThreshold(200);
+            stereo->setRectifyEdgeFillColor(0); // black, to better see the cutout
+            //stereo->loadCalibrationFile("../../../../depthai/resources/depthai.calib");
+            //stereo->setInputResolution(1280, 720);
+            // TODO: median filtering is disabled on device with (lrcheck || extended || subpixel)
+            //stereo->setMedianFilter(dai::StereoDepthProperties::MedianFilter::MEDIAN_OFF);
+            stereo->setLeftRightCheck(lrcheck);
+            stereo->setExtendedDisparity(extended);
+            stereo->setSubpixel(subpixel);
 
-        // _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
+            // Link plugins CAM -> STEREO -> XLINK
+            monoLeft->out.link(stereo->left);
+            monoRight->out.link(stereo->right);
+
+            stereo->syncedLeft.link(xoutLeft->input);
+            stereo->syncedRight.link(xoutRight->input);
+            if(outputRectified)
+            {
+                stereo->rectifiedLeft.link(xoutRectifL->input);
+                stereo->rectifiedRight.link(xoutRectifR->input);
+            }
+            stereo->disparity.link(xoutDisp->input);
+            stereo->depth.link(xoutDepth->input);
+
+        } else {
+            // Link plugins CAM -> XLINK
+            monoLeft->out.link(xoutLeft->input);
+            monoRight->out.link(xoutRight->input);
+        }
 
         ROS_INFO("Stereo pipeline initialized.");
     }
@@ -68,21 +133,21 @@ protected:
     std::vector<NodeConstPtr> getRawOutputs() const { return filterNodesByName({"XLinkOut"}); }
     std::vector<NodeConstPtr> getRawInputs() const { return filterNodesByName({"XLinkIn"}); }
 
-    // /**
-    //  * @brief returns the raw streams exposed by the ROS interface
-    //  */
-    // std::vector<NodeConstPtr> getRawVideoStreams() {
-    //     // camera.{video,preview} is linked with XLinkOut
-    //     const auto& cameras = getCameras();
-    //     const auto& outputNodes = getRawOutputs();
-    //     for (const auto& kv : getPipeline().getConnectionMap()) {
-    //         // filter connections with:
-    //         // input == {video, preview}
-    //         // no link with VideoEncoder
-    //         // link with XLinkOut
-    //     }
-    //     return {};
-    // }
+    /**
+     * @brief returns the raw streams exposed by the ROS interface
+     */
+    std::vector<NodeConstPtr> getRawVideoStreams() {
+        // camera.{video,preview} is linked with XLinkOut
+        const auto& cameras = getCameras();
+        const auto& outputNodes = getRawOutputs();
+        for (const auto& kv : getPipeline().getConnectionMap()) {
+            // filter connections with:
+            // input == {video, preview}
+            // no link with VideoEncoder
+            // link with XLinkOut
+        }
+        return {};
+    }
 
     /**
      * @brief returns the compressed streams exposed by the ROS interface
@@ -105,28 +170,6 @@ protected:
     std::vector<NodeConstPtr> getTensorOutStreams(){
 
     };
-
-    /**
-     * @brief filters the nodes in the pipeline based on requested node types
-     *
-     * @tparam Range an iterable of objects capable of holding a name,
-     * eg: std::vector<std::string> or std::array<std::string>
-     * @param node_names list of names to select
-     * @return std::vector<Pipeline::NodeConstPtr> newly created vector with the requested nodes
-     */
-    template <class Range = std::vector<std::string>>
-    std::vector<NodeConstPtr> filterNodesByName(Range&& node_names) const {};
-
-    /**
-     * @brief filters out the nodes in the pipeline based on requested node types
-     *
-     * @tparam Range an iterable of objects capable of holding a name,
-     * eg: std::vector<std::string> or std::array<std::string>
-     * @param node_names list of names to not select
-     * @return std::vector<Pipeline::NodeConstPtr> newly created vector with the requested nodes
-     */
-    template <class Range = std::vector<std::string>>
-    std::vector<NodeConstPtr> filterOutNodesByName(Range&& node_names) const {};
 };
 
 PLUGINLIB_EXPORT_CLASS(depthai_ros_driver::StereoPipeline, rr::Pipeline)

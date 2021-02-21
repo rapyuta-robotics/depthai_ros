@@ -84,6 +84,14 @@ private:
 
     boost::shared_ptr<rr::Pipeline> _stereo_pipeline;
 
+    dai::Pipeline _pipeline;
+    std::unique_ptr<dai::Device> _depthai;
+    std::unordered_map<std::string, std::shared_ptr<dai::DataOutputQueue>> _data_output_queue;
+
+
+
+
+
     ros::Publisher _camera_info_pub;
 
     ros::Subscriber _af_ctrl_sub;
@@ -127,7 +135,7 @@ private:
     std::map<std::string, int> _nn2depth_map;
     // std::list<std::shared_ptr<NNetPacket>> _nnet_packet;
     // std::list<std::shared_ptr<HostDataPacket>> _data_packet;
-    dai::Pipeline _pipeline;
+
     std::vector<std::string> _available_streams;
 
     void prepareStreamConfig();
