@@ -93,8 +93,8 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::T
     cvImg.header = std::move(header);
     std::string encoding = "";
 
-    const int rows = frame->getWidth();
-    const int cols = frame->getHeight();
+    const int cols = frame->getWidth();
+    const int rows = frame->getHeight();
 
     // cv::Mat needs `void *` not `const void *`
     auto* data = const_cast<uint8_t*>(frame->getData().data());
@@ -102,7 +102,6 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::T
     switch (type) {
         case Stream::LEFT:
         case Stream::RIGHT:
-        case Stream::DISPARITY:
             cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
             encoding = "mono8";
             break;
@@ -110,14 +109,14 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::T
             cvImg.image = cv::Mat(rows, cols, CV_8UC3, data);
             encoding = "bgr8";
             break;
-        case Stream::JPEG_OUT:
-        case Stream::VIDEO: {
-            const auto img = boost::make_shared<sensor_msgs::CompressedImage>();
-            img->header = std::move(cvImg.header);
-            img->format = "jpeg";
-            img->data = frame->getData();
-            pubPtr->publish(img);
-            return;  // already published CompressedImage
+        case Stream::DISPARITY: {
+            int maxDisp = 96;
+            bool subpixel = false;
+
+            cvImg.image = cv::Mat(rows, cols, subpixel ? CV_16UC1 : CV_8UC1, data);
+            cvImg.image.convertTo(cvImg.image, CV_8UC1, 255.0 / maxDisp); // Extend disparity range
+            encoding = "mono8";
+            break;
         }
         case Stream::DEPTH:
         case Stream::DISPARITY_COLOR: {
@@ -141,6 +140,15 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::T
                 encoding = "bgr8";
             }
             break;
+        }
+        case Stream::JPEG_OUT:
+        case Stream::VIDEO: {
+            const auto img = boost::make_shared<sensor_msgs::CompressedImage>();
+            img->header = std::move(cvImg.header);
+            img->format = "jpeg";
+            img->data = frame->getData();
+            pubPtr->publish(img);
+            return;  // already published CompressedImage
         }
         default:  // should be unreachable
             return;
@@ -180,34 +188,12 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
         const auto& imgFrame = _data_output_queue["preview"]->get<dai::ImgFrame>();
         if(imgFrame){
             publishImageMsg(imgFrame, Stream::PREVIEW_OUT, stamp);
-            // cv::Mat frame = cv::Mat(imgFrame->getHeight(), imgFrame->getWidth(), CV_8UC3, imgFrame->getData().data());
-            // cv::imshow("preview", frame);
-            // int key = cv::waitKey(1);
-            // if (key == 'q'){
-            //     return;
-            // }
         }
     }
     if (has_data_queue("disparity")) {
         const auto& dispFrame = _data_output_queue["disparity"]->get<dai::ImgFrame>();
         if(dispFrame){
-            static int count = 0;
-            constexpr bool subpixel = false;
-            constexpr int maxDisp = 96;
-
-            cv::Mat disp(dispFrame->getHeight(), dispFrame->getWidth(),
-                    subpixel ? CV_16UC1 : CV_8UC1, dispFrame->getData().data());
-            disp.convertTo(disp, CV_8UC1, 255.0 / maxDisp); // Extend disparity range
-            cv::imshow("disparity", disp);
-            cv::waitKey(1);
-            std::cout << "disparity " << count << std::endl;
-            count++;
-
-            // if (key == 'q'){
-            //     return;
-            // }
-        } else {
-            std::cout << "Not DepthFrame" << std::endl;
+            publishImageMsg(dispFrame, Stream::DISPARITY, stamp);
         }
     }
 
