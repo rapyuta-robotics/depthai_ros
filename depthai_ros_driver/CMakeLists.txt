@@ -71,7 +71,11 @@ target_link_libraries (${PROJECT_NAME}_lib
 )
 add_dependencies (${PROJECT_NAME}_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_library (${PROJECT_NAME}_pipeline src/pipeline.cpp src/pipelines/stereo_pipeline.cpp)
+add_library (${PROJECT_NAME}_pipeline
+    src/pipeline.cpp
+    src/pipelines/preview_pipeline.cpp
+    src/pipelines/stereo_pipeline.cpp
+)
 target_link_libraries (${PROJECT_NAME}_pipeline
     ${catkin_LIBRARIES}
     ${OpenCV_LIBRARIES}

@@ -3,7 +3,6 @@
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 
-#include <pluginlib/class_loader.h>
 #include <depthai_ros_driver/pipeline.hpp>
 
 #include <depthai_ros_driver/depthai_base.hpp>
@@ -65,10 +64,7 @@ void DepthAIBase<Node>::afCtrlCb(const depthai_ros_msgs::AutoFocusCtrl msg) {
 // }
 
 template <class Node>
-void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, const std::string& stream_name, ros::Time& stamp) {
-
-    const auto* camInfoPubPtr = _camera_info_publishers[type].get();
-    const auto* pubPtr = _stream_publishers[type].get();
+void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::Time& stamp) {
 
     // https://answers.ros.org/question/336045/how-to-convert-a-stdchronohigh_resolution_clock-to-rostime/
     // const auto& tstamp = frame->getTimestamp();
@@ -78,8 +74,9 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, const 
 
     std_msgs::Header header;
     header.stamp = stamp;
-    header.frame_id = stream_name;
+    header.frame_id = _topic_name[type];
 
+    const auto* camInfoPubPtr = _camera_info_publishers[type].get();
     if (camInfoPubPtr->getNumSubscribers() > 0) {
         const auto cameraInfo =
                 boost::make_shared<sensor_msgs::CameraInfo>(_camera_info_manager[type]->getCameraInfo());
@@ -87,6 +84,7 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, const 
         camInfoPubPtr->publish(cameraInfo);
     }
 
+    const auto* pubPtr = _stream_publishers[type].get();
     if (pubPtr == nullptr || pubPtr->getNumSubscribers() <= 0) {
         return;  // No subscribers
     }
@@ -108,16 +106,10 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, const 
             cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
             encoding = "mono8";
             break;
-        case Stream::PREVIEW_OUT: {
-            std::vector<cv::Mat> toMerge(3);
-            const auto offset = cols * cols;
-            for (int i = 0; i < 3; ++i) {
-                toMerge[i] = cv::Mat(cols, cols, CV_8UC1, data + i * offset);
-            }
-            cv::merge(toMerge, cvImg.image);
+        case Stream::PREVIEW_OUT:
+            cvImg.image = cv::Mat(rows, cols, CV_8UC3, data);
             encoding = "bgr8";
             break;
-        }
         case Stream::JPEG_OUT:
         case Stream::VIDEO: {
             const auto img = boost::make_shared<sensor_msgs::CompressedImage>();
@@ -125,7 +117,7 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, const 
             img->format = "jpeg";
             img->data = frame->getData();
             pubPtr->publish(img);
-            return;
+            return;  // already published CompressedImage
         }
         case Stream::DEPTH:
         case Stream::DISPARITY_COLOR: {
@@ -178,8 +170,46 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
     //     return _stamp + ros::Duration(camera_ts - _depthai_ts_offset);
     // };
 
-    const auto& imgFrame = _data_output_queue["preview"]->get<dai::ImgFrame>();
-    const auto& dispFrame = _data_output_queue["disparity"]->get<dai::ImgFrame>();
+
+    auto has_data_queue = [&] (const std::string& stream_name) {
+        return (_data_output_queue.find(stream_name) != _data_output_queue.end());
+    };
+
+
+    if (has_data_queue("preview")) {
+        const auto& imgFrame = _data_output_queue["preview"]->get<dai::ImgFrame>();
+        if(imgFrame){
+            publishImageMsg(imgFrame, Stream::PREVIEW_OUT, stamp);
+            // cv::Mat frame = cv::Mat(imgFrame->getHeight(), imgFrame->getWidth(), CV_8UC3, imgFrame->getData().data());
+            // cv::imshow("preview", frame);
+            // int key = cv::waitKey(1);
+            // if (key == 'q'){
+            //     return;
+            // }
+        }
+    }
+    if (has_data_queue("disparity")) {
+        const auto& dispFrame = _data_output_queue["disparity"]->get<dai::ImgFrame>();
+        if(dispFrame){
+            static int count = 0;
+            constexpr bool subpixel = false;
+            constexpr int maxDisp = 96;
+
+            cv::Mat disp(dispFrame->getHeight(), dispFrame->getWidth(),
+                    subpixel ? CV_16UC1 : CV_8UC1, dispFrame->getData().data());
+            disp.convertTo(disp, CV_8UC1, 255.0 / maxDisp); // Extend disparity range
+            cv::imshow("disparity", disp);
+            cv::waitKey(1);
+            std::cout << "disparity " << count << std::endl;
+            count++;
+
+            // if (key == 'q'){
+            //     return;
+            // }
+        } else {
+            std::cout << "Not DepthFrame" << std::endl;
+        }
+    }
 
     // if (_nnet_packet.size() != 0) {
     //     for (const std::shared_ptr<NNetPacket>& packet : _nnet_packet) {
@@ -196,36 +226,6 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
     //         publishObjectInfoMsg(*detections.get(), sync_ts);
     //     }
     // }
-
-    if(imgFrame){
-        publishImageMsg(imgFrame, Stream::PREVIEW_OUT, "previewout", stamp);
-        // cv::Mat frame = cv::Mat(imgFrame->getHeight(), imgFrame->getWidth(), CV_8UC3, imgFrame->getData().data());
-        // cv::imshow("preview", frame);
-        // int key = cv::waitKey(1);
-        // if (key == 'q'){
-        //     return;
-        // }
-    }
-
-    if(dispFrame){
-        static int count = 0;
-        constexpr bool subpixel = false;
-        constexpr int maxDisp = 96;
-
-        cv::Mat disp(dispFrame->getHeight(), dispFrame->getWidth(),
-                subpixel ? CV_16UC1 : CV_8UC1, dispFrame->getData().data());
-        disp.convertTo(disp, CV_8UC1, 255.0 / maxDisp); // Extend disparity range
-        cv::imshow("disparity", disp);
-        cv::waitKey(1);
-        std::cout << "disparity " << count << std::endl;
-        count++;
-
-        // if (key == 'q'){
-        //     return;
-        // }
-    } else {
-        std::cout << "Not DepthFrame" << std::endl;
-    }
 
     // if (_data_packet.size() != 0) {
     //     for (const std::shared_ptr<HostDataPacket>& packet : _data_packet) {
@@ -332,38 +332,59 @@ void DepthAIBase<Node>::onInit() {
     prepareStreamConfig();
 
 
-    pluginlib::ClassLoader<rr::Pipeline> pipeline_loader("depthai_ros_driver", "rr::Pipeline");
-    std::string plugin_name = "depthai_ros_driver/StereoPipeline";
-    try {
-        _stereo_pipeline = pipeline_loader.createInstance(plugin_name);
-        _stereo_pipeline->configure();
 
+
+    auto has_stream = [&] (const std::string& stream_name) {
+        const auto itr = std::find(_stream_list.begin(), _stream_list.end(), stream_name);
+        return (itr != _stream_list.end());
+    };
+
+    _pipeline_loader = std::make_unique<pluginlib::ClassLoader<rr::Pipeline>>("depthai_ros_driver", "rr::Pipeline");
+    try {
+
+        std::string plugin_name;
+        if (has_stream("previewout")) {
+            plugin_name = "depthai_ros_driver/PreviewPipeline";
+            ROS_INFO_STREAM("Stream: previewout");
+        } else if  (has_stream("disparity")) {
+            plugin_name = "depthai_ros_driver/StereoPipeline";
+            ROS_INFO_STREAM("Stream: disparity");
+        } else {
+            ROS_ERROR("Unknown stream. Will not load pipeline plugin.");
+        }
+        _pipeline_plugin = _pipeline_loader->createInstance(plugin_name);
+        _pipeline_plugin->configure();
+        _pipeline = _pipeline_plugin->getPipeline();
     }
     catch(pluginlib::PluginlibException &ex) {
         ROS_ERROR("failed to load the plugin. Error: %s", ex.what());
     }
 
-    _pipeline = _stereo_pipeline->getPipeline();
 
-    const auto cameras = _stereo_pipeline->getCameras();
-    for (const auto cam: cameras) {
-        ROS_INFO("camera");
-        std::cout << "    " << cam->getName() << ": " << cam->id << std::endl;
-        // const auto outputs = cam->getOutputs();
-        // for (const auto& out: outputs) {
-        //     std::cout << "    out" << std::endl;
-        //     for (const auto& con: out.getConnections()) {
-        //         std::cout << "        " << con.inputName << ", " << con.outputName << std::endl;
-        //     }
-        // }
-    }
+    // const auto cameras = _pipeline_plugin->getCameras();
+    // for (const auto cam: cameras) {
+    //     ROS_INFO("camera");
+    //     std::cout << "    " << cam->getName() << ": " << cam->id << std::endl;
+    //     // const auto outputs = cam->getOutputs();
+    //     // for (const auto& out: outputs) {
+    //     //     std::cout << "    out" << std::endl;
+    //     //     for (const auto& con: out.getConnections()) {
+    //     //         std::cout << "        " << con.inputName << ", " << con.outputName << std::endl;
+    //     //     }
+    //     // }
+    // }
 
     // device init
     _depthai = std::make_unique<dai::Device>(_pipeline);
     _depthai->startPipeline();
 
-    _data_output_queue["preview"] = _depthai->getOutputQueue("preview");
-    _data_output_queue["disparity"] = _depthai->getOutputQueue("disparity", 8, false);
+
+    if (has_stream("previewout")) {
+        _data_output_queue["preview"] = _depthai->getOutputQueue("preview");
+    } else if  (has_stream("disparity")) {
+        _data_output_queue["disparity"] = _depthai->getOutputQueue("disparity", 8, false);
+    }
+
 
     // _available_streams = _depthai->get_available_streams();
     // _nn2depth_map = _depthai->get_nn_to_depth_bbox_mapping();

@@ -37,6 +37,8 @@
 #include <memory>
 #include <string>
 
+#include <pluginlib/class_loader.h>
+
 #include <depthai_ros_driver/pipeline.hpp>
 
 namespace rr {
@@ -84,7 +86,9 @@ private:
     std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;
     ros::ServiceServer _camera_info_default;
 
-    boost::shared_ptr<rr::Pipeline> _stereo_pipeline;
+    std::unique_ptr<pluginlib::ClassLoader<rr::Pipeline> > _pipeline_loader;
+
+    boost::shared_ptr<rr::Pipeline> _pipeline_plugin;
 
     dai::Pipeline _pipeline;
     std::unique_ptr<dai::Device> _depthai;
@@ -145,7 +149,7 @@ private:
     void afCtrlCb(const depthai_ros_msgs::AutoFocusCtrl msg);
     void disparityConfCb(const std_msgs::Float32::ConstPtr& msg);
 
-    void publishImageMsg(ImageFramePtr frame, Stream type, const std::string& stream_name, ros::Time& stamp);
+    void publishImageMsg(ImageFramePtr frame, Stream type, ros::Time& stamp);
     // void publishObjectInfoMsg(const dai::Detections& detections, const ros::Time& stamp);
     void publishCameraInfo(ros::Time stamp);
 

@@ -3,16 +3,8 @@
 #include <pluginlib/class_list_macros.h>
 #include <depthai_ros_driver/pipeline.hpp>
 
-#include <depthai/pipeline/node/ColorCamera.hpp>
-#include <depthai/pipeline/node/DetectionNetwork.hpp>
-#include <depthai/pipeline/node/ImageManip.hpp>
 #include <depthai/pipeline/node/MonoCamera.hpp>
-#include <depthai/pipeline/node/NeuralNetwork.hpp>
-#include <depthai/pipeline/node/SPIOut.hpp>
 #include <depthai/pipeline/node/StereoDepth.hpp>
-#include <depthai/pipeline/node/SystemLogger.hpp>
-#include <depthai/pipeline/node/VideoEncoder.hpp>
-#include <depthai/pipeline/node/XLinkIn.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 
 namespace depthai_ros_driver
@@ -29,12 +21,10 @@ protected:
 
         bool withDepth = true;
 
-        auto colorCam = _pipeline.create<dai::node::ColorCamera>();
         auto monoLeft  = _pipeline.create<dai::node::MonoCamera>();
         auto monoRight = _pipeline.create<dai::node::MonoCamera>();
         auto stereo    = withDepth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
 
-        auto xoutColor = _pipeline.create<dai::node::XLinkOut>();
         auto xoutLeft  = _pipeline.create<dai::node::XLinkOut>();
         auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
         auto xoutDisp  = _pipeline.create<dai::node::XLinkOut>();
@@ -43,7 +33,6 @@ protected:
         auto xoutRectifR = _pipeline.create<dai::node::XLinkOut>();
 
         // XLinkOut
-        xoutColor->setStreamName("preview");
         xoutLeft->setStreamName("left");
         xoutRight->setStreamName("right");
         if (withDepth) {
@@ -52,13 +41,6 @@ protected:
             xoutRectifL->setStreamName("rectified_left");
             xoutRectifR->setStreamName("rectified_right");
         }
-
-        // Color camera
-        colorCam->setPreviewSize(300, 300);
-        colorCam->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
-        colorCam->setInterleaved(true);
-
-        colorCam->preview.link(xoutColor->input);
 
         // MonoCamera
         monoLeft->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
