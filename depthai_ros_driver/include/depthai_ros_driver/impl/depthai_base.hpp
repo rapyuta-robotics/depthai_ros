@@ -32,36 +32,39 @@ void DepthAIBase<Node>::afCtrlCb(const depthai_ros_msgs::AutoFocusCtrl msg) {
     }
 }
 
-// template <class Node>
-// void DepthAIBase<Node>::publishObjectInfoMsg(const dai::Detections& detections, const ros::Time& stamp) {
-//     const auto* pubPtr = _stream_publishers[Stream::META_OUT].get();
-//     if (pubPtr == nullptr || pubPtr->getNumSubscribers() <= 0) {
-//         return;  // No subscribers
-//     }
+template <class Node>
+void DepthAIBase<Node>::publishObjectInfoMsg(NNDataConstPtr detections, const ros::Time& stamp) {
+    const auto* pubPtr = _stream_publishers[Stream::META_OUT].get();
+    if (pubPtr == nullptr || pubPtr->getNumSubscribers() <= 0) {
+        return;  // No subscribers
+    }
 
-//     depthai_ros_msgs::Object object;
-//     depthai_ros_msgs::Objects msg;
-//     msg.objects.reserve(detections.detection_count);
+    depthai_ros_msgs::Objects msg;
+    msg.header.stamp = stamp;
 
-//     for (int i = 0; i < detections.detection_count; ++i) {
-//         object.label_id = detections.detections[i].label;
-//         object.confidence = detections.detections[i].confidence;
-//         object.bb.x_min = detections.detections[i].x_min;
-//         object.bb.y_min = detections.detections[i].y_min;
-//         object.bb.x_max = detections.detections[i].x_max;
-//         object.bb.y_max = detections.detections[i].y_max;
+    std::vector<float> detData = detections->getFirstLayerFp16();
+    if(detData.size() > 0){
+        int i = 0;
+        while (detData[i * 7] != -1.0f) {
+            depthai_ros_msgs::Object object;
+            object.label_id = detData[i * 7 + 1];
+            object.confidence = detData[i * 7 + 2];
+            object.bb.x_min = detData[i * 7 + 3];
+            object.bb.y_min = detData[i * 7 + 4];
+            object.bb.x_max = detData[i * 7 + 5];
+            object.bb.y_max = detData[i * 7 + 6];
+            // if (_compute_bbox_depth) {
+            //     object.bb.depth_x = detections.detections[i].depth_x;
+            //     object.bb.depth_y = detections.detections[i].depth_y;
+            //     object.bb.depth_z = detections.detections[i].depth_z;
+            // }
+            i++;
+            msg.objects.emplace_back(object);
+        }
+    }
 
-//         if (_compute_bbox_depth) {
-//             object.bb.depth_x = detections.detections[i].depth_x;
-//             object.bb.depth_y = detections.detections[i].depth_y;
-//             object.bb.depth_z = detections.detections[i].depth_z;
-//         }
-//         msg.objects.push_back(object);
-//     }
-
-//     msg.header.stamp = stamp;
-//     pubPtr->publish(msg);
-// }
+    pubPtr->publish(msg);
+}
 
 template <class Node>
 void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::Time& stamp) {
@@ -165,10 +168,6 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
     //     _depthai->request_jpeg();
     // }
 
-    // if (_pipeline != NULL) {
-    //     tie(_nnet_packet, _data_packet) = _pipeline->getAvailableNNetAndDataPackets(_depthai_block_read);
-    // }
-
     ros::Time stamp = ros::Time::now();
     // auto get_ts = [&](double camera_ts) {
     //     if (_depthai_ts_offset == -1) {
@@ -196,22 +195,13 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
             publishImageMsg(dispFrame, Stream::DISPARITY, stamp);
         }
     }
+    if (has_data_queue("detections")) {
+        const auto& detections = _data_output_queue["detections"]->get<dai::NNData>();
+        if(detections) {
+            publishObjectInfoMsg(detections, stamp);
+        }
+    }
 
-    // if (_nnet_packet.size() != 0) {
-    //     for (const std::shared_ptr<NNetPacket>& packet : _nnet_packet) {
-    //         auto detections = packet->getDetectedObjects();
-    //         if (detections == nullptr) {
-    //             continue;
-    //         }
-    //         auto meta_data = packet->getMetadata();
-    //         const auto seq_num = meta_data->getSequenceNum();
-    //         const auto ts = meta_data->getTimestamp();
-    //         const auto sync_ts = get_ts(ts);
-    //         ROS_DEBUG_NAMED(this->getName(), "Stream: metaout, Original TS: %f, SeqNum: %d, Synced TS: %f", ts, seq_num,
-    //                 sync_ts.toSec());
-    //         publishObjectInfoMsg(*detections.get(), sync_ts);
-    //     }
-    // }
 
     // if (_data_packet.size() != 0) {
     //     for (const std::shared_ptr<HostDataPacket>& packet : _data_packet) {
@@ -329,12 +319,15 @@ void DepthAIBase<Node>::onInit() {
     try {
 
         std::string plugin_name;
-        if (has_stream("previewout")) {
+        if (has_stream("previewout") && !has_stream("metaout")) {
             plugin_name = "depthai_ros_driver/PreviewPipeline";
             ROS_INFO_STREAM("Stream: previewout");
-        } else if  (has_stream("disparity")) {
+        } else if (has_stream("disparity")) {
             plugin_name = "depthai_ros_driver/StereoPipeline";
             ROS_INFO_STREAM("Stream: disparity");
+        } else if (has_stream("metaout")) {
+            plugin_name = "depthai_ros_driver/MobilenetSSDPipeline";
+            ROS_INFO_STREAM("Stream: mataout");
         } else {
             ROS_ERROR("Unknown stream. Will not load pipeline plugin.");
         }
@@ -367,8 +360,12 @@ void DepthAIBase<Node>::onInit() {
 
     if (has_stream("previewout")) {
         _data_output_queue["preview"] = _depthai->getOutputQueue("preview");
-    } else if  (has_stream("disparity")) {
+    }
+    if  (has_stream("disparity")) {
         _data_output_queue["disparity"] = _depthai->getOutputQueue("disparity", 8, false);
+    }
+    if (has_stream("metaout")) {
+        _data_output_queue["detections"] = _depthai->getOutputQueue("detections");
     }
 
 

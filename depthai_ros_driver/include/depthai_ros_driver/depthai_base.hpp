@@ -18,6 +18,7 @@
 
 // relevant 3rd party includes
 #include <depthai/depthai.hpp> // to be more modular
+#include <depthai/pipeline/datatype/NNData.hpp>
 #include <depthai/device/DataQueue.hpp>
 #include <depthai/pipeline/Pipeline.hpp>
 
@@ -44,6 +45,10 @@
 namespace rr {
 using ImageFramePtr = std::shared_ptr<dai::ImgFrame>;
 using ImageFrameConstPtr = std::shared_ptr<dai::ImgFrame const>;
+
+using NNDataPtr = std::shared_ptr<dai::NNData>;
+using NNDataConstPtr = std::shared_ptr<dai::NNData const>;
+
 
 template <class Node>
 class DepthAIBase : public Node {
@@ -139,7 +144,6 @@ private:
     // double _depthai_ts_offset = -1;  // sadly, we don't have a way of measuring drift
 
     std::map<std::string, int> _nn2depth_map;
-    // std::list<std::shared_ptr<NNetPacket>> _nnet_packet;
     // std::list<std::shared_ptr<HostDataPacket>> _data_packet;
 
     std::vector<std::string> _available_streams;
@@ -150,7 +154,7 @@ private:
     void disparityConfCb(const std_msgs::Float32::ConstPtr& msg);
 
     void publishImageMsg(ImageFramePtr frame, Stream type, ros::Time& stamp);
-    // void publishObjectInfoMsg(const dai::Detections& detections, const ros::Time& stamp);
+    void publishObjectInfoMsg(const NNDataConstPtr detections, const ros::Time& stamp);
     void publishCameraInfo(ros::Time stamp);
 
     void cameraReadCb(const ros::TimerEvent&);

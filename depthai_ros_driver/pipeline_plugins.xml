@@ -11,4 +11,9 @@
         Pipeline for stereo streams of DepthAI
         </description>
     </class>
+    <class name="depthai_ros_driver/MobilenetSSDPipeline" type="depthai_ros_driver::MobilenetSSDPipeline" base_class_type="rr::Pipeline">
+        <description>
+        Pipeline for Mobilenet SSD streams of DepthAI
+        </description>
+    </class>
 </library>
