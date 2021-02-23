@@ -202,7 +202,6 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
         }
     }
 
-
     // if (_data_packet.size() != 0) {
     //     for (const std::shared_ptr<HostDataPacket>& packet : _data_packet) {
     //         if (packet == nullptr) {
@@ -307,9 +306,6 @@ void DepthAIBase<Node>::onInit() {
 
     prepareStreamConfig();
 
-
-
-
     auto has_stream = [&] (const std::string& stream_name) {
         const auto itr = std::find(_stream_list.begin(), _stream_list.end(), stream_name);
         return (itr != _stream_list.end());
@@ -317,7 +313,6 @@ void DepthAIBase<Node>::onInit() {
 
     _pipeline_loader = std::make_unique<pluginlib::ClassLoader<rr::Pipeline>>("depthai_ros_driver", "rr::Pipeline");
     try {
-
         std::string plugin_name;
         if (has_stream("previewout") && !has_stream("metaout")) {
             plugin_name = "depthai_ros_driver/PreviewPipeline";
@@ -338,7 +333,6 @@ void DepthAIBase<Node>::onInit() {
     catch(pluginlib::PluginlibException &ex) {
         ROS_ERROR("failed to load the plugin. Error: %s", ex.what());
     }
-
 
     // const auto cameras = _pipeline_plugin->getCameras();
     // for (const auto cam: cameras) {
@@ -368,14 +362,6 @@ void DepthAIBase<Node>::onInit() {
         _data_output_queue["detections"] = _depthai->getOutputQueue("detections");
     }
 
-
-    // _available_streams = _depthai->get_available_streams();
-    // _nn2depth_map = _depthai->get_nn_to_depth_bbox_mapping();
-
-    // for (const auto& stream : _available_streams) {
-    //     std::cout << "Available Streams: " << stream << std::endl;
-    // }
-
     // _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
 
     _cameraReadTimer = nh.createTimer(ros::Duration(1. / 500), &DepthAIBase::cameraReadCb, this);
@@ -385,8 +371,6 @@ template <class Node>
 void DepthAIBase<Node>::prepareStreamConfig() {
     boost::property_tree::ptree root, streams, depth, ai, board_config, camera, camera_rgb, camera_mono, video_config,
             app, ot;
-    std::regex reg("\"(null|true|false|[0-9]+(\\.[0-9]+)?)\"");
-    std::ostringstream oss;
     _request_jpegout = false;
 
     auto& nh = this->getNodeHandle();
@@ -494,9 +478,12 @@ void DepthAIBase<Node>::prepareStreamConfig() {
     root.add_child("video_config", video_config);
     root.add_child("app", app);
 
+    std::regex reg("\"(null|true|false|[0-9]+(\\.[0-9]+)?)\"");
+    std::ostringstream oss;
     boost::property_tree::write_json(oss, root);
     _pipeline_config_json = std::regex_replace(oss.str(), reg, "$1");
 
+    // Control
     _af_ctrl_sub = nh.subscribe("auto_focus_ctrl", _queue_size, &DepthAIBase::afCtrlCb, this);
     _disparity_conf_sub = nh.subscribe("disparity_confidence", _queue_size, &DepthAIBase::disparityConfCb, this);
 }

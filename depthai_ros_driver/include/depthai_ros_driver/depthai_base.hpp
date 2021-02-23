@@ -143,10 +143,7 @@ private:
     ros::Time _stamp;
     // double _depthai_ts_offset = -1;  // sadly, we don't have a way of measuring drift
 
-    std::map<std::string, int> _nn2depth_map;
     // std::list<std::shared_ptr<HostDataPacket>> _data_packet;
-
-    std::vector<std::string> _available_streams;
 
     void prepareStreamConfig();
 
