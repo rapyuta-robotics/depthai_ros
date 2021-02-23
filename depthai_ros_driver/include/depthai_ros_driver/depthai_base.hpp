@@ -132,6 +132,10 @@ private:
     int _depth_height = 720;
     int _depth_fps = 30;
 
+    int _maxDisp;
+    bool _extended_disparity = false;
+    bool _subpixel = false;
+
     int _shaves = 14;
     int _cmx_slices = 14;
     int _nn_engines = 2;

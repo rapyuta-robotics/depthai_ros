@@ -17,8 +17,6 @@ protected:
      * @brief Default implementation for configure step, does nothing
      */
     void onConfigure() {
-        // _pipeline = _depthai->create_pipeline(_pipeline_config_json);
-
         bool withDepth = true;
 
         auto monoLeft  = _pipeline.create<dai::node::MonoCamera>();

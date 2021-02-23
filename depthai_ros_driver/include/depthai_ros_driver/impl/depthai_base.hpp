@@ -113,11 +113,8 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::T
             encoding = "bgr8";
             break;
         case Stream::DISPARITY: {
-            int maxDisp = 96;
-            bool subpixel = false;
-
-            cvImg.image = cv::Mat(rows, cols, subpixel ? CV_16UC1 : CV_8UC1, data);
-            cvImg.image.convertTo(cvImg.image, CV_8UC1, 255.0 / maxDisp); // Extend disparity range
+            cvImg.image = cv::Mat(rows, cols, _subpixel ? CV_16UC1 : CV_8UC1, data);
+            cvImg.image.convertTo(cvImg.image, CV_8UC1, 255.0 / _maxDisp); // Extend disparity range
             encoding = "mono8";
             break;
         }
@@ -294,6 +291,10 @@ void DepthAIBase<Node>::onInit() {
     get_param(nh, int{}, "rgb_fps", _rgb_fps);
     get_param(nh, int{}, "depth_height", _depth_height);
     get_param(nh, int{}, "depth_fps", _depth_fps);
+
+    get_param(nh, bool{}, "extended_disparity", _extended_disparity);
+    get_param(nh, bool{}, "subpixel", _subpixel);
+
     get_param(nh, int{}, "shaves", _shaves);
     get_param(nh, int{}, "cmx_slices", _cmx_slices);
     get_param(nh, int{}, "nn_engines", _nn_engines);
@@ -304,17 +305,26 @@ void DepthAIBase<Node>::onInit() {
         _camera_param_uri += "/";
     }
 
+    // set unsupported flags
     _request_jpegout = false;
 
-    prepareStreamConfig();
+    // disparity mode
+    _maxDisp = 96;
+    if (_extended_disparity) _maxDisp *= 2;
+    if (_subpixel) _maxDisp *= 32; // 5 bits fractional disparity
 
+    // generate config json
     _pipeline_config_json = generatePipelineConfigJson();
+
+    // Prepare streams (pub, sub, etc)
+    prepareStreamConfig();
 
     auto has_stream = [&] (const std::string& stream_name) {
         const auto itr = std::find(_stream_list.begin(), _stream_list.end(), stream_name);
         return (itr != _stream_list.end());
     };
 
+    // Start pipeline
     _pipeline_loader = std::make_unique<pluginlib::ClassLoader<rr::Pipeline>>("depthai_ros_driver", "rr::Pipeline");
     try {
         std::string plugin_name;
@@ -449,6 +459,8 @@ std::string DepthAIBase<Node>::generatePipelineConfigJson() const {
 
     depth.put<std::string>("calibration_file", _calib_file);
     depth.put("padding_factor", 0.3f);
+    depth.put("extended", _extended_disparity);
+    depth.put("subpixel", _subpixel);
 
     ai.put("blob_file", _blob_file);
     ai.put("blob_file_config", _blob_file_config);

@@ -25,6 +25,10 @@
   <arg name="rgb_fps" default="30"/>
   <arg name="depth_height" default="720"/>
   <arg name="depth_fps" default="30"/>
+
+  <arg name="extended_disparity" default="false"/>
+  <arg name="subpixel" default="false"/>
+
   <arg name="shaves" default="14"/>
   <arg name="cmx_slices" default="14"/>
   <arg name="nn_engines" default="2"/>
@@ -69,6 +73,9 @@
       <param name="depth_height" value="$(arg depth_height)"/>
       <param name="rgb_fps" value="$(arg rgb_fps)"/>
       <param name="rgb_height" value="$(arg rgb_height)"/>
+
+      <param name="extended_disparity" value="$(arg extended_disparity)"/>
+      <param name="subpixel" value="$(arg subpixel)"/>
 
       <param name="shaves" value="$(arg shaves)"/>
       <param name="cmx_slices" value="$(arg cmx_slices)"/>

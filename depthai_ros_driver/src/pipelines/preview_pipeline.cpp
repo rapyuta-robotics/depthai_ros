@@ -16,8 +16,6 @@ protected:
      * @brief Default implementation for configure step, does nothing
      */
     void onConfigure() {
-        // _pipeline = _depthai->create_pipeline(_pipeline_config_json);
-
         auto colorCam = _pipeline.create<dai::node::ColorCamera>();
         auto xoutColor = _pipeline.create<dai::node::XLinkOut>();
 
