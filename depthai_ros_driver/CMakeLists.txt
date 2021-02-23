@@ -40,7 +40,7 @@ add_subdirectory (${DEPTHAI_CORE} depthai-core)
 
 catkin_package (
     INCLUDE_DIRS include
-    LIBRARIES ${PACKAGE_NAME}_nodelet
+    LIBRARIES ${PROJECT_NAME}_nodelet
     CATKIN_DEPENDS camera_info_manager cv_bridge image_transport nodelet roscpp sensor_msgs node_interface
     DEPENDS Boost
 )
