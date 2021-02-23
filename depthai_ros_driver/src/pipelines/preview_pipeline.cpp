@@ -40,19 +40,6 @@ protected:
     dai::Pipeline onGetPipeline() const {};
 
     /**
-     * @brief Get the list of names used for different camera node types
-     * @note Please note that the list is of node types, not the names provided to the individual nodes
-     * @details By default, it provides the 2 cameras in depthai-core: "{Mono,Color}Camera"
-     * The names should be the same as the return value of `dai::Node::getName()`
-     * @return std::vector<std::string> vector of node types
-     */
-    std::vector<std::string> getCameraNodeNames() const { return {"MonoCamera", "ColorCamera"}; }
-
-    /////////////////////
-    std::vector<NodeConstPtr> getRawOutputs() const { return filterNodesByName({"XLinkOut"}); }
-    std::vector<NodeConstPtr> getRawInputs() const { return filterNodesByName({"XLinkIn"}); }
-
-    /**
      * @brief returns the compressed streams exposed by the ROS interface
      */
     std::vector<NodeConstPtr> getCompressedVideoStreams(){};
@@ -70,9 +57,7 @@ protected:
     /**
      * @brief returns the streams that return a tensor, for interfacing with ROS
      */
-    std::vector<NodeConstPtr> getTensorOutStreams(){
-
-    };
+    std::vector<NodeConstPtr> getTensorOutStreams(){};
 };
 
 PLUGINLIB_EXPORT_CLASS(depthai_ros_driver::PreviewPipeline, rr::Pipeline)

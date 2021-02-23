@@ -147,6 +147,8 @@ private:
 
     void prepareStreamConfig();
 
+    std::string generatePipelineConfigJson() const;
+
     void afCtrlCb(const depthai_ros_msgs::AutoFocusCtrl msg);
     void disparityConfCb(const std_msgs::Float32::ConstPtr& msg);
 

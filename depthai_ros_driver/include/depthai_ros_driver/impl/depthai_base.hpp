@@ -304,7 +304,11 @@ void DepthAIBase<Node>::onInit() {
         _camera_param_uri += "/";
     }
 
+    _request_jpegout = false;
+
     prepareStreamConfig();
+
+    _pipeline_config_json = generatePipelineConfigJson();
 
     auto has_stream = [&] (const std::string& stream_name) {
         const auto itr = std::find(_stream_list.begin(), _stream_list.end(), stream_name);
@@ -364,14 +368,16 @@ void DepthAIBase<Node>::onInit() {
 
     // _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
 
+    // Control
+    _af_ctrl_sub = nh.subscribe("auto_focus_ctrl", _queue_size, &DepthAIBase::afCtrlCb, this);
+    _disparity_conf_sub = nh.subscribe("disparity_confidence", _queue_size, &DepthAIBase::disparityConfCb, this);
+
+    // camera frame loop
     _cameraReadTimer = nh.createTimer(ros::Duration(1. / 500), &DepthAIBase::cameraReadCb, this);
 }
 
 template <class Node>
 void DepthAIBase<Node>::prepareStreamConfig() {
-    boost::property_tree::ptree root, streams, depth, ai, board_config, camera, camera_rgb, camera_mono, video_config,
-            app, ot;
-    _request_jpegout = false;
 
     auto& nh = this->getNodeHandle();
     image_transport::ImageTransport it{nh};
@@ -400,9 +406,6 @@ void DepthAIBase<Node>::prepareStreamConfig() {
 
     for (const auto& stream : _stream_list) {
         // std::cout << "Requested Streams: " << _stream_list[i] << std::endl;
-        boost::property_tree::ptree stream_config;
-        stream_config.put("", stream);
-        streams.push_back(std::make_pair("", stream_config));
 
         const auto it = std::find(_stream_name.cbegin(), _stream_name.cend(), stream);
         const auto index = static_cast<Stream>(std::distance(_stream_name.cbegin(), it));
@@ -429,6 +432,19 @@ void DepthAIBase<Node>::prepareStreamConfig() {
             default:
                 ROS_ERROR_STREAM_NAMED(this->getName(), "Uknown stream requested: " << stream);
         }
+    }
+}
+
+template <class Node>
+std::string DepthAIBase<Node>::generatePipelineConfigJson() const {
+    boost::property_tree::ptree root, streams, depth, ai, board_config, camera, camera_rgb, camera_mono, video_config,
+            app, ot;
+
+    for (const auto& stream : _stream_list) {
+        // std::cout << "Requested Streams: " << _stream_list[i] << std::endl;
+        boost::property_tree::ptree stream_config;
+        stream_config.put("", stream);
+        streams.push_back(std::make_pair("", stream_config));
     }
 
     depth.put<std::string>("calibration_file", _calib_file);
@@ -481,10 +497,8 @@ void DepthAIBase<Node>::prepareStreamConfig() {
     std::regex reg("\"(null|true|false|[0-9]+(\\.[0-9]+)?)\"");
     std::ostringstream oss;
     boost::property_tree::write_json(oss, root);
-    _pipeline_config_json = std::regex_replace(oss.str(), reg, "$1");
 
-    // Control
-    _af_ctrl_sub = nh.subscribe("auto_focus_ctrl", _queue_size, &DepthAIBase::afCtrlCb, this);
-    _disparity_conf_sub = nh.subscribe("disparity_confidence", _queue_size, &DepthAIBase::disparityConfCb, this);
+    return std::regex_replace(oss.str(), reg, "$1");
 }
+
 }  // namespace rr

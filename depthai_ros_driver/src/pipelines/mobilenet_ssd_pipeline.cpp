@@ -68,9 +68,7 @@ protected:
     /**
      * @brief returns the streams that return a tensor, for interfacing with ROS
      */
-    std::vector<NodeConstPtr> getTensorOutStreams(){
-
-    };
+    std::vector<NodeConstPtr> getTensorOutStreams(){};
 };
 
 PLUGINLIB_EXPORT_CLASS(depthai_ros_driver::MobilenetSSDPipeline, rr::Pipeline)
