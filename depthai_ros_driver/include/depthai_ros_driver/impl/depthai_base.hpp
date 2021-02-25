@@ -105,6 +105,8 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::T
     switch (type) {
         case Stream::LEFT:
         case Stream::RIGHT:
+        case Stream::RECTIFIED_LEFT:
+        case Stream::RECTIFIED_RIGHT:
             cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
             encoding = "mono8";
             break;
@@ -116,6 +118,9 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::T
             cvImg.image = cv::Mat(rows, cols, _subpixel ? CV_16UC1 : CV_8UC1, data);
             cvImg.image.convertTo(cvImg.image, CV_8UC1, 255.0 / _maxDisp); // Extend disparity range
             encoding = "mono8";
+            // cv::Mat disp_color;
+            // cv::applyColorMap(disp, disp_color, cv::COLORMAP_JET);
+            // cv::imshow("disparity_color", disp_color);
             break;
         }
         case Stream::DEPTH:
@@ -174,7 +179,6 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
     //     return _stamp + ros::Duration(camera_ts - _depthai_ts_offset);
     // };
 
-
     auto has_data_queue = [&] (const std::string& stream_name) {
         return (_data_output_queue.find(stream_name) != _data_output_queue.end());
     };
@@ -187,9 +191,35 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
         }
     }
     if (has_data_queue("disparity")) {
+        const auto& leftFrame = _data_output_queue["left"]->get<dai::ImgFrame>();
+        if(leftFrame){
+            publishImageMsg(leftFrame, Stream::LEFT, stamp);
+        }
+
+        const auto& rightFrame = _data_output_queue["right"]->get<dai::ImgFrame>();
+        if(rightFrame){
+            publishImageMsg(rightFrame, Stream::RIGHT, stamp);
+        }
         const auto& dispFrame = _data_output_queue["disparity"]->get<dai::ImgFrame>();
         if(dispFrame){
             publishImageMsg(dispFrame, Stream::DISPARITY, stamp);
+        }
+
+        const auto& depthFrame = _data_output_queue["depth"]->get<dai::ImgFrame>();
+        if (depthFrame) {
+            cv::imshow("depth", cv::Mat(depthFrame->getHeight(), depthFrame->getWidth(),
+                CV_16UC1, depthFrame->getData().data()));
+            cv::waitKey(1);
+        }
+
+        const auto& rectifiedLeftFrame = _data_output_queue["rectified_left"]->get<dai::ImgFrame>();
+        if(rectifiedLeftFrame){
+            publishImageMsg(rectifiedLeftFrame, Stream::RECTIFIED_LEFT, stamp);
+        }
+
+        const auto& rectifiedRightFrame = _data_output_queue["rectified_right"]->get<dai::ImgFrame>();
+        if(rectifiedRightFrame){
+            publishImageMsg(rectifiedRightFrame, Stream::RECTIFIED_RIGHT, stamp);
         }
     }
     if (has_data_queue("detections")) {
@@ -363,8 +393,23 @@ void DepthAIBase<Node>::onInit() {
     if (has_stream("previewout")) {
         _data_output_queue["preview"] = _depthai->getOutputQueue("preview");
     }
+    if (has_stream("left")) {
+        _data_output_queue["left"]            = _depthai->getOutputQueue("left", 8, false);
+    }
+    if (has_stream("right")) {
+        _data_output_queue["right"]           = _depthai->getOutputQueue("right", 8, false);
+    }
     if  (has_stream("disparity")) {
-        _data_output_queue["disparity"] = _depthai->getOutputQueue("disparity", 8, false);
+        _data_output_queue["disparity"]       = _depthai->getOutputQueue("disparity", 8, false);
+    }
+    if  (has_stream("depth")) {
+        _data_output_queue["depth"]           = _depthai->getOutputQueue("depth", 8, false);
+    }
+    if  (has_stream("rectified_left")) {
+        _data_output_queue["rectified_left"]  = _depthai->getOutputQueue("rectified_left", 8, false);
+    }
+    if  (has_stream("rectified_right")) {
+        _data_output_queue["rectified_right"] = _depthai->getOutputQueue("rectified_right", 8, false);
     }
     if (has_stream("metaout")) {
         _data_output_queue["detections"] = _depthai->getOutputQueue("detections");
