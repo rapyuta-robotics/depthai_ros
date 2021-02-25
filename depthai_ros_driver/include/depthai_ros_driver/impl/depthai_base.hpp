@@ -283,8 +283,6 @@ void DepthAIBase<Node>::onInit() {
 
     get_param(nh, bool{}, "depthai_block_read", _depthai_block_read);
     get_param(nh, bool{}, "enable_sync", _sync_video_meta);
-    get_param(nh, bool{}, "full_fov_nn", _full_fov_nn);
-    get_param(nh, bool{}, "disable_depth", _compute_bbox_depth);
     get_param(nh, bool{}, "force_usb2", _force_usb2);
 
     get_param(nh, int{}, "rgb_height", _rgb_height);
@@ -294,10 +292,6 @@ void DepthAIBase<Node>::onInit() {
 
     get_param(nh, bool{}, "extended_disparity", _extended_disparity);
     get_param(nh, bool{}, "subpixel", _subpixel);
-
-    get_param(nh, int{}, "shaves", _shaves);
-    get_param(nh, int{}, "cmx_slices", _cmx_slices);
-    get_param(nh, int{}, "nn_engines", _nn_engines);
 
     get_param(nh, int{}, "queue_size", _queue_size);
 
@@ -341,7 +335,7 @@ void DepthAIBase<Node>::onInit() {
             ROS_ERROR("Unknown stream. Will not load pipeline plugin.");
         }
         _pipeline_plugin = _pipeline_loader->createInstance(plugin_name);
-        _pipeline_plugin->configure();
+        _pipeline_plugin->configure(_pipeline_config_json);
         _pipeline = _pipeline_plugin->getPipeline();
     }
     catch(pluginlib::PluginlibException &ex) {
@@ -464,15 +458,6 @@ std::string DepthAIBase<Node>::generatePipelineConfigJson() const {
 
     ai.put("blob_file", _blob_file);
     ai.put("blob_file_config", _blob_file_config);
-    //    ai.put("blob_file2", _blob_file2);
-    //    ai.put("blob_file_config2", _blob_file_config2);
-    ai.put("calc_dist_to_bb", _compute_bbox_depth);
-    ai.put("keep_aspect_ratio", !_full_fov_nn);
-    //    ai.put("camera_input", "left_right");
-    ai.put("camera_input", "rgb");
-    ai.put("shaves", _shaves);
-    ai.put("cmx_slices", _cmx_slices);
-    ai.put("NN_engines", _nn_engines);
 
     // maximum 20 is supported
     ot.put("max_tracklets", 20);

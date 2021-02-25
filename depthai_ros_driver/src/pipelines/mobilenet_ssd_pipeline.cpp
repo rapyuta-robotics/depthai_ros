@@ -14,11 +14,24 @@ public:
 
 protected:
     /**
-     * @brief Default implementation for configure step, does nothing
+     * @brief Configuring mobilenet-ssd configuration
      */
-    void onConfigure() {
-        // _pipeline = _depthai->create_pipeline(_pipeline_config_json);
-        std::string nnPath = "mobilenet_ssd.blob";
+    void onConfigure(const std::string& config_json) {
+        const nlohmann::json json = nlohmann::json::parse(config_json);
+        if (!json.contains("ai")) {
+            ROS_ERROR("mobilenet_ssd pipline needs \"ai\" tag for config_json.");
+            return;
+        }
+
+        std::string nnPath;
+        const auto& config = json["ai"];
+        try {
+            nnPath = config.at("blob_file");
+
+        } catch(const std::exception& ex) { // const nlohmann::basic_json::out_of_range& ex
+            ROS_ERROR(ex.what());
+            return;
+        }
 
         auto colorCam = _pipeline.create<dai::node::ColorCamera>();
         auto xoutColor = _pipeline.create<dai::node::XLinkOut>();

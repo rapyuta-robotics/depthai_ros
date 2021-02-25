@@ -123,9 +123,8 @@ private:
     bool _depthai_block_read = false;
     bool _request_jpegout = false;
     bool _sync_video_meta = false;
-    bool _full_fov_nn = false;
     bool _force_usb2 = false;
-    bool _compute_bbox_depth = false;
+    // bool _compute_bbox_depth = false;
 
     int _rgb_height = 1080;
     int _rgb_fps = 30;
@@ -135,10 +134,6 @@ private:
     int _maxDisp;
     bool _extended_disparity = false;
     bool _subpixel = false;
-
-    int _shaves = 14;
-    int _cmx_slices = 14;
-    int _nn_engines = 2;
 
     int _queue_size = 10;
 

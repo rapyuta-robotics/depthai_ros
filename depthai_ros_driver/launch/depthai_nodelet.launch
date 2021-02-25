@@ -29,10 +29,6 @@
   <arg name="extended_disparity" default="false"/>
   <arg name="subpixel" default="false"/>
 
-  <arg name="shaves" default="14"/>
-  <arg name="cmx_slices" default="14"/>
-  <arg name="nn_engines" default="2"/>
-
   <!--
   Possible streams:
   * 'left' - left mono camera preview
@@ -76,10 +72,6 @@
 
       <param name="extended_disparity" value="$(arg extended_disparity)"/>
       <param name="subpixel" value="$(arg subpixel)"/>
-
-      <param name="shaves" value="$(arg shaves)"/>
-      <param name="cmx_slices" value="$(arg cmx_slices)"/>
-      <param name="nn_engines" value="$(arg nn_engines)"/>
 
       <param name="queue_size" value="$(arg queue_size)"/>
     </node>
