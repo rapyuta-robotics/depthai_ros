@@ -10,6 +10,10 @@
 
 namespace rr {
 
+template <class Node>
+bool DepthAIBase<Node>::has_stream(const std::string& stream) const {
+    return (_enabled_streams.find(stream) != _enabled_streams.cend());
+};
 
 template <class Node>
 void DepthAIBase<Node>::disparityConfCb(const std_msgs::Float32::ConstPtr& msg) {
@@ -67,7 +71,7 @@ void DepthAIBase<Node>::publishObjectInfoMsg(NNDataConstPtr detections, const ro
 }
 
 template <class Node>
-void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::Time& stamp) {
+void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, const std::string& stream, ros::Time& stamp) {
 
     // https://answers.ros.org/question/336045/how-to-convert-a-stdchronohigh_resolution_clock-to-rostime/
     // const auto& tstamp = frame->getTimestamp();
@@ -77,8 +81,9 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::T
 
     std_msgs::Header header;
     header.stamp = stamp;
-    header.frame_id = _topic_name[type];
+    header.frame_id = stream_info[stream].topic;
 
+    Stream type = stream_info[stream].id;
     const auto* camInfoPubPtr = _camera_info_publishers[type].get();
     if (camInfoPubPtr->getNumSubscribers() > 0) {
         const auto cameraInfo =
@@ -123,7 +128,6 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::T
             // cv::imshow("disparity_color", disp_color);
             break;
         }
-        case Stream::DEPTH:
         case Stream::DISPARITY_COLOR: {
             const int ndim = 2; // packet.dimensions.size();
             const int elemSize = 1; // packet.elem_size;  <- subpixel
@@ -146,6 +150,11 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, Stream type, ros::T
             }
             break;
         }
+        case Stream::DEPTH:
+            cvImg.image = cv::Mat(rows, cols, CV_16UC1, data);
+            encoding = "mono16";// <- fix
+            // break;
+            return;
         case Stream::JPEG_OUT:
         case Stream::VIDEO: {
             const auto img = boost::make_shared<sensor_msgs::CompressedImage>();
@@ -183,49 +192,21 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
         return (_data_output_queue.find(stream_name) != _data_output_queue.end());
     };
 
-
-    if (has_data_queue("preview")) {
-        const auto& imgFrame = _data_output_queue["preview"]->get<dai::ImgFrame>();
-        if(imgFrame){
-            publishImageMsg(imgFrame, Stream::PREVIEW_OUT, stamp);
+    for(const auto& dat: _data_output_queue) {
+        const auto& stream = dat.first;
+        const auto& queue = dat.second;
+        Stream stream_id = stream_info[stream].id;
+        if (stream_id < Stream::IMAGE_END) {
+            const auto& frame = queue->get<dai::ImgFrame>();
+            if(frame){
+                publishImageMsg(frame, stream, stamp);
+            }
         }
-    }
-    if (has_data_queue("disparity")) {
-        const auto& leftFrame = _data_output_queue["left"]->get<dai::ImgFrame>();
-        if(leftFrame){
-            publishImageMsg(leftFrame, Stream::LEFT, stamp);
-        }
-
-        const auto& rightFrame = _data_output_queue["right"]->get<dai::ImgFrame>();
-        if(rightFrame){
-            publishImageMsg(rightFrame, Stream::RIGHT, stamp);
-        }
-        const auto& dispFrame = _data_output_queue["disparity"]->get<dai::ImgFrame>();
-        if(dispFrame){
-            publishImageMsg(dispFrame, Stream::DISPARITY, stamp);
-        }
-
-        const auto& depthFrame = _data_output_queue["depth"]->get<dai::ImgFrame>();
-        if (depthFrame) {
-            cv::imshow("depth", cv::Mat(depthFrame->getHeight(), depthFrame->getWidth(),
-                CV_16UC1, depthFrame->getData().data()));
-            cv::waitKey(1);
-        }
-
-        const auto& rectifiedLeftFrame = _data_output_queue["rectified_left"]->get<dai::ImgFrame>();
-        if(rectifiedLeftFrame){
-            publishImageMsg(rectifiedLeftFrame, Stream::RECTIFIED_LEFT, stamp);
-        }
-
-        const auto& rectifiedRightFrame = _data_output_queue["rectified_right"]->get<dai::ImgFrame>();
-        if(rectifiedRightFrame){
-            publishImageMsg(rectifiedRightFrame, Stream::RECTIFIED_RIGHT, stamp);
-        }
-    }
-    if (has_data_queue("detections")) {
-        const auto& detections = _data_output_queue["detections"]->get<dai::NNData>();
-        if(detections) {
-            publishObjectInfoMsg(detections, stamp);
+        else if (stream == "detections") {
+            const auto& detections = queue->get<dai::NNData>();
+            if(detections) {
+                publishObjectInfoMsg(detections, stamp);
+            }
         }
     }
 
@@ -260,34 +241,35 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
     // }
 }
 
-template <class Node>
-bool DepthAIBase<Node>::defaultCameraInfo(
-        depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res) {
-    const auto it = std::find(_topic_name.cbegin(), _topic_name.cend(), req.name);
-    if (it == _topic_name.cend()) {
-        res.success = false;
-        res.message = "No such camera known";
-        return true;
-    }
+// template <class Node>
+// bool DepthAIBase<Node>::defaultCameraInfo(
+//         depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res) {
+//     const auto it = std::find(_topic_name.cbegin(), _topic_name.cend(), req.name);
+//     if (it == _topic_name.cend()) {
+//         res.success = false;
+//         res.message = "No such camera known";
+//         return true;
+//     }
 
-    const auto& name = req.name;
-    auto& nh = this->getPrivateNodeHandle();
-    const auto uri = _camera_param_uri + "default/" + name + ".yaml";
-    if (_defaultManager == nullptr) {
-        _defaultManager =
-                std::make_unique<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, "_default"}, name, uri);
-    } else {
-        _defaultManager->setCameraName(name);
-        _defaultManager->loadCameraInfo(uri);
-    }
-    const auto index = std::distance(_topic_name.cbegin(), it);
-    const auto cameraInfo = _defaultManager->getCameraInfo();
-    res.success = _camera_info_manager[index]->setCameraInfo(cameraInfo);
+//     const auto& name = req.name;
+//     auto& nh = this->getPrivateNodeHandle();
+//     const auto uri = _camera_param_uri + "default/" + name + ".yaml";
+//     if (_defaultManager == nullptr) {
+//         _defaultManager =
+//                 std::make_unique<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, "_default"}, name, uri);
+//     } else {
+//         _defaultManager->setCameraName(name);
+//         _defaultManager->loadCameraInfo(uri);
+//     }
+//     const auto index = std::distance(_topic_name.cbegin(), it);
+//     const auto cameraInfo = _defaultManager->getCameraInfo();
+//     res.success = _camera_info_manager[index]->setCameraInfo(cameraInfo);
 
-    _defaultManager->setCameraName("_default");
-    _defaultManager->loadCameraInfo("");
-    return true;
-}
+//     _defaultManager->setCameraName("_default");
+//     _defaultManager->loadCameraInfo("");
+//     return true;
+// }
+
 
 template <class Node>
 void DepthAIBase<Node>::onInit() {
@@ -343,10 +325,6 @@ void DepthAIBase<Node>::onInit() {
     // Prepare streams (pub, sub, etc)
     prepareStreamConfig();
 
-    auto has_stream = [&] (const std::string& stream_name) {
-        const auto itr = std::find(_stream_list.begin(), _stream_list.end(), stream_name);
-        return (itr != _stream_list.end());
-    };
 
     // Start pipeline
     _pipeline_loader = std::make_unique<pluginlib::ClassLoader<rr::Pipeline>>("depthai_ros_driver", "rr::Pipeline");
@@ -390,29 +368,8 @@ void DepthAIBase<Node>::onInit() {
     _depthai->startPipeline();
 
 
-    if (has_stream("previewout")) {
-        _data_output_queue["preview"] = _depthai->getOutputQueue("preview");
-    }
-    if (has_stream("left")) {
-        _data_output_queue["left"]            = _depthai->getOutputQueue("left", 8, false);
-    }
-    if (has_stream("right")) {
-        _data_output_queue["right"]           = _depthai->getOutputQueue("right", 8, false);
-    }
-    if  (has_stream("disparity")) {
-        _data_output_queue["disparity"]       = _depthai->getOutputQueue("disparity", 8, false);
-    }
-    if  (has_stream("depth")) {
-        _data_output_queue["depth"]           = _depthai->getOutputQueue("depth", 8, false);
-    }
-    if  (has_stream("rectified_left")) {
-        _data_output_queue["rectified_left"]  = _depthai->getOutputQueue("rectified_left", 8, false);
-    }
-    if  (has_stream("rectified_right")) {
-        _data_output_queue["rectified_right"] = _depthai->getOutputQueue("rectified_right", 8, false);
-    }
-    if (has_stream("metaout")) {
-        _data_output_queue["detections"] = _depthai->getOutputQueue("detections");
+    for (const auto& stream: _enabled_streams) {
+        _data_output_queue[stream] = _depthai->getOutputQueue(stream_info[stream].output_queue);
     }
 
     // _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
@@ -427,60 +384,67 @@ void DepthAIBase<Node>::onInit() {
 
 template <class Node>
 void DepthAIBase<Node>::prepareStreamConfig() {
-
     auto& nh = this->getNodeHandle();
     image_transport::ImageTransport it{nh};
 
-    auto set_camera_info_pub = [&](const Stream& id) {
-        const auto& name = _topic_name[id];
+    auto set_camera_info_pub = [&](const std::string& stream) {
+        const auto& name = stream_info[stream].name;
 
         const auto uri = _camera_param_uri + _camera_name + "/" + name + ".yaml";
-        _camera_info_manager[id] =
+        _camera_info_manager[stream_info[stream].id] =
                 std::make_unique<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, name}, name, uri);
-        _camera_info_publishers[id] = std::make_unique<ros::Publisher>(
+        _camera_info_publishers[stream_info[stream].id] = std::make_unique<ros::Publisher>(
                 nh.template advertise<sensor_msgs::CameraInfo>(name + "/camera_info", _queue_size));
     };
-    auto set_stream_pub = [&](const Stream& id, auto message_type) {
+
+    auto set_stream_pub = [&](const std::string& stream, auto message_type) {
         using type = decltype(message_type);
         std::string suffix;
+        Stream id = stream_info[stream].id;
         if (id < Stream::IMAGE_END) {
             suffix = (id < Stream::UNCOMPRESSED_IMG_END) ? "/image_raw" : "/compressed";
         }
-        const auto& name = _topic_name[id];
+        const auto& name = stream_info[stream].topic;
         _stream_publishers[id] =
                 std::make_unique<ros::Publisher>(nh.template advertise<type>(name + suffix, _queue_size));
     };
 
-    _camera_info_default = nh.advertiseService("reset_camera_info", &DepthAIBase::defaultCameraInfo, this);
+    // _camera_info_default = nh.advertiseService("reset_camera_info", &DepthAIBase::defaultCameraInfo, this);
 
     for (const auto& stream : _stream_list) {
         // std::cout << "Requested Streams: " << _stream_list[i] << std::endl;
-
-        const auto it = std::find(_stream_name.cbegin(), _stream_name.cend(), stream);
-        const auto index = static_cast<Stream>(std::distance(_stream_name.cbegin(), it));
-
-        if (index < Stream::IMAGE_END) {
-            set_camera_info_pub(index);
-            if (index < Stream::UNCOMPRESSED_IMG_END) {
-                set_stream_pub(index, sensor_msgs::Image{});
-            } else {
-                set_stream_pub(index, sensor_msgs::CompressedImage{});
-            }
+        if (stream_info.find(stream) == stream_info.end()) {
+            ROS_WARN_STREAM("Unknown stream: " << stream);
             continue;
         }
-        switch (index) {
-            case Stream::META_OUT:
-                set_stream_pub(index, depthai_ros_msgs::Objects{});
-                break;
-            case Stream::OBJECT_TRACKER:
-                set_stream_pub(index, depthai_ros_msgs::Object{});
-                break;
-            case Stream::META_D2H:
-                set_stream_pub(index, sensor_msgs::Image{});
-                break;
-            default:
-                ROS_ERROR_STREAM_NAMED(this->getName(), "Uknown stream requested: " << stream);
+
+        const auto index = stream_info[stream].id;
+
+        if (index < Stream::IMAGE_END) {
+            set_camera_info_pub(stream);
+            if (index < Stream::UNCOMPRESSED_IMG_END) {
+                set_stream_pub(stream, sensor_msgs::Image{});
+            } else {
+                set_stream_pub(stream, sensor_msgs::CompressedImage{});
+            }
         }
+        else {
+            switch (index) {
+                case Stream::META_OUT:
+                    set_stream_pub(stream, depthai_ros_msgs::Objects{});
+                    break;
+                case Stream::OBJECT_TRACKER:
+                    set_stream_pub(stream, depthai_ros_msgs::Object{});
+                    break;
+                case Stream::META_D2H:
+                    set_stream_pub(stream, sensor_msgs::Image{});
+                    break;
+                default:
+                    ROS_ERROR_STREAM_NAMED(this->getName(), "Uknown stream requested: " << stream);
+            }
+        }
+
+        _enabled_streams.emplace(stream);
     }
 }
 

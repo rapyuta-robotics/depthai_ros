@@ -49,6 +49,53 @@ using ImageFrameConstPtr = std::shared_ptr<dai::ImgFrame const>;
 using NNDataPtr = std::shared_ptr<dai::NNData>;
 using NNDataConstPtr = std::shared_ptr<dai::NNData const>;
 
+enum Stream : std::size_t {
+    // all images at the beginning
+    LEFT,
+    RIGHT,
+    RECTIFIED_LEFT,
+    RECTIFIED_RIGHT,
+    DISPARITY,
+    DISPARITY_COLOR,
+    DEPTH,
+    PREVIEW_OUT,
+    // compressed image streams
+    JPEG_OUT,
+    VIDEO,
+    // non-image streams
+    META_D2H,
+    META_OUT,
+    OBJECT_TRACKER,
+    // utility enums
+    END,
+    IMAGE_END = META_D2H,
+    UNCOMPRESSED_IMG_END = JPEG_OUT
+};
+
+// NOTE: output_queue can be arbitrary names set by setStreamName. to be deleted.
+struct StreamInfo {
+    Stream id;
+    std::string name;
+    std::string topic;
+    std::string output_queue;
+};
+
+std::unordered_map<std::string, StreamInfo> stream_info {
+    {"left",            {LEFT,            "left",            "left",            "left",            }},
+    {"right",           {RIGHT,           "right",           "right",           "right",           }},
+    {"rectified_left",  {RECTIFIED_LEFT,  "rectified_left",  "rectified_left",  "rectified_left",  }},
+    {"rectified_right", {RECTIFIED_RIGHT, "rectified_right", "rectified_right", "rectified_right", }},
+    {"disparity",       {DISPARITY,       "disparity",       "disparity",       "disparity",       }},
+    {"disparity_color", {DISPARITY_COLOR, "disparity_color", "disparity_color", "disparity",       }},
+    {"depth",           {DEPTH,           "depth",           "depth",           "depth",           }},
+    {"previewout",      {PREVIEW_OUT,     "previewout",      "previewout",      "preview",         }},
+    {"jpegout",         {JPEG_OUT,        "jpegout",         "jpeg",            "jpeg",            }},
+    {"video",           {VIDEO,           "video",           "mjpeg",           "mjpeg",           }},
+    {"meta_d2h",        {META_D2H,        "meta_d2h",        "meta_d2h",        "meta_d2h",        }},
+    {"metaout",         {META_OUT,        "metaout",         "object_info",     "detections",      }},
+    {"object_tracker",  {OBJECT_TRACKER,  "object_tracker",  "object_tracker",  "object_tracker",  }},
+};
+
 
 template <class Node>
 class DepthAIBase : public Node {
@@ -57,39 +104,15 @@ public:
     ~DepthAIBase() = default;
 
 private:
-    enum Stream : std::size_t {
-        // all images at the beginning
-        LEFT,
-        RIGHT,
-        RECTIFIED_LEFT,
-        RECTIFIED_RIGHT,
-        DISPARITY,
-        DISPARITY_COLOR,
-        DEPTH,
-        PREVIEW_OUT,
-        // compressed image streams
-        JPEG_OUT,
-        VIDEO,
-        // non-image streams
-        META_D2H,
-        META_OUT,
-        OBJECT_TRACKER,
-        // utility enums
-        END,
-        IMAGE_END = META_D2H,
-        UNCOMPRESSED_IMG_END = JPEG_OUT
-    };
-    std::array<std::string, Stream::END> _stream_name{"left", "right", "rectified_left", "rectified_right", "disparity",
-            "disparity_color", "depth", "previewout", "jpegout", "video", "meta_d2h", "metaout", "object_tracker"};
-    std::array<std::string, Stream::END> _topic_name{"left", "right", "rectified_left", "rectified_right", "disparity",
-            "disparity_color", "depth", "previewout", "jpeg", "mjpeg", "meta_d2h", "object_info", "object_tracker"};
 
+    std::set<std::string> _enabled_streams;
     std::array<std::unique_ptr<ros::Publisher>, Stream::END> _stream_publishers;
     std::array<std::unique_ptr<ros::Publisher>, Stream::IMAGE_END> _camera_info_publishers;
 
     std::array<std::unique_ptr<camera_info_manager::CameraInfoManager>, Stream::IMAGE_END> _camera_info_manager;
+
     std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;
-    ros::ServiceServer _camera_info_default;
+    // ros::ServiceServer _camera_info_default;
 
     std::unique_ptr<pluginlib::ClassLoader<rr::Pipeline> > _pipeline_loader;
 
@@ -144,6 +167,8 @@ private:
 
     // std::list<std::shared_ptr<HostDataPacket>> _data_packet;
 
+    bool has_stream(const std::string& stream) const;
+
     void prepareStreamConfig();
 
     std::string generatePipelineConfigJson() const;
@@ -151,12 +176,12 @@ private:
     void afCtrlCb(const depthai_ros_msgs::AutoFocusCtrl msg);
     void disparityConfCb(const std_msgs::Float32::ConstPtr& msg);
 
-    void publishImageMsg(ImageFramePtr frame, Stream type, ros::Time& stamp);
+    void publishImageMsg(ImageFramePtr frame, const std::string& stream, ros::Time& stamp);
     void publishObjectInfoMsg(const NNDataConstPtr detections, const ros::Time& stamp);
     void publishCameraInfo(ros::Time stamp);
 
     void cameraReadCb(const ros::TimerEvent&);
-    bool defaultCameraInfo(depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res);
+    // bool defaultCameraInfo(depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res);
 
     void createPipeline();
     void getAvailableStreams();
