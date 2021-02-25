@@ -50,7 +50,7 @@ jobs:
       run: |
         pwd
         ls -al .
-        # ls -al src/${{ github.repository }}
+        ls -al catkin_ws/src/${{ github.repository }}
     - name: 'Setup catkin'
       shell: bash
       run: |
@@ -64,3 +64,9 @@ jobs:
         source /opt/ros/*/setup.bash
         cd catkin_ws
         catkin_make_isolated --install
+    - name: 'Source and confirm'
+      shell: bash
+      run: |
+        source catkin_ws/install/setup.bash
+        roscd
+        pwd  # TODO: put an assert on it
