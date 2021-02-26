@@ -1,35 +1,19 @@
 #include <ros/console.h>
 
 #include <pluginlib/class_list_macros.h>
-#include <depthai_ros_driver/pipeline.hpp>
-
-#include <depthai/pipeline/node/ColorCamera.hpp>
-#include <depthai/pipeline/node/XLinkOut.hpp>
+#include <depthai_ros_driver/pipeline_ex.hpp>
 
 namespace depthai_ros_driver
 {
-class PreviewPipeline : public rr::Pipeline {
+class PreviewPipeline : public rr::PipelineEx {
 public:
 
 protected:
     /**
      * @brief Default implementation for configure step, does nothing
      */
-    void onConfigureonConfigure(const std::string& config_json) {
-        auto colorCam = _pipeline.create<dai::node::ColorCamera>();
-        auto xoutColor = _pipeline.create<dai::node::XLinkOut>();
-
-        // XLinkOut
-        xoutColor->setStreamName("preview");
-
-        // Color camera
-        colorCam->setPreviewSize(300, 300);
-        colorCam->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
-        colorCam->setInterleaved(true);
-
-        colorCam->preview.link(xoutColor->input);
-
-        ROS_INFO("Preview pipeline initialized.");
+    void onConfigure(const std::string& config_json) {
+        configure_preview_pipeline(config_json);
     }
 
     /**
