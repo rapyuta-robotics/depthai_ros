@@ -304,6 +304,7 @@ void DepthAIBase<Node>::onInit() {
 
     get_param(nh, bool{}, "extended_disparity", _extended_disparity);
     get_param(nh, bool{}, "subpixel", _subpixel);
+    get_param(nh, bool{}, "lrcheck", _lrcheck);
 
     get_param(nh, int{}, "queue_size", _queue_size);
 
@@ -464,6 +465,7 @@ std::string DepthAIBase<Node>::generatePipelineConfigJson() const {
     depth.put("padding_factor", 0.3f);
     depth.put("extended", _extended_disparity);
     depth.put("subpixel", _subpixel);
+    depth.put("lrcheck", _lrcheck);
 
     ai.put("blob_file", _blob_file);
     ai.put("blob_file_config", _blob_file_config);

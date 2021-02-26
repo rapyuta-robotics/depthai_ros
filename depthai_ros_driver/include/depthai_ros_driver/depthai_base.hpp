@@ -157,6 +157,7 @@ private:
     int _maxDisp;
     bool _extended_disparity = false;
     bool _subpixel = false;
+    bool _lrcheck = false;
 
     int _queue_size = 10;
 

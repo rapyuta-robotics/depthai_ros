@@ -8,6 +8,21 @@
 #include <depthai/pipeline/node/NeuralNetwork.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 
+namespace {
+
+// NOTE: has_any is a O(N^2) algorithm
+bool has_any(const nlohmann::json& j, const std::vector<std::string>& list) {
+    for (const auto& item: list) {
+        if (std::find(j.begin(), j.end(), item) != j.end()) {
+            return true; // found
+        }
+    }
+
+    return false;  // didn't find any
+}
+} // namespace
+
+
 namespace rr
 {
 
@@ -29,8 +44,38 @@ void PipelineEx::configure_preview_pipeline(const std::string& config_json) {
 }
 
 void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
+    // convert json string to nlohmann::json
+    const nlohmann::json json = nlohmann::json::parse(config_json);
+    if (!json.contains("depth")) {
+        ROS_ERROR("mobilenet_ssd pipline needs \"depth\" tag for config_json.");
+        return;
+    }
 
-    bool withDepth = true;
+    // parse json parameters
+    std::string calibrationFile;
+    bool extended, subpixel, lrcheck;
+    const auto& config = json["depth"];
+    try {
+        calibrationFile = config.at("calibration_file");
+        extended = config.at("extended");
+        subpixel = config.at("subpixel");
+        lrcheck = false;
+
+    } catch(const std::exception& ex) { // const nlohmann::basic_json::out_of_range& ex
+        ROS_ERROR(ex.what());
+        return;
+    }
+
+    // 
+    const auto& streams = json["streams"];
+    bool withDepth = has_any(streams, {"disparity", "depth", "disparity_color"});
+    bool outputRectified = has_any(streams, {"rectified_left", "rectified_right"});
+    bool outputDepth = false;
+
+    int maxDisp = 96;
+    if (extended) maxDisp *= 2;
+    if (subpixel) maxDisp *= 32; // 5 bits fractional disparity
+
 
     auto monoLeft  = _pipeline.create<dai::node::MonoCamera>();
     auto monoRight = _pipeline.create<dai::node::MonoCamera>();
@@ -40,8 +85,8 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
     auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
     auto xoutDisp  = _pipeline.create<dai::node::XLinkOut>();
     auto xoutDepth = _pipeline.create<dai::node::XLinkOut>();
-    auto xoutRectifL = _pipeline.create<dai::node::XLinkOut>();
-    auto xoutRectifR = _pipeline.create<dai::node::XLinkOut>();
+    auto xoutRectifL = outputRectified ? _pipeline.create<dai::node::XLinkOut>() : nullptr;
+    auto xoutRectifR = outputRectified ? _pipeline.create<dai::node::XLinkOut>() : nullptr;
 
     // XLinkOut
     xoutLeft->setStreamName("left");
@@ -49,6 +94,8 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
     if (withDepth) {
         xoutDisp->setStreamName("disparity");
         xoutDepth->setStreamName("depth");
+    }
+    if (outputRectified) {
         xoutRectifL->setStreamName("rectified_left");
         xoutRectifR->setStreamName("rectified_right");
     }
@@ -60,16 +107,6 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
     monoRight->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
     monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
     //monoRight->setFps(5.0);
-
-    bool outputDepth = false;
-    bool outputRectified = true;
-    bool lrcheck  = false;
-    bool extended = false;
-    bool subpixel = false;
-
-    int maxDisp = 96;
-    if (extended) maxDisp *= 2;
-    if (subpixel) maxDisp *= 32; // 5 bits fractional disparity
 
     if (withDepth) {
         // StereoDepth
@@ -109,6 +146,7 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
 }
 
 void PipelineEx::configure_mobilenet_ssd_pipeline(const std::string& config_json) {
+    // convert json string to nlohmann::json
     const nlohmann::json json = nlohmann::json::parse(config_json);
     if (!json.contains("ai")) {
         ROS_ERROR("mobilenet_ssd pipline needs \"ai\" tag for config_json.");
