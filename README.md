@@ -30,14 +30,14 @@ For older versions of git, one of the following processes might be needed:
 * Use `--recurse-submodules` instead of `--recursive`
 * Clone without any flags and then grab the submodules using `git submodule update --init --recursive`
 
-## Grab the Neural Network
+## Grab the Neural Network Model
 * Prepare MobileNetSSD compatible model (blob and json file). Once issue #5 is resolved, this will not be necessary for a default model. Due to limitations of Gen1 API used in the ROS driver, a model is required to run it.
 
 Sample models are available [here](https://github.com/luxonis/depthai/tree/main/resources/nn)
 
 # Usage
 0. Compile using `catkin build depthai_ros` or `catkin_make_isolated --build depthai_ros`. `catkin_make` will **not build** the package successfully.
-1. Execute ./deploy_udev_rules.sh present in `~/depthai_ros/depthai_ros_driver/scripts`.
+1. Execute `./deploy_udev_rules.sh` present in `~/depthai_ros/depthai_ros_driver/scripts`.
 2. Launch the node or nodelet by appropriately choosing the correct launch file and parameters:
     ```
     roslaunch depthai_ros_driver depthai_{node,nodelet}.launch
