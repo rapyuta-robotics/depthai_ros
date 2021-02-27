@@ -8,24 +8,9 @@
 #include <depthai/pipeline/node/NeuralNetwork.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 
-namespace {
-
-// NOTE: has_any is a O(N^2) algorithm
-bool has_any(const nlohmann::json& j, const std::vector<std::string>& list) {
-    for (const auto& item: list) {
-        if (std::find(j.begin(), j.end(), item) != j.end()) {
-            return true; // found
-        }
-    }
-
-    return false;  // didn't find any
-}
-} // namespace
-
 
 namespace rr
 {
-
 void PipelineEx::configure_preview_pipeline(const std::string& config_json) {
     auto colorCam = _pipeline.create<dai::node::ColorCamera>();
     auto xoutColor = _pipeline.create<dai::node::XLinkOut>();
@@ -66,40 +51,21 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
         return;
     }
 
-    // 
     const auto& streams = json["streams"];
-    bool withDepth = has_any(streams, {"disparity", "depth", "disparity_color"});
-    bool outputRectified = has_any(streams, {"rectified_left", "rectified_right"});
-    bool outputDepth = false;
+    const bool withDepth = has_any(streams, {"disparity", "depth", "disparity_color"});  // with disparity
+    const bool outputDepth = withDepth & has_any(streams, {"depth"});  // direct depth computation
+    const bool outputRectified = withDepth & has_any(streams, {"rectified_left", "rectified_right"});
 
     int maxDisp = 96;
     if (extended) maxDisp *= 2;
     if (subpixel) maxDisp *= 32; // 5 bits fractional disparity
 
-
     auto monoLeft  = _pipeline.create<dai::node::MonoCamera>();
     auto monoRight = _pipeline.create<dai::node::MonoCamera>();
-    auto stereo    = withDepth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
-
     auto xoutLeft  = _pipeline.create<dai::node::XLinkOut>();
     auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
-    auto xoutDisp  = _pipeline.create<dai::node::XLinkOut>();
-    auto xoutDepth = _pipeline.create<dai::node::XLinkOut>();
-    auto xoutRectifL = outputRectified ? _pipeline.create<dai::node::XLinkOut>() : nullptr;
-    auto xoutRectifR = outputRectified ? _pipeline.create<dai::node::XLinkOut>() : nullptr;
-
-    // XLinkOut
     xoutLeft->setStreamName("left");
     xoutRight->setStreamName("right");
-    if (withDepth) {
-        xoutDisp->setStreamName("disparity");
-        xoutDepth->setStreamName("depth");
-    }
-    if (outputRectified) {
-        xoutRectifL->setStreamName("rectified_left");
-        xoutRectifR->setStreamName("rectified_right");
-    }
-
     // MonoCamera
     monoLeft->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
     monoLeft->setBoardSocket(dai::CameraBoardSocket::LEFT);
@@ -109,6 +75,9 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
     //monoRight->setFps(5.0);
 
     if (withDepth) {
+        auto stereo    = withDepth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
+        auto xoutDisp  = _pipeline.create<dai::node::XLinkOut>();
+
         // StereoDepth
         stereo->setOutputDepth(outputDepth);
         stereo->setOutputRectified(outputRectified);
@@ -122,20 +91,32 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
         stereo->setExtendedDisparity(extended);
         stereo->setSubpixel(subpixel);
 
+        // XLinkOut
+        xoutDisp->setStreamName("disparity");
+
         // Link plugins CAM -> STEREO -> XLINK
         monoLeft->out.link(stereo->left);
         monoRight->out.link(stereo->right);
-
         stereo->syncedLeft.link(xoutLeft->input);
         stereo->syncedRight.link(xoutRight->input);
+        stereo->disparity.link(xoutDisp->input);
+
+        if (outputDepth) {
+            auto xoutDepth = _pipeline.create<dai::node::XLinkOut>();
+            xoutDepth->setStreamName("depth");  // XLinkOut
+            stereo->depth.link(xoutDepth->input);  // Link: depth -> XLINK
+        }
+
         if(outputRectified)
         {
+            // setting streams for recified images are not necessary for computing depth
+            auto xoutRectifL = _pipeline.create<dai::node::XLinkOut>();
+            auto xoutRectifR = _pipeline.create<dai::node::XLinkOut>();
+            xoutRectifL->setStreamName("rectified_left");
+            xoutRectifR->setStreamName("rectified_right");
             stereo->rectifiedLeft.link(xoutRectifL->input);
             stereo->rectifiedRight.link(xoutRectifR->input);
         }
-        stereo->disparity.link(xoutDisp->input);
-        stereo->depth.link(xoutDepth->input);
-
     } else {
         // Link plugins CAM -> XLINK
         monoLeft->out.link(xoutLeft->input);
