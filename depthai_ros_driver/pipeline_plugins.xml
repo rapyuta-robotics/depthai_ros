@@ -3,17 +3,22 @@
 <library path="lib/libdepthai_ros_driver_pipeline">
     <class name="depthai_ros_driver/PreviewPipeline" type="depthai_ros_driver::PreviewPipeline" base_class_type="rr::Pipeline">
         <description>
-        Pipeline for preview streams of DepthAI
+        Pipeline for preview streams
         </description>
     </class>
     <class name="depthai_ros_driver/StereoPipeline" type="depthai_ros_driver::StereoPipeline" base_class_type="rr::Pipeline">
         <description>
-        Pipeline for stereo streams of DepthAI
+        Pipeline for stereo streams
         </description>
     </class>
     <class name="depthai_ros_driver/MobilenetSSDPipeline" type="depthai_ros_driver::MobilenetSSDPipeline" base_class_type="rr::Pipeline">
         <description>
-        Pipeline for Mobilenet SSD streams of DepthAI
+        Pipeline for Mobilenet SSD streams
+        </description>
+    </class>
+    <class name="depthai_ros_driver/MulticamPipeline" type="depthai_ros_driver::MulticamPipeline" base_class_type="rr::Pipeline">
+        <description>
+        Pipeline for both stereo and color camera streams
         </description>
     </class>
 </library>

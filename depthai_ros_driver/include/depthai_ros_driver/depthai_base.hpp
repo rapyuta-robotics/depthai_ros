@@ -138,6 +138,9 @@ private:
     // Parameters
     std::string _camera_name = "";
     std::string _camera_param_uri = "package://depthai_ros_driver/params/camera/";
+
+    std::string _pipeline_name = "";
+
     std::string _cmd_file = "";
     std::string _calib_file = "";
     std::string _blob_file = "";

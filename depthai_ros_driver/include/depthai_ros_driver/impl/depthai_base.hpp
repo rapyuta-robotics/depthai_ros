@@ -1,3 +1,4 @@
+
 #include <regex>
 
 #include <ros/ros.h>
@@ -286,6 +287,9 @@ void DepthAIBase<Node>::onInit() {
 
     get_param(nh, std::string{}, "camera_name", _camera_name);
     get_param(nh, std::string{}, "camera_param_uri", _camera_param_uri);
+
+    get_param(nh, std::string{}, "pipeline_name", _pipeline_name);
+
     get_param(nh, std::string{}, "calibration_file", _calib_file);
     get_param(nh, std::string{}, "cmd_file", _cmd_file);
     get_param(nh, std::string{}, "blob_file", _blob_file);
@@ -330,20 +334,7 @@ void DepthAIBase<Node>::onInit() {
     // Start pipeline
     _pipeline_loader = std::make_unique<pluginlib::ClassLoader<rr::Pipeline>>("depthai_ros_driver", "rr::Pipeline");
     try {
-        std::string plugin_name;
-        if (has_stream("previewout") && !has_stream("metaout")) {
-            plugin_name = "depthai_ros_driver/PreviewPipeline";
-            ROS_INFO_STREAM("Stream: previewout");
-        } else if (has_stream("disparity")) {
-            plugin_name = "depthai_ros_driver/StereoPipeline";
-            ROS_INFO_STREAM("Stream: disparity");
-        } else if (has_stream("metaout")) {
-            plugin_name = "depthai_ros_driver/MobilenetSSDPipeline";
-            ROS_INFO_STREAM("Stream: mataout");
-        } else {
-            ROS_ERROR("Unknown stream. Will not load pipeline plugin.");
-        }
-        _pipeline_plugin = _pipeline_loader->createInstance(plugin_name);
+        _pipeline_plugin = _pipeline_loader->createInstance(_pipeline_name);
         _pipeline_plugin->configure(_pipeline_config_json);
         _pipeline = _pipeline_plugin->getPipeline();
     }
