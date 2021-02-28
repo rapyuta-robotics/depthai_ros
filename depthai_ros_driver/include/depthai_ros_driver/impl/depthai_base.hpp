@@ -453,7 +453,6 @@ std::string DepthAIBase<Node>::generatePipelineConfigJson() const {
     }
 
     depth.put<std::string>("calibration_file", _calib_file);
-    depth.put("padding_factor", 0.3f);
     depth.put("extended", _extended_disparity);
     depth.put("subpixel", _subpixel);
     depth.put("lrcheck", _lrcheck);
