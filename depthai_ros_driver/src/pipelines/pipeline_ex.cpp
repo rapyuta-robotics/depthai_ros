@@ -38,31 +38,39 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
 
     // set configuration based on streams
     const auto& streams = json["streams"];
-    const bool withDepth = has_any(streams, {"disparity", "depth", "disparity_color"});  // with disparity
-    const bool outputDepth = withDepth & has_any(streams, {"depth"});  // direct depth computation
-    const bool outputRectified = withDepth & has_any(streams, {"rectified_left", "rectified_right"});
+    const bool withDepth = has_any(streams, {"disparity", "disparity_color", "depth"});  // with disparity
+    const bool outputDisparity = withDepth && has_any(streams, {"disparity", "disparity_color"});
+    const bool outputDepth = withDepth && has_any(streams, {"depth"});  // direct depth computation
+    const bool outputRectified = withDepth && has_any(streams, {"rectified_left", "rectified_right"});
 
     // parse json parameters
     std::string calibrationFile;
     bool extended, subpixel, lrcheck;
+    int resolution_w = 1280;
+    int resolution_h = 720;
     auto sensorResolution = dai::MonoCameraProperties::SensorResolution::THE_720_P;
     const auto& depthConfig = json["depth"];
     try {
         calibrationFile = depthConfig.at("calibration_file");
         extended = depthConfig.at("extended");
         subpixel = depthConfig.at("subpixel");
-        lrcheck = false;
+        lrcheck = depthConfig.at("subpixel");
 
-        if (json.contains("mono")) {
-            int resolution_h = json["mono"].at("resolution_h");
-            switch(resolution_h) {
+        if (json.contains("camera")) {
+            switch(static_cast<int>(json["camera"].at("mono").at("resolution_h"))) {
             case 400:
+                resolution_w = 640;
+                resolution_h = 400;
                 sensorResolution = dai::MonoCameraProperties::SensorResolution::THE_400_P;
                 break;
             case 720:
+                resolution_w = 1280;
+                resolution_h = 720;
                 sensorResolution = dai::MonoCameraProperties::SensorResolution::THE_720_P;
                 break;
             case 800:
+                resolution_w = 1280;
+                resolution_h = 800;
                 sensorResolution = dai::MonoCameraProperties::SensorResolution::THE_800_P;
                 break;
             default:
@@ -76,7 +84,6 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
         return;
     }
 
-
     int maxDisp = 96;
     if (extended) maxDisp *= 2;
     if (subpixel) maxDisp *= 32; // 5 bits fractional disparity
@@ -88,16 +95,15 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
     xoutLeft->setStreamName("left");
     xoutRight->setStreamName("right");
     // MonoCamera
-    monoLeft->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
+    monoLeft->setResolution(sensorResolution);
     monoLeft->setBoardSocket(dai::CameraBoardSocket::LEFT);
     //monoLeft->setFps(5.0);
-    monoRight->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
+    monoRight->setResolution(sensorResolution);
     monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
     //monoRight->setFps(5.0);
 
     if (withDepth) {
         auto stereo    = withDepth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
-        auto xoutDisp  = _pipeline.create<dai::node::XLinkOut>();
 
         // StereoDepth
         stereo->setOutputDepth(outputDepth);
@@ -105,31 +111,32 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
         stereo->setConfidenceThreshold(200);
         stereo->setRectifyEdgeFillColor(0); // black, to better see the cutout
         stereo->loadCalibrationFile(calibrationFile);
-        //stereo->setInputResolution(1280, 720);
+        stereo->setInputResolution(resolution_w, resolution_h);
         // TODO: median filtering is disabled on device with (lrcheck || extended || subpixel)
         //stereo->setMedianFilter(dai::StereoDepthProperties::MedianFilter::MEDIAN_OFF);
         stereo->setLeftRightCheck(lrcheck);
         stereo->setExtendedDisparity(extended);
         stereo->setSubpixel(subpixel);
 
-        // XLinkOut
-        xoutDisp->setStreamName("disparity");
-
         // Link plugins CAM -> STEREO -> XLINK
         monoLeft->out.link(stereo->left);
         monoRight->out.link(stereo->right);
         stereo->syncedLeft.link(xoutLeft->input);
         stereo->syncedRight.link(xoutRight->input);
-        stereo->disparity.link(xoutDisp->input);
+
+        if (outputDisparity) {
+            auto xoutDisp  = _pipeline.create<dai::node::XLinkOut>();
+            xoutDisp->setStreamName("disparity");
+            stereo->disparity.link(xoutDisp->input);
+        }
 
         if (outputDepth) {
             auto xoutDepth = _pipeline.create<dai::node::XLinkOut>();
-            xoutDepth->setStreamName("depth");  // XLinkOut
-            stereo->depth.link(xoutDepth->input);  // Link: depth -> XLINK
+            xoutDepth->setStreamName("depth");
+            stereo->depth.link(xoutDepth->input);
         }
 
-        if(outputRectified)
-        {
+        if (outputRectified) {
             // setting streams for recified images are not necessary for computing depth
             auto xoutRectifL = _pipeline.create<dai::node::XLinkOut>();
             auto xoutRectifR = _pipeline.create<dai::node::XLinkOut>();

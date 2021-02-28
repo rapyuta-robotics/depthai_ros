@@ -24,6 +24,8 @@ protected:
      * @brief Default implementation for configure step, does nothing
      */
     void onConfigure(const std::string& config_json) {
+        ROS_INFO_STREAM("Multicam pipline config json:\n" << config_json);
+
         // convert json string to nlohmann::json
         const nlohmann::json json = nlohmann::json::parse(config_json);
         if (!json.contains("streams")) {
