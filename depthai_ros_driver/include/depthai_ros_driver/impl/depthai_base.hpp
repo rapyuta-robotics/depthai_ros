@@ -189,10 +189,6 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
     //     return _stamp + ros::Duration(camera_ts - _depthai_ts_offset);
     // };
 
-    auto has_data_queue = [&] (const std::string& stream_name) {
-        return (_data_output_queue.find(stream_name) != _data_output_queue.end());
-    };
-
     for(const auto& dat: _data_output_queue) {
         const auto& stream = dat.first;
         const auto& queue = dat.second;
@@ -203,7 +199,7 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
                 publishImageMsg(frame, stream, stamp);
             }
         }
-        else if (stream == "detections") {
+        else if (stream == "metaout") {
             const auto& detections = queue->get<dai::NNData>();
             if(detections) {
                 publishObjectInfoMsg(detections, stamp);
