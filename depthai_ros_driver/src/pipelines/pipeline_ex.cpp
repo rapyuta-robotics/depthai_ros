@@ -6,33 +6,90 @@
 #include <depthai/pipeline/node/ColorCamera.hpp>
 #include <depthai/pipeline/node/StereoDepth.hpp>
 #include <depthai/pipeline/node/NeuralNetwork.hpp>
+#include <depthai/pipeline/node/VideoEncoder.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 
 
 namespace rr
 {
-void PipelineEx::configure_preview_pipeline(const std::string& config_json) {
-    auto colorCam = _pipeline.create<dai::node::ColorCamera>();
-    auto xoutColor = _pipeline.create<dai::node::XLinkOut>();
+void PipelineEx::configure_color_pipeline(const std::string& config_json) {
+    // convert json string to nlohmann::json
+    const nlohmann::json json = nlohmann::json::parse(config_json);
 
-    // XLinkOut
-    xoutColor->setStreamName("preview");
+    if (!json.contains("streams")) {
+        ROS_ERROR("color pipline needs \"streams\" tag and \"depth\" tag for config_json.");
+        return;
+    }
+    const auto& streams = json["streams"];
+
+    float fps = 15.0;
+    auto sensorResolution = dai::ColorCameraProperties::SensorResolution::THE_1080_P;
+    try {
+        fps = json["camera"].at("rgb").at("fps");
+        int resolution_h = static_cast<int>(json["camera"].at("rgb").at("resolution_h"));
+        if (json.contains("camera")) {
+            switch(resolution_h) {
+            case 1080:
+                sensorResolution = dai::ColorCameraProperties::SensorResolution::THE_1080_P;
+                break;
+            case 2160:
+                sensorResolution = dai::ColorCameraProperties::SensorResolution::THE_4_K;
+                break;
+            case 3040:
+                sensorResolution = dai::ColorCameraProperties::SensorResolution::THE_12_MP;
+                break;
+            default:
+                ROS_WARN_STREAM("Unknown rgb camera resolution " << resolution_h
+                                << ". Default resolution 1920 will be used.");
+                break;
+            }
+        }
+    } catch(const std::exception& ex) { // const nlohmann::basic_json::out_of_range& ex
+        ROS_ERROR(ex.what());
+        return;
+    }
 
     // Color camera
+    auto colorCam = _pipeline.create<dai::node::ColorCamera>();
     colorCam->setPreviewSize(300, 300);
     colorCam->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
+    colorCam->setFps(fps);
     colorCam->setInterleaved(true);
 
-    colorCam->preview.link(xoutColor->input);
+    // Streams
+    if (has_any(streams, {"previewout"})) {
+        auto xoutPreviewout = _pipeline.create<dai::node::XLinkOut>();
+        xoutPreviewout->setStreamName("preview");
+        colorCam->preview.link(xoutPreviewout->input);
+    }
+    if (has_any(streams, {"video"})) {
+        auto xoutVideo = _pipeline.create<dai::node::XLinkOut>();
+        auto videnc = _pipeline.create<dai::node::VideoEncoder>();
 
-    ROS_INFO("Initialized preview pipeline.");
+        const auto resolution_wh = colorCam->getResolutionSize();
+        xoutVideo->setStreamName("mjpeg");
+        videnc->setDefaultProfilePreset(std::get<0>(resolution_wh), std::get<1>(resolution_wh),
+                                        fps, dai::VideoEncoderProperties::Profile::MJPEG);
+        colorCam->video.link(videnc->input);
+        videnc->bitstream.link(xoutVideo->input);
+
+        // xoutVideo->setStreamName("video");
+        // colorCam->video.link(xoutVideo->input); // <- uncompressed case. streamed in YUV
+    }
+    // if (has_any(streams, {"jpegout"})) {
+    //     auto xoutJpeg = _pipeline.create<dai::node::XLinkOut>();
+    //     xoutJpeg->setStreamName("jpegout");
+    //     colorCam->still.link(xoutJpeg->input);
+    // }
+
+    ROS_INFO("Initialized color pipeline.");
 }
 
 void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
     // convert json string to nlohmann::json
     const nlohmann::json json = nlohmann::json::parse(config_json);
     if (!json.contains("streams") || !json.contains("depth")) {
-        ROS_ERROR("mobilenet_ssd pipline needs \"streams\" tag and \"depth\" tag for config_json.");
+        ROS_ERROR("stereo pipline needs \"streams\" tag and \"depth\" tag for config_json.");
         return;
     }
 
@@ -45,32 +102,22 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
 
     // parse json parameters
     std::string calibrationFile;
+    bool maxDisp = 96;
     bool extended, subpixel, lrcheck;
-    int resolution_w = 1280;
-    int resolution_h = 720;
+    float fps = 10.0;
     auto sensorResolution = dai::MonoCameraProperties::SensorResolution::THE_720_P;
-    const auto& depthConfig = json["depth"];
     try {
-        calibrationFile = depthConfig.at("calibration_file");
-        extended = depthConfig.at("extended");
-        subpixel = depthConfig.at("subpixel");
-        lrcheck = depthConfig.at("subpixel");
-
         if (json.contains("camera")) {
-            switch(static_cast<int>(json["camera"].at("mono").at("resolution_h"))) {
+            fps = json["camera"].at("mono").at("fps");
+            int resolution_h = static_cast<int>(json["camera"].at("mono").at("resolution_h"));
+            switch(resolution_h) {
             case 400:
-                resolution_w = 640;
-                resolution_h = 400;
                 sensorResolution = dai::MonoCameraProperties::SensorResolution::THE_400_P;
                 break;
             case 720:
-                resolution_w = 1280;
-                resolution_h = 720;
                 sensorResolution = dai::MonoCameraProperties::SensorResolution::THE_720_P;
                 break;
             case 800:
-                resolution_w = 1280;
-                resolution_h = 800;
                 sensorResolution = dai::MonoCameraProperties::SensorResolution::THE_800_P;
                 break;
             default:
@@ -79,31 +126,39 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
                 break;
             }
         }
+
+        if (withDepth) {
+            const auto& depthConfig = json["depth"];
+            calibrationFile = depthConfig.at("calibration_file");
+            extended = depthConfig.at("extended");
+            subpixel = depthConfig.at("subpixel");
+            lrcheck = depthConfig.at("subpixel");
+
+            if (extended) maxDisp *= 2;
+            if (subpixel) maxDisp *= 32; // 5 bits fractional disparity
+        }
     } catch(const std::exception& ex) { // const nlohmann::basic_json::out_of_range& ex
         ROS_ERROR(ex.what());
         return;
     }
 
-    int maxDisp = 96;
-    if (extended) maxDisp *= 2;
-    if (subpixel) maxDisp *= 32; // 5 bits fractional disparity
-
     auto monoLeft  = _pipeline.create<dai::node::MonoCamera>();
     auto monoRight = _pipeline.create<dai::node::MonoCamera>();
+    monoLeft->setResolution(sensorResolution);
+    monoLeft->setBoardSocket(dai::CameraBoardSocket::LEFT);
+    monoLeft->setFps(fps);
+    monoRight->setResolution(sensorResolution);
+    monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
+    monoRight->setFps(fps);
+
     auto xoutLeft  = _pipeline.create<dai::node::XLinkOut>();
     auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
     xoutLeft->setStreamName("left");
     xoutRight->setStreamName("right");
-    // MonoCamera
-    monoLeft->setResolution(sensorResolution);
-    monoLeft->setBoardSocket(dai::CameraBoardSocket::LEFT);
-    //monoLeft->setFps(5.0);
-    monoRight->setResolution(sensorResolution);
-    monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
-    //monoRight->setFps(5.0);
 
     if (withDepth) {
         auto stereo    = withDepth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
+        const auto resolution_wh = monoLeft->getResolutionSize();
 
         // StereoDepth
         stereo->setOutputDepth(outputDepth);
@@ -111,7 +166,7 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
         stereo->setConfidenceThreshold(200);
         stereo->setRectifyEdgeFillColor(0); // black, to better see the cutout
         stereo->loadCalibrationFile(calibrationFile);
-        stereo->setInputResolution(resolution_w, resolution_h);
+        stereo->setInputResolution(std::get<0>(resolution_wh), std::get<1>(resolution_wh));
         // TODO: median filtering is disabled on device with (lrcheck || extended || subpixel)
         //stereo->setMedianFilter(dai::StereoDepthProperties::MedianFilter::MEDIAN_OFF);
         stereo->setLeftRightCheck(lrcheck);

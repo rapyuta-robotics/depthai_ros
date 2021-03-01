@@ -153,9 +153,9 @@ private:
     // bool _compute_bbox_depth = false;
 
     int _rgb_height = 1080;
-    int _rgb_fps = 30;
+    int _rgb_fps = 15;
     int _depth_height = 720;
-    int _depth_fps = 30;
+    int _depth_fps = 10;
 
     int _maxDisp;
     bool _extended_disparity = false;

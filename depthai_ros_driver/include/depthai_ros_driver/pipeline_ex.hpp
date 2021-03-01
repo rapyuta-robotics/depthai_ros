@@ -22,7 +22,7 @@ public:
 
 protected:
 
-    void configure_preview_pipeline(const std::string& config_json);
+    void configure_color_pipeline(const std::string& config_json);
 
 
     void configure_stereo_pipeline(const std::string& config_json);

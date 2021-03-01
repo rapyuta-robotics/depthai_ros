@@ -42,7 +42,7 @@ protected:
         }
         if (has_any(streams, color_stream_list) &&
                 !has_any(streams, nn_stream_list)) {
-            configure_preview_pipeline(config_json);
+            configure_color_pipeline(config_json);
         }
     }
 

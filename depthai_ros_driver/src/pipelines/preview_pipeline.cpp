@@ -13,7 +13,7 @@ protected:
      * @brief Default implementation for configure step, does nothing
      */
     void onConfigure(const std::string& config_json) {
-        configure_preview_pipeline(config_json);
+        configure_color_pipeline(config_json);
     }
 
     /**
