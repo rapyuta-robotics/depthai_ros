@@ -116,14 +116,11 @@ private:
 
     std::unique_ptr<pluginlib::ClassLoader<rr::Pipeline> > _pipeline_loader;
 
-    boost::shared_ptr<rr::Pipeline> _pipeline_plugin;
+    class_loader::ClassLoader::UniquePtr<rr::Pipeline> _pipeline_plugin;
 
     dai::Pipeline _pipeline;
     std::unique_ptr<dai::Device> _depthai;
     std::unordered_map<std::string, std::shared_ptr<dai::DataOutputQueue>> _data_output_queue;
-
-
-
 
 
     ros::Publisher _camera_info_pub;

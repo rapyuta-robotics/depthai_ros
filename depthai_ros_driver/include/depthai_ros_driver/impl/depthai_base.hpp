@@ -330,7 +330,7 @@ void DepthAIBase<Node>::onInit() {
     // Start pipeline
     _pipeline_loader = std::make_unique<pluginlib::ClassLoader<rr::Pipeline>>("depthai_ros_driver", "rr::Pipeline");
     try {
-        _pipeline_plugin = _pipeline_loader->createInstance(_pipeline_name);
+        _pipeline_plugin = _pipeline_loader->createUniqueInstance(_pipeline_name);
         _pipeline_plugin->configure(_pipeline_config_json);
         _pipeline = _pipeline_plugin->getPipeline();
     }
