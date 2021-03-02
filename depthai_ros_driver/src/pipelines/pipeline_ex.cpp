@@ -87,7 +87,7 @@ void PipelineEx::configure_color_pipeline(const std::string& config_json) {
         xoutPreviewout->setStreamName("preview");
         colorCam->preview.link(xoutPreviewout->input);
 
-        if (has_any(streams, {"metaout"})) {
+        if (has_stream(streams, "metaout")) {
             auto nn1 = _pipeline.create<dai::node::NeuralNetwork>();
             auto nnOut = _pipeline.create<dai::node::XLinkOut>();
             nn1->setBlobPath(nnPath);
@@ -96,7 +96,7 @@ void PipelineEx::configure_color_pipeline(const std::string& config_json) {
             nn1->out.link(nnOut->input);
         }
     }
-    if (has_any(streams, {"video"})) {
+    if (has_stream(streams, "video")) {
         auto xoutVideo = _pipeline.create<dai::node::XLinkOut>();
         auto videnc = _pipeline.create<dai::node::VideoEncoder>();
 
@@ -110,7 +110,7 @@ void PipelineEx::configure_color_pipeline(const std::string& config_json) {
         // xoutVideo->setStreamName("video");
         // colorCam->video.link(xoutVideo->input); // <- uncompressed case. streamed in YUV
     }
-    // if (has_any(streams, {"jpegout"})) {
+    // if (has_stream(streams, "jpegout")) {
     //     auto xoutJpeg = _pipeline.create<dai::node::XLinkOut>();
     //     xoutJpeg->setStreamName("jpegout");
     //     colorCam->still.link(xoutJpeg->input);
@@ -129,11 +129,11 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
 
     // set configuration based on streams
     const auto& streams = json["streams"];
-    const bool withDepth = has_any(streams, {"disparity", "disparity_color", "depth"});  // with disparity
-    const bool outputDisparity = withDepth && has_any(streams, {"disparity"});
-    const bool outputDisparityColor = withDepth && has_any(streams, {"disparity_color"});
-    const bool outputDepth = withDepth && has_any(streams, {"depth"});  // direct depth computation
-    const bool outputRectified = withDepth && has_any(streams, {"rectified_left", "rectified_right"});
+    const bool withDepth = has_any(streams, {"disparity", "disparity_color", "depth", "rectified_left", "rectified_right"});
+    const bool outputDisparity = has_stream(streams, "disparity");
+    const bool outputDisparityColor = has_stream(streams, "disparity_color");
+    const bool outputDepth = has_stream(streams, "depth");  // direct depth computation
+    const bool outputRectified = has_any(streams, {"rectified_left", "rectified_right"});
 
     // parse json parameters
     std::string calibrationFile;
