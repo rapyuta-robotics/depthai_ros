@@ -86,7 +86,7 @@ std::unordered_map<std::string, StreamInfo> stream_info {
     {"rectified_left",  {RECTIFIED_LEFT,  "rectified_left",  "rectified_left",  "rectified_left",  }},
     {"rectified_right", {RECTIFIED_RIGHT, "rectified_right", "rectified_right", "rectified_right", }},
     {"disparity",       {DISPARITY,       "disparity",       "disparity",       "disparity",       }},
-    {"disparity_color", {DISPARITY_COLOR, "disparity_color", "disparity_color", "disparity",       }},
+    {"disparity_color", {DISPARITY_COLOR, "disparity_color", "disparity_color", "disparity_color", }},
     {"depth",           {DEPTH,           "depth",           "depth",           "depth",           }},
     {"previewout",      {PREVIEW_OUT,     "previewout",      "previewout",      "preview",         }},
     {"jpegout",         {JPEG_OUT,        "jpegout",         "jpeg",            "jpeg",            }},

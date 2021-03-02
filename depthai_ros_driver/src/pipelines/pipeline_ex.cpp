@@ -96,13 +96,13 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
     // set configuration based on streams
     const auto& streams = json["streams"];
     const bool withDepth = has_any(streams, {"disparity", "disparity_color", "depth"});  // with disparity
-    const bool outputDisparity = withDepth && has_any(streams, {"disparity", "disparity_color"});
+    const bool outputDisparity = withDepth && has_any(streams, {"disparity"});
+    const bool outputDisparityColor = withDepth && has_any(streams, {"disparity_color"});
     const bool outputDepth = withDepth && has_any(streams, {"depth"});  // direct depth computation
     const bool outputRectified = withDepth && has_any(streams, {"rectified_left", "rectified_right"});
 
     // parse json parameters
     std::string calibrationFile;
-    bool maxDisp = 96;
     bool extended, subpixel, lrcheck;
     float fps = 10.0;
     auto sensorResolution = dai::MonoCameraProperties::SensorResolution::THE_720_P;
@@ -132,10 +132,7 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
             calibrationFile = depthConfig.at("calibration_file");
             extended = depthConfig.at("extended");
             subpixel = depthConfig.at("subpixel");
-            lrcheck = depthConfig.at("subpixel");
-
-            if (extended) maxDisp *= 2;
-            if (subpixel) maxDisp *= 32; // 5 bits fractional disparity
+            lrcheck = depthConfig.at("lrcheck");
         }
     } catch(const std::exception& ex) { // const nlohmann::basic_json::out_of_range& ex
         ROS_ERROR(ex.what());
@@ -183,6 +180,12 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
             auto xoutDisp  = _pipeline.create<dai::node::XLinkOut>();
             xoutDisp->setStreamName("disparity");
             stereo->disparity.link(xoutDisp->input);
+        }
+
+        if (outputDisparityColor) {
+            auto xoutDispColor  = _pipeline.create<dai::node::XLinkOut>();
+            xoutDispColor->setStreamName("disparity_color");
+            stereo->disparity.link(xoutDispColor->input);
         }
 
         if (outputDepth) {

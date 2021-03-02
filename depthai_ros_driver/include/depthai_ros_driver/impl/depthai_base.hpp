@@ -126,25 +126,10 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, const std::string& 
             break;
         }
         case Stream::DISPARITY_COLOR: {
-            const int ndim = 2; // packet.dimensions.size();
-            const int elemSize = 1; // packet.elem_size;  <- subpixel
-
-            if (ndim == 2) {
-                if (elemSize == 1) {
-                    cvImg.image = cv::Mat(rows, cols, CV_8UC1, data);
-                    encoding = "mono8";
-                } else {  // depth
-                    cv::Mat bgrImg;
-                    cv::Mat monoImg(rows, cols, CV_8UC1, data);
-                    cv::applyColorMap(monoImg, bgrImg, cv::COLORMAP_HOT);
-                    // cv::applyColorMap(monoImg, bgrImg, cv::COLORMAP_JET);
-                    cvImg.image = bgrImg;
-                    encoding = "bgr8";
-                }
-            } else {  // disparity_color  <- ??
-                cvImg.image = cv::Mat(rows, cols, CV_8UC3, data);
-                encoding = "bgr8";
-            }
+            cv::Mat disp(rows, cols, _subpixel ? CV_16UC1 : CV_8UC1, data);
+            disp.convertTo(disp, CV_8UC1, 255.0 / _maxDisp); // Extend disparity range
+            cv::applyColorMap(disp, cvImg.image, cv::COLORMAP_JET);
+            encoding = "bgr8";
             break;
         }
         case Stream::DEPTH:
@@ -310,7 +295,7 @@ void DepthAIBase<Node>::onInit() {
     // set unsupported flags
     _request_jpegout = false;
 
-    // disparity mode
+    // disparity mode. necessary only for visualization
     _maxDisp = 96;
     if (_extended_disparity) _maxDisp *= 2;
     if (_subpixel) _maxDisp *= 32; // 5 bits fractional disparity
