@@ -5,7 +5,6 @@
 #include <image_transport/image_transport.h>
 
 #include <depthai_ros_driver/pipeline.hpp>
-
 #include <depthai_ros_driver/depthai_base.hpp>
 
 
@@ -186,67 +185,7 @@ void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
             }
         }
     }
-
-    // if (_data_packet.size() != 0) {
-    //     for (const std::shared_ptr<HostDataPacket>& packet : _data_packet) {
-    //         if (packet == nullptr) {
-    //             // just a sanity check to prevent null dereference
-    //             continue;
-    //         }
-    //         const auto& name = packet->stream_name;
-    //         const auto stream = std::find(_stream_name.cbegin(), _stream_name.cend(), name);
-    //         if (stream == _stream_name.end()) {
-    //             ROS_WARN_THROTTLE_NAMED(10, this->getName(), "Stream: %s is not implemented", name.c_str());
-    //             continue;
-    //         }
-
-    //         const auto index = std::distance(_stream_name.cbegin(), stream);
-    //         if (index == Stream::VIDEO) {
-    //             // workaround for the bug in DepthAI-Core library
-    //             publishImageMsg(*(packet.get()), static_cast<Stream>(index), stamp);
-    //             continue;
-    //         }
-
-    //         auto meta_data = packet->getMetadata();
-    //         const auto seq_num = meta_data->getSequenceNum();
-    //         const auto ts = meta_data->getTimestamp();
-    //         const auto sync_ts = get_ts(ts);
-    //         ROS_DEBUG_NAMED(this->getName(), "Stream: %s, Original TS: %f, SeqNum: %d, Synced TS: %f",
-    //                 packet->stream_name.c_str(), ts, seq_num, sync_ts.toSec());
-    //         publishImageMsg(*(packet.get()), static_cast<Stream>(index), sync_ts);
-    //     }
-    // }
 }
-
-// template <class Node>
-// bool DepthAIBase<Node>::defaultCameraInfo(
-//         depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res) {
-//     const auto it = std::find(_topic_name.cbegin(), _topic_name.cend(), req.name);
-//     if (it == _topic_name.cend()) {
-//         res.success = false;
-//         res.message = "No such camera known";
-//         return true;
-//     }
-
-//     const auto& name = req.name;
-//     auto& nh = this->getPrivateNodeHandle();
-//     const auto uri = _camera_param_uri + "default/" + name + ".yaml";
-//     if (_defaultManager == nullptr) {
-//         _defaultManager =
-//                 std::make_unique<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, "_default"}, name, uri);
-//     } else {
-//         _defaultManager->setCameraName(name);
-//         _defaultManager->loadCameraInfo(uri);
-//     }
-//     const auto index = std::distance(_topic_name.cbegin(), it);
-//     const auto cameraInfo = _defaultManager->getCameraInfo();
-//     res.success = _camera_info_manager[index]->setCameraInfo(cameraInfo);
-
-//     _defaultManager->setCameraName("_default");
-//     _defaultManager->loadCameraInfo("");
-//     return true;
-// }
-
 
 template <class Node>
 void DepthAIBase<Node>::onInit() {
@@ -377,8 +316,6 @@ void DepthAIBase<Node>::prepareStreamConfig() {
         _stream_publishers[id] =
                 std::make_unique<ros::Publisher>(nh.template advertise<type>(name + suffix, _queue_size));
     };
-
-    // _camera_info_default = nh.advertiseService("reset_camera_info", &DepthAIBase::defaultCameraInfo, this);
 
     for (const auto& stream : _stream_list) {
         // std::cout << "Requested Streams: " << _stream_list[i] << std::endl;

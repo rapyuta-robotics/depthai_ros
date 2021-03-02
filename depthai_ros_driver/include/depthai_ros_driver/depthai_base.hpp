@@ -7,25 +7,22 @@
 #include <depthai_ros_msgs/TriggerNamed.h>
 
 // core ROS dependency includes
+#include <ros/ros.h>
 #include <camera_info_manager/camera_info_manager.h>
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/camera_publisher.h>
-#include <ros/ros.h>
+#include <pluginlib/class_loader.h>
 
 // ROS1 messages
 #include <sensor_msgs/Image.h>
 #include <std_msgs/Float32.h>
 
 // relevant 3rd party includes
-#include <depthai/depthai.hpp> // to be more modular
+#include <depthai/pipeline/datatype/ImgFrame.hpp>
 #include <depthai/pipeline/datatype/NNData.hpp>
+#include <depthai/device/Device.hpp>
 #include <depthai/device/DataQueue.hpp>
 #include <depthai/pipeline/Pipeline.hpp>
-
-// #include <depthai/device.hpp>
-//#include <depthai/host_data_packet.hpp>
-//#include <depthai/nnet/nnet_packet.hpp>
-//#include <depthai/pipeline/cnn_host_pipeline.hpp>
 
 // general 3rd party includes
 #include <boost/property_tree/json_parser.hpp>
@@ -33,12 +30,8 @@
 #include <opencv2/opencv.hpp>
 
 // std includes
-#include <algorithm>
 #include <array>
-#include <memory>
 #include <string>
-
-#include <pluginlib/class_loader.h>
 
 #include <depthai_ros_driver/pipeline.hpp>
 
@@ -112,7 +105,6 @@ private:
     std::array<std::unique_ptr<camera_info_manager::CameraInfoManager>, Stream::IMAGE_END> _camera_info_manager;
 
     std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;
-    // ros::ServiceServer _camera_info_default;
 
     std::unique_ptr<pluginlib::ClassLoader<rr::Pipeline> > _pipeline_loader;
 
@@ -166,8 +158,6 @@ private:
     ros::Time _stamp;
     // double _depthai_ts_offset = -1;  // sadly, we don't have a way of measuring drift
 
-    // std::list<std::shared_ptr<HostDataPacket>> _data_packet;
-
     bool has_stream(const std::string& stream) const;
 
     void prepareStreamConfig();
@@ -182,7 +172,6 @@ private:
     void publishCameraInfo(ros::Time stamp);
 
     void cameraReadCb(const ros::TimerEvent&);
-    // bool defaultCameraInfo(depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res);
 
     void createPipeline();
     void getAvailableStreams();
