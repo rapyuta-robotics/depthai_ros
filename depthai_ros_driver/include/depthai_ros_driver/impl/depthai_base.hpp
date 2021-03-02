@@ -377,12 +377,13 @@ void DepthAIBase<Node>::prepareStreamConfig() {
 
     auto set_camera_info_pub = [&](const std::string& stream) {
         const auto& name = stream_info[stream].name;
+        const auto& topic = stream_info[stream].topic;
 
         const auto uri = _camera_param_uri + _camera_name + "/" + name + ".yaml";
         _camera_info_manager[stream_info[stream].id] =
                 std::make_unique<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, name}, name, uri);
         _camera_info_publishers[stream_info[stream].id] = std::make_unique<ros::Publisher>(
-                nh.template advertise<sensor_msgs::CameraInfo>(name + "/camera_info", _queue_size));
+                nh.template advertise<sensor_msgs::CameraInfo>(topic + "/camera_info", _queue_size));
     };
 
     auto set_stream_pub = [&](const std::string& stream, auto message_type) {
