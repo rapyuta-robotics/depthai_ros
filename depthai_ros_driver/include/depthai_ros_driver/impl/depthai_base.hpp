@@ -153,9 +153,8 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, const std::string& 
         }
         case Stream::DEPTH:
             cvImg.image = cv::Mat(rows, cols, CV_16UC1, data);
-            encoding = "mono16";// <- fix
-            // break;
-            return;
+            encoding = "mono16";
+            break;
         case Stream::JPEG_OUT:
         case Stream::VIDEO: {
             const auto img = boost::make_shared<sensor_msgs::CompressedImage>();
