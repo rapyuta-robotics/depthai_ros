@@ -122,11 +122,7 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, const std::string& 
             break;
         case Stream::DISPARITY: {
             cvImg.image = cv::Mat(rows, cols, _subpixel ? CV_16UC1 : CV_8UC1, data);
-            cvImg.image.convertTo(cvImg.image, CV_8UC1, 255.0 / _maxDisp); // Extend disparity range
-            encoding = "mono8";
-            // cv::Mat disp_color;
-            // cv::applyColorMap(disp, disp_color, cv::COLORMAP_JET);
-            // cv::imshow("disparity_color", disp_color);
+            encoding = _subpixel ? "mono16" : "mono8";
             break;
         }
         case Stream::DISPARITY_COLOR: {
