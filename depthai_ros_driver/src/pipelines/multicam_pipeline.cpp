@@ -9,7 +9,7 @@ namespace depthai_ros_driver
 class MulticamPipeline : public rr::PipelineEx {
 protected:
     std::vector<std::string> color_stream_list = {
-        "previewout", "jpegout", "video"
+        "previewout", "jpegout", "video", "metaout"
     };
     std::vector<std::string> stereo_stream_list = {
         "left", "right", "disparity", "depth", "disparity_color", "rectified_left", "rectified_right"
@@ -37,11 +37,7 @@ protected:
         if (has_any(streams, stereo_stream_list)) {
             configure_stereo_pipeline(config_json);
         }
-        if (has_any(streams, nn_stream_list)) {
-            configure_mobilenet_ssd_pipeline(config_json);
-        }
-        if (has_any(streams, color_stream_list) &&
-                !has_any(streams, nn_stream_list)) {
+        if (has_any(streams, color_stream_list)) {
             configure_color_pipeline(config_json);
         }
     }

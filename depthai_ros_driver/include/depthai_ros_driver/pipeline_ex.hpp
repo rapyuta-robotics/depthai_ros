@@ -24,10 +24,7 @@ protected:
 
     void configure_color_pipeline(const std::string& config_json);
 
-
     void configure_stereo_pipeline(const std::string& config_json);
-
-    void configure_mobilenet_ssd_pipeline(const std::string& config_json);
 
 };
 }  // namespace rr

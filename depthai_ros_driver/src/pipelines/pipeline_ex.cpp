@@ -49,18 +49,52 @@ void PipelineEx::configure_color_pipeline(const std::string& config_json) {
         return;
     }
 
+    std::string nnPath;
+    bool withNN = false;
+    if (has_any(streams, {"meta_d2h", "metaout", "object_tracker"})) {  // TODO: nn_stream_list
+        if (!json.contains("ai")) {
+            ROS_ERROR("mobilenet_ssd pipline needs \"ai\" tag for config_json.");
+            return;
+        }
+
+        const auto& config = json["ai"];
+        try {
+            nnPath = config.at("blob_file");
+
+        } catch(const std::exception& ex) { // const nlohmann::basic_json::out_of_range& ex
+            ROS_ERROR(ex.what());
+            return;
+        }
+
+        withNN = true;
+    }
+
     // Color camera
     auto colorCam = _pipeline.create<dai::node::ColorCamera>();
     colorCam->setPreviewSize(300, 300);
     colorCam->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
     colorCam->setFps(fps);
-    colorCam->setInterleaved(true);
+    if (withNN) {
+        colorCam->setInterleaved(false); // 3 x height x width
+        colorCam->setColorOrder(dai::ColorCameraProperties::ColorOrder::BGR);
+    } else {
+        colorCam->setInterleaved(true); // height x width x 3
+    }
 
     // Streams
-    if (has_any(streams, {"previewout"})) {
+    if (has_any(streams, {"previewout", "metaout"})) {
         auto xoutPreviewout = _pipeline.create<dai::node::XLinkOut>();
         xoutPreviewout->setStreamName("preview");
         colorCam->preview.link(xoutPreviewout->input);
+
+        if (has_any(streams, {"metaout"})) {
+            auto nn1 = _pipeline.create<dai::node::NeuralNetwork>();
+            auto nnOut = _pipeline.create<dai::node::XLinkOut>();
+            nn1->setBlobPath(nnPath);
+            nnOut->setStreamName("detections");
+            colorCam->preview.link(nn1->input);
+            nn1->out.link(nnOut->input);
+        }
     }
     if (has_any(streams, {"video"})) {
         auto xoutVideo = _pipeline.create<dai::node::XLinkOut>();
@@ -211,50 +245,5 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
 
     ROS_INFO("Initialized stereo pipeline.");
 }
-
-void PipelineEx::configure_mobilenet_ssd_pipeline(const std::string& config_json) {
-    // convert json string to nlohmann::json
-    const nlohmann::json json = nlohmann::json::parse(config_json);
-    if (!json.contains("ai")) {
-        ROS_ERROR("mobilenet_ssd pipline needs \"ai\" tag for config_json.");
-        return;
-    }
-
-    std::string nnPath;
-    const auto& config = json["ai"];
-    try {
-        nnPath = config.at("blob_file");
-
-    } catch(const std::exception& ex) { // const nlohmann::basic_json::out_of_range& ex
-        ROS_ERROR(ex.what());
-        return;
-    }
-
-    auto colorCam = _pipeline.create<dai::node::ColorCamera>();
-    auto xoutColor = _pipeline.create<dai::node::XLinkOut>();
-    auto nn1 = _pipeline.create<dai::node::NeuralNetwork>();
-    auto nnOut = _pipeline.create<dai::node::XLinkOut>();
-
-    nn1->setBlobPath(nnPath);
-
-    // XLinkOut
-    xoutColor->setStreamName("preview");
-    nnOut->setStreamName("detections");
-
-    // Color camera
-    colorCam->setPreviewSize(300, 300);
-    colorCam->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
-    colorCam->setInterleaved(false);
-    colorCam->setColorOrder(dai::ColorCameraProperties::ColorOrder::BGR);
-
-    // Link plugins CAM -> NN -> XLINK
-    colorCam->preview.link(nn1->input);
-    colorCam->preview.link(xoutColor->input);
-    nn1->out.link(nnOut->input);
-
-    ROS_INFO("Mobilenet SSD pipeline initialized.");
-}
-
-
 
 } // namespace depthai_ros_driver
