@@ -32,12 +32,12 @@ protected:
             ROS_ERROR("MulticamPipline needs \"streams\" tag for an array of streams in config_json.");
             return;
         }
+        _streams = json["streams"];
 
-        const auto& streams = json["streams"];
-        if (has_any(streams, stereo_stream_list)) {
+        if (has_any(stereo_stream_list)) {
             configure_stereo_pipeline(config_json);
         }
-        if (has_any(streams, color_stream_list)) {
+        if (has_any(color_stream_list)) {
             configure_color_pipeline(config_json);
         }
     }

@@ -12,15 +12,40 @@
 
 namespace rr
 {
+bool PipelineEx::has_stream(const std::string& name) const {
+    return (std::find(_streams.cbegin(), _streams.cend(), name) != _streams.cend());
+}
+
+/**
+ * @brief returns whether any of the list members are contained in the json array
+ * @note O(N^2) algorithm
+ */
+// NOTE: has_any is a O(N^2) algorithm
+bool PipelineEx::has_any(const std::vector<std::string>& list) const {
+    for (const std::string& item: list) {
+        if (has_stream(item)) {
+            return true; // found
+        }
+    }
+
+    return false;  // didn't find any
+}
+
+bool PipelineEx::link_to_xout(auto& source , const std::string& stream) {
+    if (has_stream(stream)) {
+        auto xout  = _pipeline.create<dai::node::XLinkOut>();
+        xout->setStreamName(stream);
+        source.link(xout->input);
+    }
+}
+
 void PipelineEx::configure_color_pipeline(const std::string& config_json) {
     // convert json string to nlohmann::json
     const nlohmann::json json = nlohmann::json::parse(config_json);
-
-    if (!json.contains("streams")) {
-        ROS_ERROR("color pipline needs \"streams\" tag and \"depth\" tag for config_json.");
+    if (!json.contains("camera")) {
+        ROS_ERROR("color pipline needs \"camera\" tag for config_json.");
         return;
     }
-    const auto& streams = json["streams"];
 
     float fps = 15.0;
     auto sensorResolution = dai::ColorCameraProperties::SensorResolution::THE_1080_P;
@@ -51,7 +76,7 @@ void PipelineEx::configure_color_pipeline(const std::string& config_json) {
 
     std::string nnPath;
     bool withNN = false;
-    if (has_any(streams, {"meta_d2h", "metaout", "object_tracker"})) {  // TODO: nn_stream_list
+    if (has_any({"meta_d2h", "metaout", "object_tracker"})) {  // TODO: nn_stream_list
         if (!json.contains("ai")) {
             ROS_ERROR("mobilenet_ssd pipline needs \"ai\" tag for config_json.");
             return;
@@ -82,12 +107,12 @@ void PipelineEx::configure_color_pipeline(const std::string& config_json) {
     }
 
     // Streams
-    if (has_any(streams, {"previewout", "metaout"})) {
+    if (has_any({"previewout", "metaout"})) {
         auto xoutPreviewout = _pipeline.create<dai::node::XLinkOut>();
         xoutPreviewout->setStreamName("preview");
         colorCam->preview.link(xoutPreviewout->input);
 
-        if (has_stream(streams, "metaout")) {
+        if (has_stream("metaout")) {
             auto nn1 = _pipeline.create<dai::node::NeuralNetwork>();
             auto nnOut = _pipeline.create<dai::node::XLinkOut>();
             nn1->setBlobPath(nnPath);
@@ -96,7 +121,7 @@ void PipelineEx::configure_color_pipeline(const std::string& config_json) {
             nn1->out.link(nnOut->input);
         }
     }
-    if (has_stream(streams, "video")) {
+    if (has_stream("video")) {
         auto xoutVideo = _pipeline.create<dai::node::XLinkOut>();
         auto videnc = _pipeline.create<dai::node::VideoEncoder>();
 
@@ -122,18 +147,13 @@ void PipelineEx::configure_color_pipeline(const std::string& config_json) {
 void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
     // convert json string to nlohmann::json
     const nlohmann::json json = nlohmann::json::parse(config_json);
-    if (!json.contains("streams") || !json.contains("depth")) {
-        ROS_ERROR("stereo pipline needs \"streams\" tag and \"depth\" tag for config_json.");
+    if (!json.contains("depth")) {
+        ROS_ERROR("stereo pipline needs \"depth\" tag for config_json.");
         return;
     }
 
     // set configuration based on streams
-    const auto& streams = json["streams"];
-    const bool withDepth = has_any(streams, {"disparity", "disparity_color", "depth", "rectified_left", "rectified_right"});
-    const bool outputDisparity = has_stream(streams, "disparity");
-    const bool outputDisparityColor = has_stream(streams, "disparity_color");
-    const bool outputDepth = has_stream(streams, "depth");  // direct depth computation
-    const bool outputRectified = has_any(streams, {"rectified_left", "rectified_right"});
+    const bool withDepth = has_any({"disparity", "disparity_color", "depth", "rectified_left", "rectified_right"});
 
     // parse json parameters
     std::string calibrationFile;
@@ -174,14 +194,14 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
     }
 
     std::shared_ptr<dai::node::MonoCamera> monoLeft, monoRight;
-    if (withDepth || has_stream(streams, "left")) {
+    if (withDepth || has_stream("left")) {
         monoLeft  = _pipeline.create<dai::node::MonoCamera>();
         monoLeft->setResolution(sensorResolution);
         monoLeft->setBoardSocket(dai::CameraBoardSocket::LEFT);
         monoLeft->setFps(fps);
     }
 
-    if (withDepth || has_stream(streams, "right")) {
+    if (withDepth || has_stream("right")) {
         monoRight = _pipeline.create<dai::node::MonoCamera>();
         monoRight->setResolution(sensorResolution);
         monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
@@ -189,7 +209,10 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
     }
 
     if (withDepth) {
-        auto stereo    = withDepth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
+        auto stereo = _pipeline.create<dai::node::StereoDepth>();
+
+        const bool outputDepth = has_stream("depth"); // direct depth computation
+        const bool outputRectified = has_any({"rectified_left", "rectified_right"});
         const auto resolution_wh = monoLeft->getResolutionSize();
 
         // StereoDepth
@@ -205,61 +228,22 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
         stereo->setExtendedDisparity(extended);
         stereo->setSubpixel(subpixel);
 
-        // Link plugins CAM -> STEREO -> XLINK
+        // Link plugins CAM -> STEREO
         monoLeft->out.link(stereo->left);
         monoRight->out.link(stereo->right);
-        if (has_stream(streams, "left")) {
-            auto xoutLeft  = _pipeline.create<dai::node::XLinkOut>();
-            xoutLeft->setStreamName("left");
-            stereo->syncedLeft.link(xoutLeft->input);
-        }
-        if (has_stream(streams, "right")) {
-            auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
-            xoutRight->setStreamName("right");
 
-            stereo->syncedRight.link(xoutRight->input);
-        }
+        link_to_xout(stereo->syncedLeft, "left");
+        link_to_xout(stereo->syncedRight, "right");
+        link_to_xout(stereo->disparity, "disparity");
+        link_to_xout(stereo->disparity, "disparity_color");
+        link_to_xout(stereo->depth, "depth");
 
-        if (outputDisparity) {
-            auto xoutDisp  = _pipeline.create<dai::node::XLinkOut>();
-            xoutDisp->setStreamName("disparity");
-            stereo->disparity.link(xoutDisp->input);
-        }
-
-        if (outputDisparityColor) {
-            auto xoutDispColor  = _pipeline.create<dai::node::XLinkOut>();
-            xoutDispColor->setStreamName("disparity_color");
-            stereo->disparity.link(xoutDispColor->input);
-        }
-
-        if (outputDepth) {
-            auto xoutDepth = _pipeline.create<dai::node::XLinkOut>();
-            xoutDepth->setStreamName("depth");
-            stereo->depth.link(xoutDepth->input);
-        }
-
-            // setting streams for recified images are not necessary for computing depth
-        if (has_stream(streams, "rectified_left")) {
-            auto xoutRectifL = _pipeline.create<dai::node::XLinkOut>();
-            xoutRectifL->setStreamName("rectified_left");
-            stereo->rectifiedLeft.link(xoutRectifL->input);
-        }
-        if (has_stream(streams, "rectified_right")) {
-            auto xoutRectifR = _pipeline.create<dai::node::XLinkOut>();
-            xoutRectifR->setStreamName("rectified_right");
-            stereo->rectifiedRight.link(xoutRectifR->input);
-        }
+        // setting streams for recified images are not necessary for computing depth
+        link_to_xout(stereo->rectifiedLeft, "rectified_left");
+        link_to_xout(stereo->rectifiedRight, "rectified_right");
     } else {
-        if (has_stream(streams, "left")) {
-            auto xoutLeft  = _pipeline.create<dai::node::XLinkOut>();
-            xoutLeft->setStreamName("left");
-            monoLeft->out.link(xoutLeft->input);
-        }
-        if (has_stream(streams, "right")) {
-            auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
-            xoutRight->setStreamName("right");
-            monoRight->out.link(xoutRight->input);
-        }
+        link_to_xout(monoLeft->out, "left");
+        link_to_xout(monoRight->out, "right");
     }
 
     ROS_INFO("Initialized stereo pipeline.");
