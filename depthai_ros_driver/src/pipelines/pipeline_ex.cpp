@@ -173,19 +173,20 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
         return;
     }
 
-    auto monoLeft  = _pipeline.create<dai::node::MonoCamera>();
-    auto monoRight = _pipeline.create<dai::node::MonoCamera>();
-    monoLeft->setResolution(sensorResolution);
-    monoLeft->setBoardSocket(dai::CameraBoardSocket::LEFT);
-    monoLeft->setFps(fps);
-    monoRight->setResolution(sensorResolution);
-    monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
-    monoRight->setFps(fps);
+    std::shared_ptr<dai::node::MonoCamera> monoLeft, monoRight;
+    if (withDepth || has_stream(streams, "left")) {
+        monoLeft  = _pipeline.create<dai::node::MonoCamera>();
+        monoLeft->setResolution(sensorResolution);
+        monoLeft->setBoardSocket(dai::CameraBoardSocket::LEFT);
+        monoLeft->setFps(fps);
+    }
 
-    auto xoutLeft  = _pipeline.create<dai::node::XLinkOut>();
-    auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
-    xoutLeft->setStreamName("left");
-    xoutRight->setStreamName("right");
+    if (withDepth || has_stream(streams, "right")) {
+        monoRight = _pipeline.create<dai::node::MonoCamera>();
+        monoRight->setResolution(sensorResolution);
+        monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
+        monoRight->setFps(fps);
+    }
 
     if (withDepth) {
         auto stereo    = withDepth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
@@ -207,8 +208,17 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
         // Link plugins CAM -> STEREO -> XLINK
         monoLeft->out.link(stereo->left);
         monoRight->out.link(stereo->right);
-        stereo->syncedLeft.link(xoutLeft->input);
-        stereo->syncedRight.link(xoutRight->input);
+        if (has_stream(streams, "left")) {
+            auto xoutLeft  = _pipeline.create<dai::node::XLinkOut>();
+            xoutLeft->setStreamName("left");
+            stereo->syncedLeft.link(xoutLeft->input);
+        }
+        if (has_stream(streams, "right")) {
+            auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
+            xoutRight->setStreamName("right");
+
+            stereo->syncedRight.link(xoutRight->input);
+        }
 
         if (outputDisparity) {
             auto xoutDisp  = _pipeline.create<dai::node::XLinkOut>();
@@ -228,19 +238,28 @@ void PipelineEx::configure_stereo_pipeline(const std::string& config_json) {
             stereo->depth.link(xoutDepth->input);
         }
 
-        if (outputRectified) {
             // setting streams for recified images are not necessary for computing depth
+        if (has_stream(streams, "rectified_left")) {
             auto xoutRectifL = _pipeline.create<dai::node::XLinkOut>();
-            auto xoutRectifR = _pipeline.create<dai::node::XLinkOut>();
             xoutRectifL->setStreamName("rectified_left");
-            xoutRectifR->setStreamName("rectified_right");
             stereo->rectifiedLeft.link(xoutRectifL->input);
+        }
+        if (has_stream(streams, "rectified_right")) {
+            auto xoutRectifR = _pipeline.create<dai::node::XLinkOut>();
+            xoutRectifR->setStreamName("rectified_right");
             stereo->rectifiedRight.link(xoutRectifR->input);
         }
     } else {
-        // Link plugins CAM -> XLINK
-        monoLeft->out.link(xoutLeft->input);
-        monoRight->out.link(xoutRight->input);
+        if (has_stream(streams, "left")) {
+            auto xoutLeft  = _pipeline.create<dai::node::XLinkOut>();
+            xoutLeft->setStreamName("left");
+            monoLeft->out.link(xoutLeft->input);
+        }
+        if (has_stream(streams, "right")) {
+            auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
+            xoutRight->setStreamName("right");
+            monoRight->out.link(xoutRight->input);
+        }
     }
 
     ROS_INFO("Initialized stereo pipeline.");
