@@ -1,11 +1,12 @@
 #include <ros/console.h>
 #include <pluginlib/class_list_macros.h>
 
-#include <depthai/pipeline/node/MonoCamera.hpp>
 #include <depthai/pipeline/node/ColorCamera.hpp>
 #include <depthai/pipeline/node/StereoDepth.hpp>
+#include <depthai/pipeline/node/MonoCamera.hpp>
 #include <depthai/pipeline/node/NeuralNetwork.hpp>
 #include <depthai/pipeline/node/VideoEncoder.hpp>
+#include <depthai/pipeline/node/XLinkIn.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 
 #include <depthai_ros_driver/multicam_pipeline.hpp>
@@ -154,6 +155,15 @@ void MulticamPipeline::configure_color_pipeline(const std::string& config_json) 
     //     xoutJpeg->setStreamName("jpegout");
     //     colorCam->still.link(xoutJpeg->input);
     // }
+
+    // Configure camera control
+    auto controlIn = _pipeline.create<dai::node::XLinkIn>();
+    controlIn->setStreamName("control");
+    controlIn->out.link(colorCam->inputControl);
+
+    auto configIn = _pipeline.create<dai::node::XLinkIn>();
+    configIn->setStreamName("config");
+    configIn->out.link(colorCam->inputConfig);
 
     ROS_INFO("Initialized color pipeline.");
 }

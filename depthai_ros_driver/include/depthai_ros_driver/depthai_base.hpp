@@ -114,7 +114,8 @@ private:
     std::unique_ptr<dai::Device> _depthai;
     std::unordered_map<std::string, std::shared_ptr<dai::DataOutputQueue>> _data_output_queue;
 
-
+    std::shared_ptr<dai::DataInputQueue> _color_control_queue = nullptr;
+    std::shared_ptr<dai::DataInputQueue> _color_config_queue = nullptr;
     ros::Publisher _camera_info_pub;
 
     ros::Subscriber _af_ctrl_sub;
