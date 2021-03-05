@@ -8,6 +8,7 @@
 
 #include <depthai_ros_driver/pipeline.hpp>
 #include <depthai_ros_driver/depthai_base.hpp>
+#include <depthai_ros_driver/control/focus_control.hpp>
 
 
 namespace rr {
@@ -27,14 +28,12 @@ void DepthAIBase<Node>::disparityConfCb(const std_msgs::Float32::ConstPtr& msg) 
 }
 
 template <class Node>
-void DepthAIBase<Node>::afCtrlCb(const depthai_ros_msgs::AutoFocusCtrl msg) {
-    if ((msg.auto_focus_mode >= 0) && (msg.auto_focus_mode <= static_cast<uint8_t>(dai::CameraControl::AutoFocusMode::EDOF))) {
-        dai::CameraControl ctrl;
-        ctrl.setAutoFocusMode(static_cast<dai::CameraControl::AutoFocusMode>(msg.auto_focus_mode));
-        ctrl.setAutoFocusTrigger();
-        _color_control_queue->send(ctrl);
+void DepthAIBase<Node>::focusControlCallback(const depthai_ros_msgs::FocusControlCommand& msg) {
+    auto focus_control = FocusControl::createControl(msg);
+    if (focus_control) {
+        _color_control_queue->send(*focus_control);
     } else {
-        ROS_ERROR_STREAM_NAMED(this->getName(), "Invalid Auto Focus mode requested: " << static_cast<int>(msg.auto_focus_mode));
+        ROS_ERROR_STREAM_NAMED(this->getName(), "Invalid Focus mode is requested: " << msg);
     }
 }
 
@@ -286,7 +285,7 @@ void DepthAIBase<Node>::onInit() {
     // _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
 
     // Control
-    _af_ctrl_sub = nh.subscribe("auto_focus_ctrl", _queue_size, &DepthAIBase::afCtrlCb, this);
+    _af_ctrl_sub = nh.subscribe("auto_focus_ctrl", _queue_size, &DepthAIBase::focusControlCallback, this);
     _disparity_conf_sub = nh.subscribe("disparity_confidence", _queue_size, &DepthAIBase::disparityConfCb, this);
 
     // camera frame loop

@@ -62,12 +62,20 @@ include_directories (SYSTEM
 )
 
 # internal library, not to be exported
+add_library (${PROJECT_NAME}_control_lib
+    src/control/focus_control.cpp
+)
+target_link_libraries (${PROJECT_NAME}_control_lib
+    depthai-core
+)
+
 add_library (${PROJECT_NAME}_lib src/depthai_base.cpp)
 target_link_libraries (${PROJECT_NAME}_lib
     ${catkin_LIBRARIES}
     ${OpenCV_LIBRARIES}
     ${Boost_LIBRARIES}
     depthai-core
+    ${PROJECT_NAME}_control_lib
 )
 add_dependencies (${PROJECT_NAME}_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 

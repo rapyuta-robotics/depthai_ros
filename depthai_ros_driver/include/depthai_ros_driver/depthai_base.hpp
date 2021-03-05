@@ -1,7 +1,7 @@
 #pragma once
 
 // self-message includes
-#include <depthai_ros_msgs/AutoFocusCtrl.h>
+#include <depthai_ros_msgs/FocusControlCommand.h>
 #include <depthai_ros_msgs/Object.h>
 #include <depthai_ros_msgs/Objects.h>
 #include <depthai_ros_msgs/TriggerNamed.h>
@@ -165,7 +165,7 @@ private:
 
     std::string generatePipelineConfigJson() const;
 
-    void afCtrlCb(const depthai_ros_msgs::AutoFocusCtrl msg);
+    void focusControlCallback(const depthai_ros_msgs::FocusControlCommand& msg);
     void disparityConfCb(const std_msgs::Float32::ConstPtr& msg);
 
     void publishImageMsg(ImageFramePtr frame, const std::string& stream, ros::Time& stamp);
