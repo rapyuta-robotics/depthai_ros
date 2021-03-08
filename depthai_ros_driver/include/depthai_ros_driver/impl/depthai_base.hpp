@@ -18,14 +18,14 @@ bool DepthAIBase<Node>::has_stream(const std::string& stream) const {
     return (_enabled_streams.find(stream) != _enabled_streams.cend());
 };
 
-template <class Node>
-void DepthAIBase<Node>::disparityConfCb(const std_msgs::Float32::ConstPtr& msg) {
-    if ((msg->data >= 0.0) && (msg->data <= 255.0)) {
-        //_depthai->send_disparity_confidence_threshold(msg->data);
-    } else {
-        ROS_ERROR_NAMED(this->getName(), "Disparity confidence value:%f, is invalid", msg->data);
-    }
-}
+// template <class Node>
+// void DepthAIBase<Node>::disparityConfCb(const std_msgs::Float32::ConstPtr& msg) {
+//     if ((msg->data >= 0.0) && (msg->data <= 255.0)) {
+//         //_depthai->send_disparity_confidence_threshold(msg->data);
+//     } else {
+//         ROS_ERROR_NAMED(this->getName(), "Disparity confidence value:%f, is invalid", msg->data);
+//     }
+// }
 
 template <class Node>
 void DepthAIBase<Node>::focusControlCallback(const depthai_ros_msgs::FocusControlCommand& msg) {
@@ -246,7 +246,6 @@ void DepthAIBase<Node>::onInit() {
     // Prepare streams (pub, sub, etc)
     prepareStreamConfig();
 
-
     // Start pipeline
     _pipeline_loader = std::make_unique<pluginlib::ClassLoader<rr::Pipeline>>("depthai_ros_driver", "rr::Pipeline");
     try {
@@ -275,18 +274,15 @@ void DepthAIBase<Node>::onInit() {
     _depthai = std::make_unique<dai::Device>(_pipeline);
     _depthai->startPipeline();
 
-
     for (const auto& stream: _enabled_streams) {
         _data_output_queue[stream] = _depthai->getOutputQueue(stream_info[stream].output_queue);
     }
     _color_control_queue = _depthai->getInputQueue("control");
     _color_config_queue = _depthai->getInputQueue("config");
 
-    // _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
-
     // Control
-    _af_ctrl_sub = nh.subscribe("auto_focus_ctrl", _queue_size, &DepthAIBase::focusControlCallback, this);
-    _disparity_conf_sub = nh.subscribe("disparity_confidence", _queue_size, &DepthAIBase::disparityConfCb, this);
+    _focus_ctrl_sub = nh.subscribe("focus_ctrl", _queue_size, &DepthAIBase::focusControlCallback, this);
+    // _disparity_conf_sub = nh.subscribe("disparity_confidence", _queue_size, &DepthAIBase::disparityConfCb, this);
 
     // camera frame loop
     _cameraReadTimer = nh.createTimer(ros::Duration(1. / 500), &DepthAIBase::cameraReadCb, this);

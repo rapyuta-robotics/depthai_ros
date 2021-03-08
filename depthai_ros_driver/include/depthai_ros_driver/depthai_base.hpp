@@ -118,8 +118,8 @@ private:
     std::shared_ptr<dai::DataInputQueue> _color_config_queue = nullptr;
     ros::Publisher _camera_info_pub;
 
-    ros::Subscriber _af_ctrl_sub;
-    ros::Subscriber _disparity_conf_sub;
+    ros::Subscriber _focus_ctrl_sub;
+    // ros::Subscriber _disparity_conf_sub;
 
     ros::Timer _cameraReadTimer;
 
@@ -166,7 +166,7 @@ private:
     std::string generatePipelineConfigJson() const;
 
     void focusControlCallback(const depthai_ros_msgs::FocusControlCommand& msg);
-    void disparityConfCb(const std_msgs::Float32::ConstPtr& msg);
+    // void disparityConfCb(const std_msgs::Float32::ConstPtr& msg);
 
     void publishImageMsg(ImageFramePtr frame, const std::string& stream, ros::Time& stamp);
     void publishObjectInfoMsg(const NNDataConstPtr detections, const ros::Time& stamp);
