@@ -277,12 +277,18 @@ void DepthAIBase<Node>::onInit() {
     for (const auto& stream: _enabled_streams) {
         _data_output_queue[stream] = _depthai->getOutputQueue(stream_info[stream].output_queue);
     }
-    _color_control_queue = _depthai->getInputQueue("control");
-    _color_config_queue = _depthai->getInputQueue("config");
 
     // Control
-    _focus_ctrl_sub = nh.subscribe("focus_ctrl", _queue_size, &DepthAIBase::focusControlCallback, this);
-    // _disparity_conf_sub = nh.subscribe("disparity_confidence", _queue_size, &DepthAIBase::disparityConfCb, this);
+    const auto& input_queues = _depthai->getInputQueueNames();
+    for (const auto& input_queue: input_queues) {
+        if (input_queue == "control") {
+            _color_control_queue = _depthai->getInputQueue("control");
+            _focus_ctrl_sub = nh.subscribe("focus_ctrl", _queue_size, &DepthAIBase::focusControlCallback, this);
+            // _disparity_conf_sub = nh.subscribe("disparity_confidence", _queue_size, &DepthAIBase::disparityConfCb, this);
+        } else if (input_queue == "config") {
+            _color_config_queue = _depthai->getInputQueue("config");
+        }
+    }
 
     // camera frame loop
     _cameraReadTimer = nh.createTimer(ros::Duration(1. / 500), &DepthAIBase::cameraReadCb, this);
