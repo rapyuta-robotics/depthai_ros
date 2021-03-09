@@ -50,6 +50,19 @@ Sample models are available [here](https://github.com/luxonis/depthai/tree/main/
     $ rosparam list /depthai
     ```
 
+# Trouble shooting
+If you see an error similar to this:
+```
+Stream not opened: config_d2h
+Available streams: []
+device is not initialized
+Pipeline is not created.
+No USB device [03e7:2485], still looking... 0.401s [FOUND]
+Sending internal device firmware
+Successfully connected to device.
+```
+Try forcing USB2 mode using `<roslaunch as before> force_usb2:=true`
+
 # Details
 
 ## `depthai_ros_msgs`
