@@ -275,7 +275,7 @@ void DepthAIBase<Node>::onInit() {
     _depthai->startPipeline();
 
     for (const auto& stream: _enabled_streams) {
-        _data_output_queue[stream] = _depthai->getOutputQueue(stream_info[stream].output_queue);
+        _data_output_queue[stream] = _depthai->getOutputQueue(stream_info[stream].output_queue, 4, false);
     }
 
     // Control
