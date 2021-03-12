@@ -67,9 +67,6 @@ jobs:
     - name: 'Source and confirm'
       shell: bash
       run: |
-        pwd
-        ls -al .
-        ls -al catkin_ws/
         source catkin_ws/install_isolated/setup.bash
         roscd
         pwd  # TODO: put an assert on it
