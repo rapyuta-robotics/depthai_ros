@@ -2,6 +2,7 @@
 
 #include <depthai/device/DeviceBase.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
+#include <depthai/pipeline/node/XLinkIn.hpp>
 
 #include <ros/ros.h>
 #include <ros/callback_queue.h>
@@ -78,6 +79,34 @@ class DepthAI : public dai::DeviceBase {
         return out;
     }
 
+    static auto getAllOutputs(const dai::Pipeline& pipeline) {
+        const auto& xlinkins = filterNodesByType<dai::node::XLinkIn>(pipeline);
+        // hack for Input
+        using InVec = decltype(xlinkins[0]->getInputs());
+        using Input = typename InVec::value_type;
+        struct ret {
+            std::shared_ptr<const dai::node::XLinkIn> node_from;
+            std::vector<Input> in_to;
+        };
+
+        std::vector<ret> in;
+        for (const auto& node : xlinkins) {
+            // for all output slots of the node
+            ret data;
+            data.node_from = node;
+            const auto& outputs = node->getOutputs();
+            for (const auto& outp : outputs) {
+                const auto& links = getOutputOf(node, outp.name);
+                // for all links to the slot
+                for (const auto& link : links) {
+                    data.in_to.push_back(link);
+                }
+            }
+            in.emplace_back(std::move(data));
+        }
+        return in;
+    }
+
 public:
     using Base::Base;
 
@@ -142,6 +171,7 @@ public:
                 if (!common_type) {
                     common_type = type;
                 } else if (common_type.value() != type) {
+                    // @TODO: find the common type, not necessarily the buffer
                     common_type = dai::DatatypeEnum::Buffer;
                 }
             }
@@ -149,8 +179,8 @@ public:
                 // Huh, what? Anyways...
                 continue;
             }
-            // create appropriate publisher using the common_type
 
+            // create appropriate publisher using the common_type
             switch (common_type.value()) {
                 case dai::DatatypeEnum::Buffer : break;
                 case dai::DatatypeEnum::CameraControl : break;
