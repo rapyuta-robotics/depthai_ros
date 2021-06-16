@@ -1,6 +1,7 @@
 #include <depthai_ros_driver/dai_utils.hpp>
 
 #include <depthai/device/DeviceBase.hpp>
+#include <depthai/pipeline/datatype/StreamPacketParser.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 #include <depthai/pipeline/node/XLinkIn.hpp>
 
@@ -19,8 +20,7 @@ std::vector<NodeConstPtr> filterNodesByName(const dai::Pipeline& pipeline, std::
 std::vector<dai::Node::Connection> getConnectionsFrom(const NodeConstPtr& node) {
     const auto& connectionMap = node->getParentPipeline().getConnectionMap();
     return connectionMap | rv::values | rv::join |
-           rv::filter([&](const auto& conn) { return conn.outputId == node->id; }) |
-           ranges::to<std::vector>;
+           rv::filter([&](const auto& conn) { return conn.outputId == node->id; }) | ranges::to<std::vector>;
 }
 
 /**
@@ -41,6 +41,7 @@ public:
     Guard(Guard&&) = delete;
     void disable() { _run = false; }
     void reenable() { _run = true; }
+    bool is_enabled() const { return _run; }
     ~Guard() {
         if (_run) {
             _func();
@@ -121,33 +122,46 @@ public:
         Base::closeImpl();
     }
 
-    bool startPipelineImpl(const dai::Pipeline& pipeline) override {
-        _active = std::make_shared<std::uint8_t>(0);
+    // create stream based on name at the time of subscription
+    template <class MsgType>
+    auto generate_cb_lambda(std::string name) {
+        auto conn = this->getConnection();
+        const auto core_sub_lambda = [&, stream = dai::XLinkStream{*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE}](
+                                             MsgType& msg, dai::RawBuffer& data) {
+            Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
-        // copy connection by value
-        const auto pub_lambda = [this](auto message, ros::NodeHandle nh, std::string name, std::size_t q_size) {
-            Guard guard([&] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
+            // TODO:  convert msg to data here somehow
+            std::vector<std::uint8_t> serialized = dai::StreamPacketParser::serializeMessage(data);
+            stream.write(serialized);
+            guard.disable();
+        };
+        return core_sub_lambda;
+    }
 
-            auto conn = this->getConnection();
-            // writeSize = 1, since we're just reading
-            dai::XLinkStream stream(*conn, name, 1);
-
-            using MsgType = decltype(message);
-            ros::Publisher pub = nh.advertise<MsgType>(name, q_size);
+    template <class MsgType>
+    auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {
+        auto conn = this->getConnection();
+        const auto pub_lambda = [this, pub = nh.advertise<MsgType>(name, q_size),
+                                        // no writing happens, so 1 is sufficient
+                                        stream = dai::XLinkStream{*conn, name, 1}]() {
+            Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             while (this->_running) {
                 // block till data is read
                 PacketReader reader{stream};
                 auto data = reader.getData();
+                // @TODO convert data to ROS message type here, somehow
                 // publish data
                 pub.publish(data);
             }
 
-            //
             guard.disable();
         };
+        return pub_lambda;
+    }
 
-        const auto sub_lambda = [] {};
+    bool startPipelineImpl(const dai::Pipeline& pipeline) override {
+        _active = std::make_shared<std::uint8_t>(0);
 
         // get all xlinkout
         const auto& out_links = getAllInputs(pipeline);
@@ -182,18 +196,30 @@ public:
 
             // create appropriate publisher using the common_type
             switch (common_type.value()) {
-                case dai::DatatypeEnum::Buffer : break;
-                case dai::DatatypeEnum::CameraControl : break;
-                case dai::DatatypeEnum::IMUData : break;
-                case dai::DatatypeEnum::ImageManipConfig : break;
-                case dai::DatatypeEnum::ImgDetections : break;
-                case dai::DatatypeEnum::ImgFrame : break;
-                case dai::DatatypeEnum::NNData : break;
-                case dai::DatatypeEnum::SpatialImgDetections : break;
-                case dai::DatatypeEnum::SpatialLocationCalculatorConfig : break;
-                case dai::DatatypeEnum::SpatialLocationCalculatorData : break;
-                case dai::DatatypeEnum::SystemInformation : break;
-                case dai::DatatypeEnum::Tracklets : break;
+                case dai::DatatypeEnum::Buffer:
+                    break;
+                case dai::DatatypeEnum::CameraControl:
+                    break;
+                case dai::DatatypeEnum::IMUData:
+                    break;
+                case dai::DatatypeEnum::ImageManipConfig:
+                    break;
+                case dai::DatatypeEnum::ImgDetections:
+                    break;
+                case dai::DatatypeEnum::ImgFrame:
+                    break;
+                case dai::DatatypeEnum::NNData:
+                    break;
+                case dai::DatatypeEnum::SpatialImgDetections:
+                    break;
+                case dai::DatatypeEnum::SpatialLocationCalculatorConfig:
+                    break;
+                case dai::DatatypeEnum::SpatialLocationCalculatorData:
+                    break;
+                case dai::DatatypeEnum::SystemInformation:
+                    break;
+                case dai::DatatypeEnum::Tracklets:
+                    break;
                 default:
                     break;
             }
