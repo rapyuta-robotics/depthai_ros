@@ -162,40 +162,53 @@ public:
 
     bool startPipelineImpl(const dai::Pipeline& pipeline) override {
         _active = std::make_shared<std::uint8_t>(0);
+        _setup_publishers(pipeline);
+        _setup_subscribers(pipeline);
 
-        // get all xlinkout
+        return Base::startPipelineImpl(pipeline);
+    }
+
+    /**
+     * @tparam Range vector of Inputs or Outputs
+     */
+    template <class Range>
+    dai::DatatypeEnum _getCommonType(const Range& links) {
+        std::optional<dai::DatatypeEnum> common_type;
+        for (const auto& link : links) {
+            // get the link type
+            const auto& allowed_types = link.possibleDatatypes;
+            const dai::DatatypeEnum type = [&] {
+                if (allowed_types.size() > 1) {
+                    return dai::DatatypeEnum::Buffer;
+                } else {
+                    return allowed_types[0].datatype;
+                }
+            }();
+            if (!common_type) {
+                common_type = type;
+            } else if (common_type.value() != type) {
+                // @TODO: find the common type, not necessarily the buffer
+                common_type = dai::DatatypeEnum::Buffer;
+            }
+        }
+        if (!common_type) {
+            return dai::DatatypeEnum::Buffer;
+        }
+        return common_type.value();
+    }
+
+    void _setup_publishers(const dai::Pipeline& pipeline) {
+        // get all XLinkOut
         const auto& out_links = getAllInputs(pipeline);
         for (const auto& node_links : out_links) {
             const auto& node = node_links.node_to;
             // get name for publisher
             const auto& name = node->getStreamName();
 
-            std::optional<dai::DatatypeEnum> common_type;
-            // figure out a type shared by all conenctions dumping into the XLinkOut
-            for (const auto& link : node_links.out_from) {
-                // get the link type
-                const auto& allowed_types = link.possibleDatatypes;
-                const dai::DatatypeEnum type = [&] {
-                    if (allowed_types.size() > 1) {
-                        return dai::DatatypeEnum::Buffer;
-                    } else {
-                        return allowed_types[0].datatype;
-                    }
-                }();
-                if (!common_type) {
-                    common_type = type;
-                } else if (common_type.value() != type) {
-                    // @TODO: find the common type, not necessarily the buffer
-                    common_type = dai::DatatypeEnum::Buffer;
-                }
-            }
-            if (!common_type) {
-                // Huh, what? Anyways...
-                continue;
-            }
+            auto common_type = _getCommonType(node_links.out_from);
 
             // create appropriate publisher using the common_type
-            switch (common_type.value()) {
+            switch (common_type) {
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
@@ -224,8 +237,47 @@ public:
                     break;
             }
         }
+    }
+    void _setup_subscribers(const dai::Pipeline& pipeline) {
+        // get all XLinkIn
+        const auto& in_links = getAllOutputs(pipeline);
+        for (const auto& node_links : in_links) {
+            const auto& node = node_links.node_from;
+            // get name for publisher
+            const auto& name = node->getStreamName();
 
-        return Base::startPipelineImpl(pipeline);
+            auto common_type = _getCommonType(node_links.in_to);
+
+            // create appropriate subscriber using the common_type
+            switch (common_type) {
+                case dai::DatatypeEnum::Buffer:
+                    break;
+                case dai::DatatypeEnum::CameraControl:
+                    break;
+                case dai::DatatypeEnum::IMUData:
+                    break;
+                case dai::DatatypeEnum::ImageManipConfig:
+                    break;
+                case dai::DatatypeEnum::ImgDetections:
+                    break;
+                case dai::DatatypeEnum::ImgFrame:
+                    break;
+                case dai::DatatypeEnum::NNData:
+                    break;
+                case dai::DatatypeEnum::SpatialImgDetections:
+                    break;
+                case dai::DatatypeEnum::SpatialLocationCalculatorConfig:
+                    break;
+                case dai::DatatypeEnum::SpatialLocationCalculatorData:
+                    break;
+                case dai::DatatypeEnum::SystemInformation:
+                    break;
+                case dai::DatatypeEnum::Tracklets:
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 
     // shared ptr for the callbacks to be called
