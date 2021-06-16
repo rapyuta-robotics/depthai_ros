@@ -1,9 +1,11 @@
 #pragma once
 
-#include <depthai/pipeline/Pipeline.hpp>
 #include <depthai/pipeline/Node.hpp>
-#include <depthai/xlink/XLinkStream.hpp>
+#include <depthai/pipeline/Pipeline.hpp>
 #include <depthai/pipeline/datatype/StreamPacketParser.hpp>
+#include <depthai/pipeline/node/XLinkIn.hpp>
+#include <depthai/pipeline/node/XLinkOut.hpp>
+#include <depthai/xlink/XLinkStream.hpp>
 
 #include <boost/lambda/detail/is_instance_of.hpp>
 
@@ -27,7 +29,7 @@ namespace rv = ranges::views;
  * @return vector of node shared pointers
  */
 template <class Range>
-std::vector<NodeConstPtr> filterNodesByNames(const dai::Pipeline& pipeline, Range&& node_names) {
+std::vector<NodeConstPtr> filterNodesByNames(const dai::Pipeline& pipeline, const Range& node_names) {
     const auto& nodeMap = pipeline.getNodeMap();
 
     return nodeMap | rv::values | rv::filter([&](const auto& nodePtr) {
@@ -47,25 +49,32 @@ std::vector<NodeConstPtr> filterNodesByNames(const dai::Pipeline& pipeline, Rang
 std::vector<NodeConstPtr> filterNodesByName(const dai::Pipeline& pipeline, std::string name);
 
 namespace detail {
-// @TODO: FIX, doesn't work
 template <class T>
-constexpr auto is_shared_ptr_v = boost::lambda::is_instance_of_1<T, std::shared_ptr>::value;
+struct remove_smart_ptr {
+    using type = T;
+};
+template <class T>
+using remove_smart_ptr_t = typename remove_smart_ptr<T>::type;
 
-template <class NodeT, std::enable_if_t<is_shared_ptr_v<NodeT>> = true>
-auto constTransformNode(const NodeConstPtr& nodePtr) {
-    return std::dynamic_pointer_cast<const typename NodeT::element_type>(nodePtr);
-}
-template <class NodeT, std::enable_if_t<!is_shared_ptr_v<NodeT>> = true>
-auto constTransformNode(const NodeConstPtr& nodePtr) {
-    return std::dynamic_pointer_cast<const NodeT>(nodePtr);
-}
+template <class T>
+struct remove_smart_ptr<std::shared_ptr<T>> {
+    using type = T;
+};
+template <class T>
+struct remove_smart_ptr<std::unique_ptr<T>> {
+    using type = T;
+};
+template <class T>
+struct remove_smart_ptr<std::weak_ptr<T>> {
+    using type = T;
+};
 }  // namespace detail
 
 /**
- * @brief Search for nodes with a certain type in a pipelne
+ * @brief Search for nodes with a certain type in a pipeline
  * @param[in] pipeline Pipeline to search for nodes in
- * @tparam NodeT type of node to dynamic cast into
- * @note Ensure that `NodeT` is `NodeType` and not `shared_ptr<NodeType>`
+ * @tparam NodeT type of node to dynamic cast into. If it's of form shared_ptr<T>, then the smart pointer is stripped
+ * away
  * @return vector of node shared pointers
  * @sa filterNodesByNames
  */
@@ -73,9 +82,10 @@ template <class NodeT>
 std::vector<std::shared_ptr<const NodeT>> filterNodesByType(const dai::Pipeline& pipeline) {
     const auto& nodeMap = pipeline.getNodeMap();
 
-    return nodeMap | rv::values |
-           rv::transform([](const auto& nodePtr) { return std::dynamic_pointer_cast<const NodeT>(nodePtr); }) |
-           rv::filter([&](const auto& nodePtr) { return nodePtr != nullptr; }) | ranges::to<std::vector>;
+    return nodeMap | rv::values | rv::transform([](const auto& nodePtr) {
+        return std::dynamic_pointer_cast<const detail::remove_smart_ptr_t<NodeT>>(nodePtr);
+    }) | rv::filter([&](const auto& nodePtr) { return nodePtr != nullptr; }) |
+           ranges::to<std::vector>;
 }
 
 /**
@@ -128,6 +138,108 @@ class PacketReader {
     streamPacketDesc_t* _packet;
 };
 
+/**
+ * @brief get a type shared by the links (which may belong to different nodes/pipelines)
+ * @param[in] links should be iterable and the value_type should have a possibleDatatypes data member
+ * @tparam Range Example: std::vector<dai::{In,Out}put> or a variant of the same
+ * @return A type which encompasses the types of all other links
+ */
+template <class Range>
+dai::DatatypeEnum getCommonType(const Range& links) {
+    std::optional<dai::DatatypeEnum> common_type;
+    for (const auto& link : links) {
+        // get the link type
+        const auto& allowed_types = link.possibleDatatypes;
+        const dai::DatatypeEnum type = [&] {
+            if (allowed_types.size() > 1) {
+                return dai::DatatypeEnum::Buffer;
+            } else {
+                return allowed_types[0].datatype;
+            }
+        }();
+        if (!common_type) {
+            common_type = type;
+        } else if (common_type.value() != type) {
+            // @TODO: find the common type, not necessarily the buffer
+            common_type = dai::DatatypeEnum::Buffer;
+        }
+    }
+    if (!common_type) {
+        return dai::DatatypeEnum::Buffer;
+    }
+    return common_type.value();
+}
+
+template <class Range>
+auto getAllInputs(const Range& nodes, const dai::Pipeline& pipeline) {
+    // hack to get the Output type
+    using OutVec = decltype(nodes[0]->getOutputs());
+    using Output = typename OutVec::value_type;
+
+    struct ret {
+        std::shared_ptr<const dai::node::XLinkOut> node_to;
+        std::vector<Output> out_from;
+    };
+
+    std::vector<ret> out;
+    for (const auto& node : nodes) {
+        // for all input slots of the node
+        ret data;
+        data.node_to = node;
+        const auto& inputs = node->getInputs();
+        for (const auto& inp : inputs) {
+            const auto& links = getInputOf(node, inp.name);
+            // for all links to the slot
+            for (const auto& link : links) {
+                data.out_from.push_back(link);
+            }
+        }
+        out.emplace_back(std::move(data));
+    }
+    return out;
+}
+
+template <class NodeT = dai::node::XLinkOut>
+auto getAllInputs(const dai::Pipeline& pipeline) {
+    const auto& nodes = filterNodesByType<detail::remove_smart_ptr_t<NodeT>>(pipeline);
+    return getAllInputs(nodes, pipeline);
+}
+
+template <class Range>
+auto getAllOutputs(const Range& nodes, const dai::Pipeline& pipeline) {
+    // hack to get the Input type
+    using InVec = decltype(nodes[0]->getInputs());
+    using Input = typename InVec::value_type;
+
+    struct ret {
+        std::shared_ptr<const dai::node::XLinkIn> node_from;
+        std::vector<Input> in_to;
+    };
+
+    std::vector<ret> in;
+    for (const auto& node : nodes) {
+        // for all output slots of the node
+        ret data;
+        data.node_from = node;
+        const auto& outputs = node->getOutputs();
+        for (const auto& outp : outputs) {
+            const auto& links = getOutputOf(node, outp.name);
+            // for all links to the slot
+            for (const auto& link : links) {
+                data.in_to.push_back(link);
+            }
+        }
+        in.emplace_back(std::move(data));
+    }
+    return in;
+}
+
+template <class NodeT = dai::node::XLinkIn>
+auto getAllOutputs(const dai::Pipeline& pipeline) {
+    const auto& nodes = filterNodesByType<detail::remove_smart_ptr_t<NodeT>>(pipeline);
+    return getAllOutputs(nodes, pipeline);
+}
+///////////////// IMPL ////////////////////
 // @TODO: explicit return type or move them into an impl header
 auto getConnectionsTo(const NodeConstPtr& node) {
     const auto& connectionMap = node->getParentPipeline().getConnectionMap();
