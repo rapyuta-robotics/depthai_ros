@@ -19,6 +19,22 @@ add_message_files (
   Objects.msg
   AutoFocusCtrl.msg
 
+  # dai common msgs
+  dai/common/DaiCameraBoardSocket.msg
+  dai/common/DaiCameraImageOrientation.msg
+  dai/common/DaiCameraModel.msg
+  dai/common/DaiChipTemperature.msg
+  dai/common/DaiCpuUsage.msg
+  dai/common/DaiDetectionNetworkType.msg
+  dai/common/DaiMemoryInfo.msg
+  dai/common/DaiPoint2f.msg
+  dai/common/DaiPoint3f.msg
+  dai/common/DaiProcessorType.msg
+  dai/common/DaiRect.msg
+  # dai/common/DaiRotatedRect.msg
+  dai/common/DaiSize2f.msg
+  dai/common/DaiUsbSpeed.msg
+
   # dai datatype msgs
   dai/datatype/DaiImgDetections.msg
 )

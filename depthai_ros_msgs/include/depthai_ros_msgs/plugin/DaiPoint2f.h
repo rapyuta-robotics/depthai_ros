@@ -1,0 +1,5 @@
+#define DEPTHAI_ROS_MSGS_MESSAGE_DAIPOINT2F_PLUGIN_CLASS_BODY \
+    MSGPACK_DEFINE(\
+        x,\
+        y\
+    )
