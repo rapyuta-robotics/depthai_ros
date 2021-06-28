@@ -43,7 +43,7 @@ public:
  * @brief Reads a packet from an XLinkStream and frees it on destruction
  * @note Make sure to call `getData` or else the packet will go un-processed
  */
-class PacketReader {
+struct PacketReader {
     PacketReader(dai::XLinkStream& stream)
             : _stream(stream) {
         _packet = _stream.readRaw();  // blocking read
