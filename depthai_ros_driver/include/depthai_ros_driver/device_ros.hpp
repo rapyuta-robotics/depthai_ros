@@ -14,7 +14,7 @@
 #include <thread>
 
 #include <msgpack.hpp>
-#include <depthai_ros_msgs/DaiImgDetections.h>
+#include <depthai_ros_msgs/DaiImgDetection.h>
 
 namespace rr {
 /**
@@ -153,7 +153,7 @@ protected:
                 case dai::DatatypeEnum::ImageManipConfig:
                     break;
                 case dai::DatatypeEnum::ImgDetections:
-                    _pub_t["ImageDetections"] = std::thread{generate_pub_lambda<depthai_ros_msgs::DaiImgDetections>(_pub_nh, "ImageDetections", 10)};
+                    _pub_t["ImageDetections"] = std::thread{generate_pub_lambda<depthai_ros_msgs::DaiImgDetection>(_pub_nh, "ImageDetections", 10)};
                     break;
                 case dai::DatatypeEnum::ImgFrame:
                     break;

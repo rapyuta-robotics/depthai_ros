@@ -29,6 +29,7 @@ add_message_files (
   dai/common/DaiMemoryInfo.msg
   dai/common/DaiPoint2f.msg
   dai/common/DaiPoint3f.msg
+  dai/common/DaiTimestamp.msg
   dai/common/DaiProcessorType.msg
   dai/common/DaiRect.msg
   # dai/common/DaiRotatedRect.msg
@@ -36,7 +37,8 @@ add_message_files (
   dai/common/DaiUsbSpeed.msg
 
   # dai datatype msgs
-  dai/datatype/DaiImgDetections.msg
+  dai/datatype/DaiImgDetection.msg
+  # dai/datatype/DaiRawImgDetections.msg
 )
 
 ## Generate services in the 'srv' folder
