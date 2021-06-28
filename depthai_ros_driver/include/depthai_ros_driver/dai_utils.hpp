@@ -22,6 +22,32 @@ using NodeConstPtr = std::shared_ptr<const dai::Node>;
 namespace rv = ranges::views;
 
 /**
+ * @brief simple class to run a function at the destruction, unless disabled
+ * @detail Not thread safe. Expected to stay on a single thread and perform cleanups
+ * @tparam An invocable object with no paramters
+ */
+template <class T>
+class Guard {
+    static_assert(std::is_invocable_v<T>, "Guard needs an input that can be invoked without any parameters");
+    T _func;
+    bool _run = true;
+
+public:
+    Guard(T&& func)
+            : _func(func) {}
+    Guard(const Guard&) = delete;
+    Guard(Guard&&) = delete;
+    void disable() { _run = false; }
+    void reenable() { _run = true; }
+    bool is_enabled() const { return _run; }
+    ~Guard() {
+        if (_run) {
+            _func();
+        }
+    }
+};
+
+/**
  * @brief Search for nodes with certain names in a pipeline
  * @tparam Range a range of string
  * @param[in] pipeline Pipeline to search for nodes in
@@ -46,7 +72,7 @@ std::vector<NodeConstPtr> filterNodesByNames(const dai::Pipeline& pipeline, cons
  * @return vector of node shared pointers
  * @sa filterNodesByNames
  */
-std::vector<NodeConstPtr> filterNodesByName(const dai::Pipeline& pipeline, std::string name);
+inline std::vector<NodeConstPtr> filterNodesByName(const dai::Pipeline& pipeline, std::string name);
 
 namespace detail {
 template <class T>
@@ -103,7 +129,7 @@ inline auto getConnectionsTo(const NodeConstPtr& node);
  * @return vector of connections that start from the specified node
  * @sa getConnectionsTo
  */
-std::vector<dai::Node::Connection> getConnectionsFrom(const NodeConstPtr& node);
+inline std::vector<dai::Node::Connection> getConnectionsFrom(const NodeConstPtr& node);
 
 /**
  * @brief Get the Outputs that are connected to the specified input of the specified node
@@ -239,6 +265,7 @@ auto getAllOutputs(const dai::Pipeline& pipeline) {
     const auto& nodes = filterNodesByType<detail::remove_smart_ptr_t<NodeT>>(pipeline);
     return getAllOutputs(nodes, pipeline);
 }
+
 ///////////////// IMPL ////////////////////
 // @TODO: explicit return type or move them into an impl header
 auto getConnectionsTo(const NodeConstPtr& node) {
@@ -288,5 +315,15 @@ auto getOutputOf(const NodeConstPtr& node, const std::string& out) {
         }
     }
     return ins;
+}
+
+std::vector<NodeConstPtr> filterNodesByName(const dai::Pipeline& pipeline, std::string name) {
+    return filterNodesByNames(pipeline, rv::single(name));
+}
+
+std::vector<dai::Node::Connection> getConnectionsFrom(const NodeConstPtr& node) {
+    const auto& connectionMap = node->getParentPipeline().getConnectionMap();
+    return connectionMap | rv::values | rv::join |
+           rv::filter([&](const auto& conn) { return conn.outputId == node->id; }) | ranges::to<std::vector>;
 }
 }  // namespace rr

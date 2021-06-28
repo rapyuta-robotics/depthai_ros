@@ -83,6 +83,9 @@ include_directories (SYSTEM
 add_library(gen2_ros_queue src/ros_xlink.cpp)
 target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai-core range-v3)
 
+add_executable(gen2_ros_driver src/depthai_loader.cpp)
+target_link_libraries(gen2_ros_driver gen2_ros_queue)
+
 catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
 if(TARGET ${PROJECT_NAME}_depthai_api)
     target_link_libraries(${PROJECT_NAME}_depthai_api gen2_ros_queue gtest_main)
