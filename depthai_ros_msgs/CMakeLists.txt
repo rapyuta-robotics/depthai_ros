@@ -39,6 +39,7 @@ generate_messages (
 ## catkin specific configuration ##
 ###################################
 catkin_package (
+  INCLUDE_DIRS include
   CATKIN_DEPENDS message_runtime sensor_msgs std_msgs
 )
 

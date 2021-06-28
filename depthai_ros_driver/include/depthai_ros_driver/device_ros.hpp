@@ -48,6 +48,7 @@ public:
  * @note Make sure to call `getData` or else the packet will go un-processed
  */
 class PacketReader {
+public:
     PacketReader(dai::XLinkStream& stream)
             : _stream(stream) {
         _packet = _stream.readRaw();  // blocking read
@@ -96,13 +97,13 @@ protected:
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {
         auto conn = this->getConnection();
         _pub_map[name] = nh.advertise<MsgType>(name, q_size); // no writing happens, so 1 is sufficient
-        const auto pub_lambda = [this, name,
-                                        stream = dai::XLinkStream{*conn, name, 1}]() {
+        _streams[name] = std::make_unique<dai::XLinkStream>(*conn, name, 1);
+        const auto pub_lambda = [this, name]() {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             while (this->_running) {
                 // block till data is read
-                PacketReader reader{stream};
+                PacketReader reader{*_streams[name]};
                 const auto& data = reader.getData()->getRaw()->data;
 
                 // convert data to ROS message type here
@@ -112,7 +113,7 @@ protected:
                 obj.convert(msg);
 
                 // publish data
-                this->_pub_map[name].publish(msg);
+                _pub_map[name].publish(msg);
             }
 
             guard.disable();
@@ -219,6 +220,7 @@ protected:
     }
 
     // shared ptr for the callbacks to be called
+    std::unordered_map<std::string, std::unique_ptr<dai::XLinkStream>> _streams;
     std::unordered_map<std::string, std::thread> _pub_t;
     std::shared_ptr<std::uint8_t> _active;
     std::unordered_map<streamId_t, std::string> _stream_node_map;
