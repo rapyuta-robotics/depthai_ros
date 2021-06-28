@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 3.10.2)  # CMake version in Ubuntu 18.04 LTS
 set (CMAKE_CXX_STANDARD 17)
 
 get_filename_component (DEPTHAI_CORE "${CMAKE_CURRENT_LIST_DIR}/../external/depthai-core" REALPATH)
+get_filename_component (MSGPACK "${CMAKE_CURRENT_LIST_DIR}/../external/msgpack-c" REALPATH)
 
 include ("${DEPTHAI_CORE}/cmake/HunterGate.cmake")
 
@@ -58,6 +59,7 @@ include_directories (include)
 include_directories (SYSTEM
     ${Boost_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
+    ${MSGPACK}/include
     ${catkin_INCLUDE_DIRS}
 )
 

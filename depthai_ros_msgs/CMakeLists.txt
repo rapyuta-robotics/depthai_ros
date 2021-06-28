@@ -18,6 +18,9 @@ add_message_files (
   Object.msg
   Objects.msg
   AutoFocusCtrl.msg
+
+  # dai datatype msgs
+  dai/datatype/DaiImgDetections.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -37,4 +40,12 @@ generate_messages (
 ###################################
 catkin_package (
   CATKIN_DEPENDS message_runtime sensor_msgs std_msgs
+)
+
+#############
+## Install ##
+#############
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
 )

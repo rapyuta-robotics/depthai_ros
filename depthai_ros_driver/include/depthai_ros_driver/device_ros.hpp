@@ -11,6 +11,10 @@
 #include <range/v3/view.hpp>
 #include <range/v3/algorithm/find.hpp>
 #include <memory>
+#include <thread>
+
+#include <msgpack.hpp>
+#include <depthai_ros_msgs/DaiImgDetections.h>
 
 namespace rr {
 /**
@@ -91,22 +95,29 @@ protected:
     template <class MsgType>
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {
         auto conn = this->getConnection();
-        const auto pub_lambda = [this, pub = nh.advertise<MsgType>(name, q_size),
-                                        // no writing happens, so 1 is sufficient
+        _pub_map[name] = nh.advertise<MsgType>(name, q_size); // no writing happens, so 1 is sufficient
+        const auto pub_lambda = [this, name,
                                         stream = dai::XLinkStream{*conn, name, 1}]() {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             while (this->_running) {
                 // block till data is read
                 PacketReader reader{stream};
-                auto data = reader.getData();
-                // @TODO convert data to ROS message type here, somehow
+                const auto& data = reader.getData()->getRaw()->data;
+
+                // convert data to ROS message type here
+                MsgType msg;
+                msgpack::object_handle oh = msgpack::unpack(reinterpret_cast<const char *>(data.data()), data.size());
+                msgpack::object obj = oh.get();
+                obj.convert(msg);
+
                 // publish data
-                pub.publish(data);
+                this->_pub_map[name].publish(msg);
             }
 
             guard.disable();
         };
+
         return pub_lambda;
     }
 
@@ -141,6 +152,7 @@ protected:
                 case dai::DatatypeEnum::ImageManipConfig:
                     break;
                 case dai::DatatypeEnum::ImgDetections:
+                    _pub_t["ImageDetections"] = std::thread{generate_pub_lambda<depthai_ros_msgs::DaiImgDetections>(_pub_nh, "ImageDetections", 10)};
                     break;
                 case dai::DatatypeEnum::ImgFrame:
                     break;
@@ -207,11 +219,12 @@ protected:
     }
 
     // shared ptr for the callbacks to be called
+    std::unordered_map<std::string, std::thread> _pub_t;
     std::shared_ptr<std::uint8_t> _active;
     std::unordered_map<streamId_t, std::string> _stream_node_map;
     ros::CallbackQueue _pub_q, _sub_q;
     ros::NodeHandle _pub_nh, _sub_nh;
-    std::unordered_map<streamId_t, ros::Publisher> _pub_map;
+    std::unordered_map<std::string, ros::Publisher> _pub_map;
     std::atomic<bool> _running = true;
 };
 }  // namespace rr
