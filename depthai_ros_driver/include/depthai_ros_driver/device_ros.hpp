@@ -13,6 +13,47 @@
 #include <memory>
 
 namespace rr {
+/**
+ * @brief simple class to run a function at the destruction, unless disabled
+ * @detail Not thread safe. Expected to stay on a single thread and perform cleanups
+ * @tparam An invocable object with no paramters
+ */
+template <class T>
+class Guard {
+    static_assert(std::is_invocable_v<T>, "Guard needs an input that can be invoked without any parameters");
+    T _func;
+    bool _run = true;
+
+public:
+    Guard(T&& func)
+            : _func(func) {}
+    Guard(const Guard&) = delete;
+    Guard(Guard&&) = delete;
+    void disable() { _run = false; }
+    void reenable() { _run = true; }
+    bool is_enabled() const { return _run; }
+    ~Guard() {
+        if (_run) {
+            _func();
+        }
+    }
+};
+
+/**
+ * @brief Reads a packet from an XLinkStream and frees it on destruction
+ * @note Make sure to call `getData` or else the packet will go un-processed
+ */
+class PacketReader {
+    PacketReader(dai::XLinkStream& stream)
+            : _stream(stream) {
+        _packet = _stream.readRaw();  // blocking read
+    }
+    ~PacketReader() { _stream.readRawRelease(); }
+    auto getData() { return dai::StreamPacketParser::parsePacketToADatatype(_packet); }
+    dai::XLinkStream& _stream;
+    streamPacketDesc_t* _packet;
+};
+
 class DeviceROS : public dai::DeviceBase {
     using Base = dai::DeviceBase;
 
