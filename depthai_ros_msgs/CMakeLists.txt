@@ -39,9 +39,19 @@ add_message_files (
   # dai datatype msgs
   DaiDatatypeImgDetection.msg
   DaiDatatypeRawImgDetections.msg
+
   DaiDatatypeTrackingStatus.msg
   DaiDatatypeTracklet.msg
   DaiDatatypeRawTracklets.msg
+
+  DaiDatatypeTensorInfoDataType.msg
+  DaiDatatypeTensorInfoStorageOrder.msg
+  DaiDatatypeTensorInfo.msg
+  DaiDatatypeRawNNData.msg
+
+  DaiDatatypeRawImgFrameType.msg
+  DaiDatatypeRawImgFrameSpecs.msg
+  DaiDatatypeRawImgFrame.msg
 )
 
 ## Generate services in the 'srv' folder
