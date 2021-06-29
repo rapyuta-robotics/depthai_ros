@@ -1,0 +1,3 @@
+DaiCommonPoint2f center
+DaiCommonSize2f size
+float32 angle

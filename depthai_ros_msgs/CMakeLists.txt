@@ -20,25 +20,25 @@ add_message_files (
   AutoFocusCtrl.msg
 
   # dai common msgs
-  dai/common/DaiCameraBoardSocket.msg
-  dai/common/DaiCameraImageOrientation.msg
-  dai/common/DaiCameraModel.msg
-  dai/common/DaiChipTemperature.msg
-  dai/common/DaiCpuUsage.msg
-  dai/common/DaiDetectionNetworkType.msg
-  dai/common/DaiMemoryInfo.msg
-  dai/common/DaiPoint2f.msg
-  dai/common/DaiPoint3f.msg
-  dai/common/DaiTimestamp.msg
-  dai/common/DaiProcessorType.msg
-  dai/common/DaiRect.msg
-  # dai/common/DaiRotatedRect.msg
-  dai/common/DaiSize2f.msg
-  dai/common/DaiUsbSpeed.msg
+  DaiCommonCameraBoardSocket.msg
+  DaiCommonCameraImageOrientation.msg
+  DaiCommonCameraModel.msg
+  DaiCommonChipTemperature.msg
+  DaiCommonCpuUsage.msg
+  DaiCommonDetectionNetworkType.msg
+  DaiCommonMemoryInfo.msg
+  DaiCommonPoint2f.msg
+  DaiCommonPoint3f.msg
+  DaiCommonTimestamp.msg
+  DaiCommonProcessorType.msg
+  DaiCommonRect.msg
+  DaiCommonRotatedRect.msg
+  DaiCommonSize2f.msg
+  DaiCommonUsbSpeed.msg
 
   # dai datatype msgs
-  dai/datatype/DaiImgDetection.msg
-  # dai/datatype/DaiRawImgDetections.msg
+  DaiDatatypeImgDetection.msg
+  DaiDatatypeRawImgDetections.msg
 )
 
 ## Generate services in the 'srv' folder

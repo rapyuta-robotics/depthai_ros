@@ -1,0 +1,5 @@
+#define DEPTHAI_ROS_MSGS_MESSAGE_DAICOMMONTIMESTAMP_PLUGIN_CLASS_BODY \
+    MSGPACK_DEFINE(\
+        sec,\
+        nsec\
+    )

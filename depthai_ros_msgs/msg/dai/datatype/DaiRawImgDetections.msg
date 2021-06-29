@@ -1,1 +1,0 @@
-DaiImgDetection[] detections;
