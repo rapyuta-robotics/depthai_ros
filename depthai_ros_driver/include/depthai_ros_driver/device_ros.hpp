@@ -14,7 +14,8 @@
 #include <thread>
 
 #include <msgpack.hpp>
-#include <depthai_ros_msgs/DaiDatatypeImgDetection.h>
+#include <depthai_ros_msgs/DaiDatatypeRawImgDetections.h>
+#include <depthai_ros_msgs/DaiDatatypeRawTracklets.h>
 
 namespace rr {
 /**
@@ -153,7 +154,7 @@ protected:
                 case dai::DatatypeEnum::ImageManipConfig:
                     break;
                 case dai::DatatypeEnum::ImgDetections:
-                    _pub_t["ImageDetections"] = std::thread{generate_pub_lambda<depthai_ros_msgs::DaiDatatypeImgDetection>(_pub_nh, "ImageDetections", 10)};
+                    _pub_t["ImageDetections"] = std::thread{generate_pub_lambda<depthai_ros_msgs::DaiDatatypeRawImgDetections>(_pub_nh, "ImageDetections", 10)};
                     break;
                 case dai::DatatypeEnum::ImgFrame:
                     break;
@@ -168,6 +169,7 @@ protected:
                 case dai::DatatypeEnum::SystemInformation:
                     break;
                 case dai::DatatypeEnum::Tracklets:
+                    _pub_t["Tracklets"] = std::thread{generate_pub_lambda<depthai_ros_msgs::DaiDatatypeRawTracklets>(_pub_nh, "Tracklets", 10)};
                     break;
                 default:
                     break;
