@@ -1,4 +1,6 @@
 enum class CameraBoardSocket : int32_t { AUTO = -1, RGB, LEFT, RIGHT };
 
 #define DEPTHAI_COMMON_MSGS_MESSAGE_CAMERABOARDSOCKET_PLUGIN_CLASS_BODY \
-    MSGPACK_ADD_ENUM(DaiCameraBoardSocket);
+    MSGPACK_DEFINE()
+
+MSGPACK_ADD_ENUM(CameraBoardSocket);
