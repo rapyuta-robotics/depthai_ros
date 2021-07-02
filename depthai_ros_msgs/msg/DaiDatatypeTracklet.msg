@@ -1,7 +1,0 @@
-DaiCommonRect roi
-int32 id
-int32 label
-int32 age
-DaiDatatypeTrackingStatus status
-DaiDatatypeImgDetection srcImgDetection
-DaiCommonPoint3f spatialCoordinates

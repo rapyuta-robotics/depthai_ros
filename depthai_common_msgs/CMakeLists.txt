@@ -1,11 +1,9 @@
 cmake_minimum_required (VERSION 3.10.2)  # CMake version in Ubuntu 18.04 LTS
 
-project (depthai_ros_msgs VERSION 1.0.0)
+project (depthai_common_msgs VERSION 1.0.0)
 
 find_package (catkin REQUIRED COMPONENTS
   message_generation
-  sensor_msgs
-  std_msgs
 )
 
 ################################################
@@ -14,27 +12,37 @@ find_package (catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files (
   FILES
-  BoundingBox.msg
-  Object.msg
-  Objects.msg
-  AutoFocusCtrl.msg
-)
-
-## Generate services in the 'srv' folder
-add_service_files (
-  FILES
-  TriggerNamed.srv
+  CameraBoardSocket.msg
+  CameraImageOrientation.msg
+  CameraModel.msg
+  ChipTemperature.msg
+  CpuUsage.msg
+  DetectionNetworkType.msg
+  MemoryInfo.msg
+  Point2f.msg
+  Point3f.msg
+  ProcessorType.msg
+  Rect.msg
+  RotatedRect.msg
+  Size2f.msg
+  Timestamp.msg
 )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages (
-  DEPENDENCIES
-  sensor_msgs std_msgs
-)
+generate_messages ()
 
 ###################################
 ## catkin specific configuration ##
 ###################################
 catkin_package (
-  CATKIN_DEPENDS message_runtime sensor_msgs std_msgs
+  INCLUDE_DIRS include
+  CATKIN_DEPENDS message_runtime
+)
+
+#############
+## Install ##
+#############
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
 )

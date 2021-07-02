@@ -14,10 +14,10 @@
 #include <thread>
 
 #include <msgpack.hpp>
-#include <depthai_ros_msgs/DaiDatatypeRawImgDetections.h>
-#include <depthai_ros_msgs/DaiDatatypeRawTracklets.h>
-#include <depthai_ros_msgs/DaiDatatypeRawNNData.h>
-#include <depthai_ros_msgs/DaiDatatypeRawImgFrame.h>
+#include <depthai_datatype_msgs/RawImgDetections.h>
+#include <depthai_datatype_msgs/RawTracklets.h>
+#include <depthai_datatype_msgs/RawNNData.h>
+#include <depthai_datatype_msgs/RawImgFrame.h>
 
 namespace rr {
 /**
@@ -156,13 +156,13 @@ protected:
                 case dai::DatatypeEnum::ImageManipConfig:
                     break;
                 case dai::DatatypeEnum::ImgDetections:
-                    _pub_t["ImageDetections"] = std::thread{generate_pub_lambda<depthai_ros_msgs::DaiDatatypeRawImgDetections>(_pub_nh, "ImageDetections", 10)};
+                    _pub_t["ImageDetections"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, "ImageDetections", 10)};
                     break;
                 case dai::DatatypeEnum::ImgFrame:
-                    _pub_t["ImgFrame"] = std::thread{generate_pub_lambda<depthai_ros_msgs::DaiDatatypeRawImgFrame>(_pub_nh, "ImgFrame", 10)};
+                    _pub_t["ImgFrame"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, "ImgFrame", 10)};
                     break;
                 case dai::DatatypeEnum::NNData:
-                    _pub_t["NNData"] = std::thread{generate_pub_lambda<depthai_ros_msgs::DaiDatatypeRawNNData>(_pub_nh, "NNData", 10)};
+                    _pub_t["NNData"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, "NNData", 10)};
                     break;
                 case dai::DatatypeEnum::SpatialImgDetections:
                     break;
@@ -173,7 +173,7 @@ protected:
                 case dai::DatatypeEnum::SystemInformation:
                     break;
                 case dai::DatatypeEnum::Tracklets:
-                    _pub_t["Tracklets"] = std::thread{generate_pub_lambda<depthai_ros_msgs::DaiDatatypeRawTracklets>(_pub_nh, "Tracklets", 10)};
+                    _pub_t["Tracklets"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, "Tracklets", 10)};
                     break;
                 default:
                     break;

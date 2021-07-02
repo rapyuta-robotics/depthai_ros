@@ -1,5 +1,0 @@
-#define DEPTHAI_ROS_MSGS_MESSAGE_DAIDATATYPERAWNNDATA_PLUGIN_CLASS_BODY \
-    MSGPACK_DEFINE(\
-        tensors,\
-        batchSize\
-    )

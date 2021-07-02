@@ -1,5 +1,0 @@
-DaiDatatypeRawImgFrameSpecs fb
-uint32 category
-uint32 instanceNum
-int32 sequenceNum
-DaiCommonTimestamp ts
