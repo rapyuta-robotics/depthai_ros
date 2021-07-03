@@ -108,10 +108,10 @@ target_link_libraries (${PROJECT_NAME}_pipeline
 # target_link_libraries (${PROJECT_NAME}_nodelet
 #     ${PROJECT_NAME}_lib
 # )
-add_executable (${PROJECT_NAME} src/depthai_node.cpp)
-target_link_libraries (${PROJECT_NAME}
-    ${PROJECT_NAME}_lib
-)
+# add_executable (${PROJECT_NAME} src/depthai_node.cpp)
+# target_link_libraries (${PROJECT_NAME}
+#     ${PROJECT_NAME}_lib
+# )
 
 add_library(gen2_ros_queue src/dai_utils.cpp)
 target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai-core range-v3)

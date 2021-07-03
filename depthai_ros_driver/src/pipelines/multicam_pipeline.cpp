@@ -235,13 +235,9 @@ void MulticamPipeline::configure_stereo_pipeline(const std::string& config_json)
     if (withDepth) {
         auto stereo = _pipeline.create<dai::node::StereoDepth>();
 
-        const bool outputDepth = has_stream("depth"); // direct depth computation
-        const bool outputRectified = has_any({"rectified_left", "rectified_right"});
         const auto resolution_wh = monoLeft->getResolutionSize();
 
         // StereoDepth
-        stereo->setOutputDepth(outputDepth);
-        stereo->setOutputRectified(outputRectified);
         stereo->setConfidenceThreshold(200);
         stereo->setRectifyEdgeFillColor(0); // black, to better see the cutout
         stereo->loadCalibrationFile(calibrationFile);

@@ -52,8 +52,6 @@ protected:
         monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
         //monoRight->setFps(5.0);
 
-        bool outputDepth = false;
-        bool outputRectified = true;
         bool lrcheck  = true;
         bool extended = false;
         bool subpixel = true;
@@ -64,8 +62,6 @@ protected:
 
         if (withDepth) {
             // StereoDepth
-            stereo->setOutputDepth(outputDepth);
-            stereo->setOutputRectified(outputRectified);
             stereo->setConfidenceThreshold(200);
             stereo->setRectifyEdgeFillColor(0); // black, to better see the cutout
             //stereo->loadCalibrationFile("../../../../depthai/resources/depthai.calib");
@@ -82,11 +78,8 @@ protected:
 
             stereo->syncedLeft.link(xoutLeft->input);
             stereo->syncedRight.link(xoutRight->input);
-            if(outputRectified)
-            {
-                stereo->rectifiedLeft.link(xoutRectifL->input);
-                stereo->rectifiedRight.link(xoutRectifR->input);
-            }
+            stereo->rectifiedLeft.link(xoutRectifL->input);
+            stereo->rectifiedRight.link(xoutRectifR->input);
             stereo->disparity.link(xoutDisp->input);
             stereo->depth.link(xoutDepth->input);
 
