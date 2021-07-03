@@ -1,0 +1,3 @@
+int32 sequence
+IMUReportAccuracy accuracy
+depthai_common_msgs/Timestamp timestamp

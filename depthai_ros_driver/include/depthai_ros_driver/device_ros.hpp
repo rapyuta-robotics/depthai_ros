@@ -152,6 +152,7 @@ protected:
                 case dai::DatatypeEnum::CameraControl:
                     break;
                 case dai::DatatypeEnum::IMUData:
+                    // _pub_t["IMUData"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawIMUData>(_pub_nh, "IMUData", 10)}; // Not supported
                     break;
                 case dai::DatatypeEnum::ImageManipConfig:
                     break;

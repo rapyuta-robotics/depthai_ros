@@ -28,6 +28,16 @@ add_message_files (
   RawImgFrameType.msg
   RawImgFrameSpecs.msg
   RawImgFrame.msg
+
+  # IMU data type not converted due to duplicate field names
+  IMUReportAccuracy.msg
+  IMUReport.msg
+  IMUReportAccelerometer.msg
+  IMUReportGyroscope.msg
+  IMUReportMagneticField.msg
+  # IMUReportRotationVectorWAcc.msg
+  # IMUPacket.msg
+  # RawIMUData.msg
 )
 
 ## Generate added messages and services with any dependencies listed here
