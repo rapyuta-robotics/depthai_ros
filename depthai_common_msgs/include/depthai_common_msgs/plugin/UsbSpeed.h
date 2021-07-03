@@ -1,6 +1,6 @@
-enum class UsbSpeed : int32_t { UNKNOWN, LOW, FULL, HIGH, SUPER, SUPER_PLUS };
+#include <depthai-shared/datatype/UsbSpeed.hpp>
 
 #define DEPTHAI_COMMON_MSGS_MESSAGE_USBSPEED_PLUGIN_CLASS_BODY \
     MSGPACK_DEFINE()
 
-MSGPACK_ADD_ENUM(UsbSpeed);
+MSGPACK_ADD_ENUM(dai::UsbSpeed);

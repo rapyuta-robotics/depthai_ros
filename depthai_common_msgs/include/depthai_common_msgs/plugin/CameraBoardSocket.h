@@ -1,6 +1,6 @@
-enum class CameraBoardSocket : int32_t { AUTO = -1, RGB, LEFT, RIGHT };
+#include <depthai-shared/datatype/CameraBoardSocket.hpp>
 
 #define DEPTHAI_COMMON_MSGS_MESSAGE_CAMERABOARDSOCKET_PLUGIN_CLASS_BODY \
     MSGPACK_DEFINE()
 
-MSGPACK_ADD_ENUM(CameraBoardSocket);
+MSGPACK_ADD_ENUM(dai::CameraBoardSocket);
