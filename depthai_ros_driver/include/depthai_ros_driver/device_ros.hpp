@@ -99,14 +99,14 @@ protected:
     template <class MsgType>
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {
         auto conn = this->getConnection();
-        _pub_map[name] = nh.advertise<MsgType>(name, q_size); // no writing happens, so 1 is sufficient
-        _streams[name] = std::make_unique<dai::XLinkStream>(*conn, name, 1);
-        const auto pub_lambda = [this, name]() {
+        ros::Publisher pub = nh.advertise<MsgType>(name, q_size); // no writing happens, so 1 is sufficient
+        std::unique_ptr<dai::XLinkStream> stream = std::make_unique<dai::XLinkStream>(*conn, name, 1);
+        const auto pub_lambda = [this, pub, &stream]() {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             while (this->_running) {
                 // block till data is read
-                PacketReader reader{*_streams[name]};
+                PacketReader reader{*stream};
                 const auto& data = reader.getData()->getRaw()->data;
 
                 // convert data to ROS message type here
@@ -116,7 +116,7 @@ protected:
                 obj.convert(msg);
 
                 // publish data
-                _pub_map[name].publish(msg);
+                pub.publish(msg);
             }
 
             guard.disable();
@@ -226,13 +226,12 @@ protected:
     }
 
     // shared ptr for the callbacks to be called
-    std::unordered_map<std::string, std::unique_ptr<dai::XLinkStream>> _streams;
     std::unordered_map<std::string, std::thread> _pub_t;
     std::shared_ptr<std::uint8_t> _active;
     std::unordered_map<streamId_t, std::string> _stream_node_map;
     ros::CallbackQueue _pub_q, _sub_q;
     ros::NodeHandle _pub_nh, _sub_nh;
-    std::unordered_map<std::string, ros::Publisher> _pub_map;
+    // std::unordered_map<std::string, ros::Publisher> _pub_map;
     std::atomic<bool> _running = true;
 };
 }  // namespace rr
