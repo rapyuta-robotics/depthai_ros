@@ -10,6 +10,7 @@ include ("${DEPTHAI_CORE}/cmake/HunterGate.cmake")
 
 set (CMAKE_POSITION_INDEPENDENT_CODE ON)
 set (HUNTER_CONFIGURATION_TYPES "Release" CACHE STRING "Hunter dependencies list of build configurations")
+set (MSGPACK_CXX17 ON)
 
 HunterGate (
     URL "https://github.com/cpp-pm/hunter/archive/v0.23.304.tar.gz"
