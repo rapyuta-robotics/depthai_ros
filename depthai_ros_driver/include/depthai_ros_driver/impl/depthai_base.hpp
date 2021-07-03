@@ -155,13 +155,19 @@ void DepthAIBase<Node>::publishImageMsg(ImageFramePtr frame, const std::string& 
 }
 
 template <class Node>
-void DepthAIBase<Node>::publishImageMsg(const HostDataPacket& packet, Stream type, const ros::Time& stamp) {
-    const auto* camInfoPubPtr = _camera_info_publishers[type].get();
-    const auto* pubPtr = _stream_publishers[type].get();
+void DepthAIBase<Node>::cameraReadCb(const ros::TimerEvent&) {
+    // if (_request_jpegout) {
+    //     _depthai->request_jpeg();
+    // }
 
-    std_msgs::Header header;
-    header.stamp = stamp;
-    header.frame_id = packet.stream_name;
+    ros::Time stamp = ros::Time::now();
+    // auto get_ts = [&](double camera_ts) {
+    //     if (_depthai_ts_offset == -1) {
+    //         _depthai_ts_offset = camera_ts;
+    //         _stamp = stamp;
+    //     }
+    //     return _stamp + ros::Duration(camera_ts - _depthai_ts_offset);
+    // };
 
     for(const auto& dat: _data_output_queue) {
         const auto& stream = dat.first;
@@ -172,9 +178,6 @@ void DepthAIBase<Node>::publishImageMsg(const HostDataPacket& packet, Stream typ
             if(frame){
                 publishImageMsg(frame, stream, stamp);
             }
-            cv::merge(toMerge, cvImg.image);
-            encoding = "bgr8";
-            break;
         }
         else if (stream == "metaout") {
             const auto& detections = queue->get<dai::NNData>();
@@ -182,66 +185,97 @@ void DepthAIBase<Node>::publishImageMsg(const HostDataPacket& packet, Stream typ
                 publishObjectInfoMsg(detections, stamp);
             }
         }
-    } else {
-        std::cout << "Not ImgFrame" << std::endl;
     }
-    if (has_data_queue("detections")) {
-        const auto& detections = _data_output_queue["detections"]->get<dai::NNData>();
-        if(detections) {
-            publishObjectInfoMsg(detections, stamp);
-        }
-    }
-
-    if(dispFrame){
-        static int count = 0;
-        constexpr bool subpixel = false;
-        constexpr int maxDisp = 96;
-
-        cv::Mat disp(dispFrame->getHeight(), dispFrame->getWidth(),
-                subpixel ? CV_16UC1 : CV_8UC1, dispFrame->getData().data());
-        disp.convertTo(disp, CV_8UC1, 255.0 / maxDisp); // Extend disparity range
-        cv::imshow("disparity", disp);
-        cv::waitKey(1);
-        std::cout << "disparity " << count << std::endl;
-        count++;
-
-        // if (key == 'q'){
-        //     return;
-        // }
-    } else {
-        std::cout << "Not DepthFrame" << std::endl;
-    }
-
-    // if (_data_packet.size() != 0) {
-    //     for (const std::shared_ptr<HostDataPacket>& packet : _data_packet) {
-    //         if (packet == nullptr) {
-    //             // just a sanity check to prevent null dereference
-    //             continue;
-    //         }
-    //         const auto& name = packet->stream_name;
-    //         const auto stream = std::find(_stream_name.cbegin(), _stream_name.cend(), name);
-    //         if (stream == _stream_name.end()) {
-    //             ROS_WARN_THROTTLE_NAMED(10, this->getName(), "Stream: %s is not implemented", name.c_str());
-    //             continue;
-    //         }
-
-    //         const auto index = std::distance(_stream_name.cbegin(), stream);
-    //         if (index == Stream::VIDEO) {
-    //             // workaround for the bug in DepthAI-Core library
-    //             publishImageMsg(*(packet.get()), static_cast<Stream>(index), stamp);
-    //             continue;
-    //         }
-
-    //         auto meta_data = packet->getMetadata();
-    //         const auto seq_num = meta_data->getSequenceNum();
-    //         const auto ts = meta_data->getTimestamp();
-    //         const auto sync_ts = get_ts(ts);modified:
-    //         ROS_DEBUG_NAMED(this->getName(), "Stream: %s, Original TS: %f, SeqNum: %d, Synced TS: %f",
-    //                 packet->stream_name.c_str(), ts, seq_num, sync_ts.toSec());
-    //         publishImageMsg(*(packet.get()), static_cast<Stream>(index), sync_ts);
-    //     }
-    // }
 }
+
+// template <class Node>
+// void DepthAIBase<Node>::publishImageMsg(const HostDataPacket& packet, Stream type, const ros::Time& stamp) {
+//     const auto* camInfoPubPtr = _camera_info_publishers[type].get();
+//     const auto* pubPtr = _stream_publishers[type].get();
+
+//     std_msgs::Header header;
+//     header.stamp = stamp;
+//     header.frame_id = packet.stream_name;
+
+//     for(const auto& dat: _data_output_queue) {
+//         const auto& stream = dat.first;
+//         const auto& queue = dat.second;
+//         Stream stream_id = stream_info[stream].id;
+//         if (stream_id < Stream::IMAGE_END) {
+//             const auto& frame = queue->get<dai::ImgFrame>();
+//             if(frame){
+//                 publishImageMsg(frame, stream, stamp);
+//             }
+//             cv::merge(toMerge, cvImg.image);
+//             encoding = "bgr8";
+//             break;
+//         }
+//         else if (stream == "metaout") {
+//             const auto& detections = queue->get<dai::NNData>();
+//             if(detections) {
+//                 publishObjectInfoMsg(detections, stamp);
+//             }
+//         }
+//     } else {
+//         std::cout << "Not ImgFrame" << std::endl;
+//     }
+//     if (has_data_queue("detections")) {
+//         const auto& detections = _data_output_queue["detections"]->get<dai::NNData>();
+//         if(detections) {
+//             publishObjectInfoMsg(detections, stamp);
+//         }
+//     }
+
+//     if(dispFrame){
+//         static int count = 0;
+//         constexpr bool subpixel = false;
+//         constexpr int maxDisp = 96;
+
+//         cv::Mat disp(dispFrame->getHeight(), dispFrame->getWidth(),
+//                 subpixel ? CV_16UC1 : CV_8UC1, dispFrame->getData().data());
+//         disp.convertTo(disp, CV_8UC1, 255.0 / maxDisp); // Extend disparity range
+//         cv::imshow("disparity", disp);
+//         cv::waitKey(1);
+//         std::cout << "disparity " << count << std::endl;
+//         count++;
+
+//         // if (key == 'q'){
+//         //     return;
+//         // }
+//     } else {
+//         std::cout << "Not DepthFrame" << std::endl;
+//     }
+
+//     // if (_data_packet.size() != 0) {
+//     //     for (const std::shared_ptr<HostDataPacket>& packet : _data_packet) {
+//     //         if (packet == nullptr) {
+//     //             // just a sanity check to prevent null dereference
+//     //             continue;
+//     //         }
+//     //         const auto& name = packet->stream_name;
+//     //         const auto stream = std::find(_stream_name.cbegin(), _stream_name.cend(), name);
+//     //         if (stream == _stream_name.end()) {
+//     //             ROS_WARN_THROTTLE_NAMED(10, this->getName(), "Stream: %s is not implemented", name.c_str());
+//     //             continue;
+//     //         }
+
+//     //         const auto index = std::distance(_stream_name.cbegin(), stream);
+//     //         if (index == Stream::VIDEO) {
+//     //             // workaround for the bug in DepthAI-Core library
+//     //             publishImageMsg(*(packet.get()), static_cast<Stream>(index), stamp);
+//     //             continue;
+//     //         }
+
+//     //         auto meta_data = packet->getMetadata();
+//     //         const auto seq_num = meta_data->getSequenceNum();
+//     //         const auto ts = meta_data->getTimestamp();
+//     //         const auto sync_ts = get_ts(ts);modified:
+//     //         ROS_DEBUG_NAMED(this->getName(), "Stream: %s, Original TS: %f, SeqNum: %d, Synced TS: %f",
+//     //                 packet->stream_name.c_str(), ts, seq_num, sync_ts.toSec());
+//     //         publishImageMsg(*(packet.get()), static_cast<Stream>(index), sync_ts);
+//     //     }
+//     // }
+// }
 
 template <class Node>
 void DepthAIBase<Node>::onInit() {
@@ -327,8 +361,6 @@ void DepthAIBase<Node>::onInit() {
 
     // device init
     _depthai = std::make_unique<dai::Device>(_pipeline);
-    _depthai->startPipeline();
-
     for (const auto& stream: _enabled_streams) {
         _data_output_queue[stream] = _depthai->getOutputQueue(stream_info[stream].output_queue, 4, false);
     }

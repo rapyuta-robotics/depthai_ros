@@ -63,7 +63,7 @@ protected:
     /**
      * @brief Returns a pipeline in constant time
      */
-    dai::Pipeline onGetPipeline() const {};
+    void onGetPipeline() const {};
 
     /**
      * @brief returns the compressed streams exposed by the ROS interface
