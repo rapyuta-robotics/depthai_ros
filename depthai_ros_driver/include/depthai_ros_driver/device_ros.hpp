@@ -14,10 +14,13 @@
 #include <thread>
 
 #include <msgpack.hpp>
+
 #include <depthai_datatype_msgs/RawImgDetections.h>
 #include <depthai_datatype_msgs/RawTracklets.h>
 #include <depthai_datatype_msgs/RawNNData.h>
 #include <depthai_datatype_msgs/RawImgFrame.h>
+
+#include <depthai_datatype_msgs/RawCameraControl.h>
 
 namespace rr {
 /**
@@ -150,6 +153,7 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
+                    _pub_t["CameraControl"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawCameraControl>(_pub_nh, "CameraControl", 10)};
                     break;
                 case dai::DatatypeEnum::IMUData:
                     // _pub_t["IMUData"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawIMUData>(_pub_nh, "IMUData", 10)}; // Not supported

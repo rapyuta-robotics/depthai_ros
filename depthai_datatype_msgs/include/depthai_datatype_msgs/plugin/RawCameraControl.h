@@ -1,0 +1,22 @@
+#define DEPTHAI_DATATYPE_MSGS_MESSAGE_RAWCAMERACONTROL_PLUGIN_CLASS_BODY \
+    MSGPACK_DEFINE(\
+        cmdMask,\
+        autoFocusMode,\
+        lensPosition,\
+        expManual,\
+        aeRegion,\
+        afRegion,\
+        awbMode,\
+        sceneMode,\
+        antiBandingMode,\
+        aeLockMode,\
+        awbLockMode,\
+        effectMode,\
+        expCompensation,\
+        brightness,\
+        contrast,\
+        saturation,\
+        sharpness,\
+        lumaDenoise,\
+        chromaDenoise\
+    )

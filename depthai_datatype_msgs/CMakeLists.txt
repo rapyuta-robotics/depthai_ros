@@ -38,6 +38,18 @@ add_message_files (
   # IMUReportRotationVectorWAcc.msg
   # IMUPacket.msg
   # RawIMUData.msg
+
+  RawCameraControlAntiBandingMode.msg
+  RawCameraControlAutoFocusMode.msg
+  RawCameraControlAutoWhiteBalanceMode.msg
+  RawCameraControlCaptureIntent.msg
+  RawCameraControlCommand.msg
+  RawCameraControlControlMode.msg
+  RawCameraControlEffectMode.msg
+  RawCameraControlSceneMode.msg
+  ManualExposureParams.msg
+  RegionParams.msg
+  RawCameraControl.msg
 )
 
 ## Generate added messages and services with any dependencies listed here
