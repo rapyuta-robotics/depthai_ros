@@ -85,22 +85,27 @@ public:
 protected:
     // create stream based on name at the time of subscription
     template <class MsgType>
-    auto generate_cb_lambda(std::string name) -> void(*)(const MsgType&) {
-        auto conn = this->getConnection();
+    auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream) -> boost::function<void(const boost::shared_ptr<MsgType const >&)> {
+        // auto conn = this->getConnection();
         // const auto core_sub_lambda = [stream = dai::XLinkStream{*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE}](
-        const auto core_sub_lambda = [] (
-                                             const MsgType& msg) {
+        const auto core_sub_lambda = [&stream] (
+                                             const boost::shared_ptr<MsgType const >& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
-            // // TODO:  convert msg to data here somehow
-            // std::vector<std::uint8_t> serialized = dai::StreamPacketParser::serializeMessage(data);
-            // stream.write(serialized);
+            // convert msg to data
+            std::stringstream buffer;
+            msgpack::pack(buffer, *msg);
+            buffer.seekg(0);
+
+            const std::string str(buffer.str());
+            const std::vector<std::uint8_t> serialized(str.cbegin(), str.cend()); // copying?
+            stream->write(serialized);
             guard.disable();
         };
 
-        // boost::function<void(MsgType)> func = core_sub_lambda;
+        boost::function<void(const boost::shared_ptr<MsgType const >&)> func = core_sub_lambda;
 
-        return core_sub_lambda;
+        return func;
     }
 
     template <class MsgType>
@@ -202,12 +207,15 @@ protected:
             auto common_type = getCommonType(node_links.in_to);
             std::cout << static_cast<int>(common_type) << "\n";
 
+            auto conn = this->getConnection();
+            std::unique_ptr<dai::XLinkStream> stream = std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
+
             // create appropriate subscriber using the common_type
             switch (common_type) {
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    _sub["CameraControl"] = _sub_nh.subscribe("CameraControl", 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>("CameraControl"));
+                    _sub[name] = _sub_nh.subscribe(name, 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>(stream));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;
