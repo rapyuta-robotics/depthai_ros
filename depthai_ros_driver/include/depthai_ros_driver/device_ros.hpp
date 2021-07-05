@@ -102,14 +102,14 @@ protected:
     template <class MsgType>
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {
         auto conn = this->getConnection();
-        ros::Publisher pub = nh.advertise<MsgType>(name, q_size); // no writing happens, so 1 is sufficient
-        std::unique_ptr<dai::XLinkStream> stream = std::make_unique<dai::XLinkStream>(*conn, name, 1);
-        const auto pub_lambda = [this, pub, &stream]() {
+        const auto pub_lambda = [this, pub = nh.advertise<MsgType>(name, q_size),
+                                        // no writing happens, so 1 is sufficient
+                                        stream = dai::XLinkStream{*conn, name, 1}]() {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             while (this->_running) {
                 // block till data is read
-                PacketReader reader{*stream};
+                PacketReader reader{stream};
                 const auto& data = reader.getData()->getRaw()->data;
 
                 // convert data to ROS message type here
