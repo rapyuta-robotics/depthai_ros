@@ -85,17 +85,21 @@ public:
 protected:
     // create stream based on name at the time of subscription
     template <class MsgType>
-    auto generate_cb_lambda(std::string name) {
+    auto generate_cb_lambda(std::string name) -> void(*)(const MsgType&) {
         auto conn = this->getConnection();
-        const auto core_sub_lambda = [&, stream = dai::XLinkStream{*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE}](
-                                             MsgType& msg, dai::RawBuffer& data) {
+        // const auto core_sub_lambda = [stream = dai::XLinkStream{*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE}](
+        const auto core_sub_lambda = [] (
+                                             const MsgType& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
-            // TODO:  convert msg to data here somehow
-            std::vector<std::uint8_t> serialized = dai::StreamPacketParser::serializeMessage(data);
-            stream.write(serialized);
+            // // TODO:  convert msg to data here somehow
+            // std::vector<std::uint8_t> serialized = dai::StreamPacketParser::serializeMessage(data);
+            // stream.write(serialized);
             guard.disable();
         };
+
+        // boost::function<void(MsgType)> func = core_sub_lambda;
+
         return core_sub_lambda;
     }
 
@@ -203,6 +207,7 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
+                    _sub["CameraControl"] = _sub_nh.subscribe("CameraControl", 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>("CameraControl"));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;
@@ -232,6 +237,8 @@ protected:
 
     // shared ptr for the callbacks to be called
     std::unordered_map<std::string, std::thread> _pub_t;
+    std::unordered_map<std::string, ros::Subscriber> _sub;
+
     std::shared_ptr<std::uint8_t> _active;
     std::unordered_map<streamId_t, std::string> _stream_node_map;
     ros::CallbackQueue _pub_q, _sub_q;
