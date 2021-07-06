@@ -30,6 +30,9 @@ int main(int argc, char** argv) {
         auto out = p.create<XLinkOut>();
         auto inp = p.create<XLinkIn>();
 
+        out->setStreamName("preview");
+        inp->setStreamName("input_config");
+
         inp->out.link(cam->inputConfig);
         cam->preview.link(out->input);
     }

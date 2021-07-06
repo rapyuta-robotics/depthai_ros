@@ -105,15 +105,16 @@ protected:
 
     template <class MsgType>
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {
-        auto conn = this->getConnection();
-        ros::Publisher pub = nh.advertise<MsgType>(name, q_size); // no writing happens, so 1 is sufficient
-        auto stream = std::make_unique<dai::XLinkStream>(*conn, name, 1);
-        const auto pub_lambda = [this, pub, &stream]() {
+        ros::Publisher pub = nh.advertise<MsgType>(name, q_size);
+
+        const auto pub_lambda = [this, pub, name]() {
+            auto conn = this->getConnection();
+            auto stream = dai::XLinkStream(*conn, name, 1); // no writing happens, so 1 is sufficient
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             while (this->_running) {
                 // block till data is read
-                PacketReader reader{*stream};
+                PacketReader reader{stream};
                 const auto& data = reader.getData()->getRaw()->data;
 
                 // convert data to ROS message type here
@@ -157,21 +158,21 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    _pub_t["CameraControl"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawCameraControl>(_pub_nh, "CameraControl", 10)};
+                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawCameraControl>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::IMUData:
-                    // _pub_t["IMUData"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawIMUData>(_pub_nh, "IMUData", 10)}; // Not supported
+                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawIMUData>(_pub_nh, name, 10)}; // Not supported
                     break;
                 case dai::DatatypeEnum::ImageManipConfig:
                     break;
                 case dai::DatatypeEnum::ImgDetections:
-                    _pub_t["ImageDetections"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, "ImageDetections", 10)};
+                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::ImgFrame:
-                    _pub_t["ImgFrame"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, "ImgFrame", 10)};
+                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::NNData:
-                    _pub_t["NNData"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, "NNData", 10)};
+                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::SpatialImgDetections:
                     break;
@@ -182,7 +183,7 @@ protected:
                 case dai::DatatypeEnum::SystemInformation:
                     break;
                 case dai::DatatypeEnum::Tracklets:
-                    _pub_t["Tracklets"] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, "Tracklets", 10)};
+                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, 10)};
                     break;
                 default:
                     break;
