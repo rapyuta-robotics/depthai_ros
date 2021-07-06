@@ -93,26 +93,21 @@ protected:
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             // convert msg to data
-            std::stringstream buffer;
-            msgpack::pack(buffer, *msg);
-            buffer.seekg(0);
+            msgpack::sbuffer sbuf;
+            msgpack::pack(sbuf, *msg);
+            stream->write(reinterpret_cast<uint8_t*>(sbuf.data()), sbuf.size());
 
-            const std::string str(buffer.str());
-            const std::vector<std::uint8_t> serialized(str.cbegin(), str.cend()); // copying?
-            stream->write(serialized);
             guard.disable();
         };
 
-        boost::function<void(const boost::shared_ptr<MsgType const >&)> func = core_sub_lambda;
-
-        return func;
+        return core_sub_lambda;
     }
 
     template <class MsgType>
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {
         auto conn = this->getConnection();
         ros::Publisher pub = nh.advertise<MsgType>(name, q_size); // no writing happens, so 1 is sufficient
-        std::unique_ptr<dai::XLinkStream> stream = std::make_unique<dai::XLinkStream>(*conn, name, 1);
+        auto stream = std::make_unique<dai::XLinkStream>(*conn, name, 1);
         const auto pub_lambda = [this, pub, &stream]() {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
