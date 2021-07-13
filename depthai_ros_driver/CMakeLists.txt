@@ -36,6 +36,8 @@ set (PKG_DEPS
     node_interface
 )
 
+add_compile_definitions(MSGPACK_USE_DEFINE_MAP)
+
 find_package (catkin REQUIRED COMPONENTS ${PKG_DEPS})
 
 find_package (OpenCV REQUIRED)

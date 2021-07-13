@@ -1,4 +1,4 @@
-RawImgFrameType type
+int32 type
 uint32 width
 uint32 height
 uint32 stride

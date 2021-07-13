@@ -60,10 +60,34 @@ public:
         _packet = _stream.readRaw();  // blocking read
     }
     ~PacketReader() { _stream.readRawRelease(); }
+
+    auto getPacket() { return _packet; }
     auto getData() { return dai::StreamPacketParser::parsePacketToADatatype(_packet); }
+
+    auto serial_data_range() {
+        auto readIntLE = [](uint8_t* data) {
+            return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256;
+        };
+
+        uint32_t serializedObjectSize = static_cast<uint32_t>(readIntLE(_packet->data + _packet->length - 4));
+        auto objectType = static_cast<dai::DatatypeEnum>(readIntLE(_packet->data + _packet->length - 8));
+
+        if(serializedObjectSize < 0) {
+            throw std::runtime_error("Bad packet, couldn't parse");
+        }
+        std::uint32_t bufferLength = _packet->length - 8 - serializedObjectSize;
+        auto* msgpackStart = _packet->data + bufferLength;
+
+        return std::tuple<uint32_t, uint32_t>(bufferLength, serializedObjectSize);
+    }
+
+
     dai::XLinkStream& _stream;
     streamPacketDesc_t* _packet;
 };
+
+
+
 
 class DeviceROS : public dai::DeviceBase {
     using Base = dai::DeviceBase;
@@ -115,11 +139,11 @@ protected:
             while (this->_running) {
                 // block till data is read
                 PacketReader reader{stream};
-                const auto& data = reader.getData()->getRaw()->data;
+                auto packet = reader.getPacket();
+                auto [ser_start, ser_size] = reader.serial_data_range();
 
-                // convert data to ROS message type here
                 MsgType msg;
-                msgpack::object_handle oh = msgpack::unpack(reinterpret_cast<const char *>(data.data()), data.size());
+                msgpack::object_handle oh = msgpack::unpack(reinterpret_cast<const char *>(packet->data + ser_start), ser_size);
                 msgpack::object obj = oh.get();
                 obj.convert(msg);
 
@@ -158,7 +182,7 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawCameraControl>(_pub_nh, name, 10)};
+                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawCameraControl>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::IMUData:
                     // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawIMUData>(_pub_nh, name, 10)}; // Not supported
@@ -166,13 +190,13 @@ protected:
                 case dai::DatatypeEnum::ImageManipConfig:
                     break;
                 case dai::DatatypeEnum::ImgDetections:
-                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, name, 10)};
+                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::ImgFrame:
                     _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::NNData:
-                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, 10)};
+                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::SpatialImgDetections:
                     break;
@@ -183,7 +207,7 @@ protected:
                 case dai::DatatypeEnum::SystemInformation:
                     break;
                 case dai::DatatypeEnum::Tracklets:
-                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, 10)};
+                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, 10)};
                     break;
                 default:
                     break;
@@ -211,7 +235,7 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    _sub[name] = _sub_nh.subscribe(name, 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>(stream));
+                    // _sub[name] = _sub_nh.subscribe(name, 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>(stream));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;

@@ -25,7 +25,7 @@ add_message_files (
   TensorInfo.msg
   RawNNData.msg
 
-  RawImgFrameType.msg
+  # RawImgFrameType.msg
   RawImgFrameSpecs.msg
   RawImgFrame.msg
 
