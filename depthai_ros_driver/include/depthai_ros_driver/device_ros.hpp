@@ -119,7 +119,7 @@ public:
 
 protected:
     // create stream based on name at the time of subscription
-    template <class MsgType>
+    template <class MsgType, class DaiType>
     auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream) -> boost::function<void(const boost::shared_ptr<MsgType const >&)> {
         // auto conn = this->getConnection();
         // const auto core_sub_lambda = [stream = dai::XLinkStream{*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE}](
@@ -130,7 +130,14 @@ protected:
             // convert msg to data
             msgpack::sbuffer sbuf;
             msgpack::pack(sbuf, *msg);
-            stream->write(reinterpret_cast<uint8_t*>(sbuf.data()), sbuf.size());
+
+            DaiType daidata;
+            // auto daidata = std::make_shared<DaiType>();
+            auto json = nlohmann::json::from_msgpack(sbuf.data(), sbuf.data() + sbuf.size());
+            std::cout << json << std::endl;
+            nlohmann::from_json(json, daidata);
+
+            // Here, daidata is pushed back to camera input queue.
 
             guard.disable();
         };
@@ -139,7 +146,7 @@ protected:
     }
 
     template <class MsgType>
-    auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {
+    auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) { // name: copied
         ros::Publisher pub = nh.advertise<MsgType>(name, q_size);
 
         const auto pub_lambda = [this, pub, name]() {
@@ -248,7 +255,7 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    // _sub[name] = _sub_nh.subscribe(name, 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>(stream));
+                    _sub[name] = _sub_nh.subscribe(name, 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl, dai::RawCameraControl>(stream));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;

@@ -39,14 +39,14 @@ add_message_files (
   # IMUPacket.msg
   # RawIMUData.msg
 
-  RawCameraControlAntiBandingMode.msg
-  RawCameraControlAutoFocusMode.msg
-  RawCameraControlAutoWhiteBalanceMode.msg
+  # RawCameraControlAntiBandingMode.msg
+  # RawCameraControlAutoFocusMode.msg
+  # RawCameraControlAutoWhiteBalanceMode.msg
   RawCameraControlCaptureIntent.msg
   RawCameraControlCommand.msg
   RawCameraControlControlMode.msg
-  RawCameraControlEffectMode.msg
-  RawCameraControlSceneMode.msg
+  # RawCameraControlEffectMode.msg
+  # RawCameraControlSceneMode.msg
   ManualExposureParams.msg
   RegionParams.msg
   RawCameraControl.msg

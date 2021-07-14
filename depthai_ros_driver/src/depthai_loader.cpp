@@ -29,11 +29,14 @@ int main(int argc, char** argv) {
         auto cam = p.create<ColorCamera>();
         auto out = p.create<XLinkOut>();
         auto inp = p.create<XLinkIn>();
+        auto ctl = p.create<XLinkIn>();
 
         out->setStreamName("preview");
         inp->setStreamName("input_config");
+        ctl->setStreamName("control");
 
         inp->out.link(cam->inputConfig);
+        ctl->out.link(cam->inputControl);
         cam->preview.link(out->input);
     }
 
