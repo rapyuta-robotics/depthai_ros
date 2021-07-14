@@ -61,7 +61,7 @@ public:
     }
     ~PacketReader() { _stream.readRawRelease(); }
 
-    auto readIntLE(uint8_t* data) {
+    auto fromLE(uint8_t* data) {
         return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256;
     };
 
@@ -69,7 +69,7 @@ public:
     auto getData() { return dai::StreamPacketParser::parsePacketToADatatype(_packet); }
 
     auto serialRange() {
-        uint32_t serializedObjectSize = static_cast<uint32_t>(readIntLE(_packet->data + _packet->length - 4));
+        uint32_t serializedObjectSize = static_cast<uint32_t>(fromLE(_packet->data + _packet->length - 4));
         if(serializedObjectSize < 0) {
             throw std::runtime_error("Bad packet, couldn't parse");
         }
@@ -80,7 +80,7 @@ public:
     }
 
     auto bufferData() {
-        int serializedObjectSize = readIntLE(_packet->data + _packet->length - 4);
+        int serializedObjectSize = fromLE(_packet->data + _packet->length - 4);
         if(serializedObjectSize < 0) {
             throw std::runtime_error("Bad packet, couldn't parse");
         }
@@ -97,7 +97,34 @@ public:
     streamPacketDesc_t* _packet;
 };
 
+class PacketWriter {
+public:
+    PacketWriter(dai::XLinkStream& stream)
+            : _stream(stream) {}
 
+    auto toLE(uint32_t num, uint8_t* le_data) {
+        le_data[0] = static_cast<uint8_t>((num & 0x000000ff) >>  0u);
+        le_data[1] = static_cast<uint8_t>((num & 0x0000ff00) >>  8u);
+        le_data[2] = static_cast<uint8_t>((num & 0x00ff0000) >> 16u);
+        le_data[3] = static_cast<uint8_t>((num & 0xff000000) >> 24u);
+    };
+
+    void write(const uint8_t* dat, size_t dat_size,
+               const uint8_t* ser, size_t ser_size, uint32_t datatype) {
+        size_t packet_size = dat_size + ser_size + 8;
+
+        std::vector<uint8_t> packet(packet_size);
+        toLE(datatype, packet.data() + packet_size - 8);
+        toLE(dat_size, packet.data() + packet_size - 4);
+
+        memcpy(packet.data(), dat, dat_size);
+        memcpy(packet.data() + dat_size, ser, ser_size);
+
+        _stream.write(packet);
+    }
+
+    dai::XLinkStream& _stream;
+};
 
 
 class DeviceROS : public dai::DeviceBase {
@@ -119,7 +146,7 @@ public:
 
 protected:
     // create stream based on name at the time of subscription
-    template <class MsgType, class DaiType>
+    template <class MsgType, dai::DatatypeEnum DataType>
     auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream) -> boost::function<void(const boost::shared_ptr<MsgType const >&)> {
         // auto conn = this->getConnection();
         // const auto core_sub_lambda = [stream = dai::XLinkStream{*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE}](
@@ -131,13 +158,10 @@ protected:
             msgpack::sbuffer sbuf;
             msgpack::pack(sbuf, *msg);
 
-            DaiType daidata;
-            // auto daidata = std::make_shared<DaiType>();
-            auto json = nlohmann::json::from_msgpack(sbuf.data(), sbuf.data() + sbuf.size());
-            std::cout << json << std::endl;
-            nlohmann::from_json(json, daidata);
-
-            // Here, daidata is pushed back to camera input queue.
+            PacketWriter writer(*stream);
+            writer.write(msg->data.data(), msg->data.size(),
+                         reinterpret_cast<uint8_t*>(sbuf.data()), sbuf.size(),
+                         static_cast<uint32_t>(DataType));
 
             guard.disable();
         };
@@ -255,7 +279,7 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    _sub[name] = _sub_nh.subscribe(name, 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl, dai::RawCameraControl>(stream));
+                    _sub[name] = _sub_nh.subscribe(name, 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl, dai::DatatypeEnum::CameraControl>(stream));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;

@@ -17,3 +17,4 @@ int8 saturation
 uint8 sharpness
 uint8 lumaDenoise
 uint8 chromaDenoise
+uint8[] data
