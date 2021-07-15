@@ -278,13 +278,21 @@ auto getOutputOf(const NodeConstPtr& node, const std::string& out) {
 
 /**
  * @brief inverts the 4 bytes as follows:
- * Original: | A | B | C | D |
- * Returned: | D | C | B | A |
+ * Original: | A | B | C | D |  <-- data
+ * Returned: | D | C | B | A |  <-- out
  *           |MSB|...|...|LSB| (Most and Least Significant bits)
  *
  * @param data pointer to data, at least 4 byte wide
- * @return std::uint32_t data, but with different endianness
+ * @param out pointer, at least 4 byte wide
  */
 void switchEndianness(const std::uint8_t* const data, std::uint8_t* const out);
+
+/**
+ * @brief Switches the endianness of the input
+ *
+ * @param data number to convert
+ * @return std::uint32_t data, but in a different endian format
+ * @sa switchEndianness
+ */
 std::uint32_t switchEndianness(std::uint32_t data);
 }  // namespace rr
