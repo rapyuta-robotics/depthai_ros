@@ -61,16 +61,16 @@ public:
     }
     ~PacketReader() { _stream.readRawRelease(); }
 
-    auto fromLE(uint8_t* data) {
-        return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256;
-    };
+    auto fromLE(uint8_t* data) { return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256; };
 
     auto getPacket() { return _packet; }
-    auto getData() { return dai::StreamPacketParser::parsePacketToADatatype(_packet); }
+    [[deprecated("Uses dai interface, to be removed soon")]] auto getData() {
+        return dai::StreamPacketParser::parsePacketToADatatype(_packet);
+    }
 
     auto serialRange() {
         uint32_t serializedObjectSize = static_cast<uint32_t>(fromLE(_packet->data + _packet->length - 4));
-        if(serializedObjectSize < 0) {
+        if (serializedObjectSize < 0) {
             throw std::runtime_error("Bad packet, couldn't parse");
         }
         std::uint32_t bufferLength = _packet->length - 8 - serializedObjectSize;
@@ -81,7 +81,7 @@ public:
 
     auto bufferData() {
         int serializedObjectSize = fromLE(_packet->data + _packet->length - 4);
-        if(serializedObjectSize < 0) {
+        if (serializedObjectSize < 0) {
             throw std::runtime_error("Bad packet, couldn't parse");
         }
 
@@ -103,14 +103,13 @@ public:
             : _stream(stream) {}
 
     auto toLE(uint32_t num, uint8_t* le_data) {
-        le_data[0] = static_cast<uint8_t>((num & 0x000000ff) >>  0u);
-        le_data[1] = static_cast<uint8_t>((num & 0x0000ff00) >>  8u);
+        le_data[0] = static_cast<uint8_t>((num & 0x000000ff) >> 0u);
+        le_data[1] = static_cast<uint8_t>((num & 0x0000ff00) >> 8u);
         le_data[2] = static_cast<uint8_t>((num & 0x00ff0000) >> 16u);
         le_data[3] = static_cast<uint8_t>((num & 0xff000000) >> 24u);
     };
 
-    void write(const uint8_t* dat, size_t dat_size,
-               const uint8_t* ser, size_t ser_size, uint32_t datatype) {
+    void write(const uint8_t* dat, size_t dat_size, const uint8_t* ser, size_t ser_size, uint32_t datatype) {
         size_t packet_size = dat_size + ser_size + 8;
 
         std::vector<uint8_t> packet(packet_size);
@@ -125,7 +124,6 @@ public:
 
     dai::XLinkStream& _stream;
 };
-
 
 class DeviceROS : public dai::DeviceBase {
     using Base = dai::DeviceBase;
@@ -147,11 +145,11 @@ public:
 protected:
     // create stream based on name at the time of subscription
     template <class MsgType, dai::DatatypeEnum DataType>
-    auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream) -> boost::function<void(const boost::shared_ptr<MsgType const >&)> {
+    auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream)
+            -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
         // auto conn = this->getConnection();
         // const auto core_sub_lambda = [stream = dai::XLinkStream{*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE}](
-        const auto core_sub_lambda = [&stream] (
-                                             const boost::shared_ptr<MsgType const >& msg) {
+        const auto core_sub_lambda = [&stream](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             // convert msg to data
@@ -159,9 +157,8 @@ protected:
             msgpack::pack(sbuf, *msg);
 
             PacketWriter writer(*stream);
-            writer.write(msg->data.data(), msg->data.size(),
-                         reinterpret_cast<uint8_t*>(sbuf.data()), sbuf.size(),
-                         static_cast<uint32_t>(DataType));
+            writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<uint8_t*>(sbuf.data()), sbuf.size(),
+                    static_cast<uint32_t>(DataType));
 
             guard.disable();
         };
@@ -170,12 +167,12 @@ protected:
     }
 
     template <class MsgType>
-    auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) { // name: copied
+    auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {  // name: copied
         ros::Publisher pub = nh.advertise<MsgType>(name, q_size);
 
         const auto pub_lambda = [this, pub, name]() {
             auto conn = this->getConnection();
-            auto stream = dai::XLinkStream(*conn, name, 1); // no writing happens, so 1 is sufficient
+            auto stream = dai::XLinkStream(*conn, name, 1);  // no writing happens, so 1 is sufficient
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             while (this->_running) {
@@ -184,7 +181,8 @@ protected:
                 auto packet = reader.getPacket();
 
                 auto [ser_start, ser_size] = reader.serialRange();
-                msgpack::object_handle oh = msgpack::unpack(reinterpret_cast<const char *>(packet->data + ser_start), ser_size);
+                msgpack::object_handle oh =
+                        msgpack::unpack(reinterpret_cast<const char*>(packet->data + ser_start), ser_size);
                 msgpack::object obj = oh.get();
 
                 MsgType msg;
@@ -226,21 +224,26 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawCameraControl>(_pub_nh, name, 10)};
+                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawCameraControl>(_pub_nh,
+                    // name, 10)};
                     break;
                 case dai::DatatypeEnum::IMUData:
-                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawIMUData>(_pub_nh, name, 10)}; // Not supported
+                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawIMUData>(_pub_nh, name,
+                    // 10)}; // Not supported
                     break;
                 case dai::DatatypeEnum::ImageManipConfig:
                     break;
                 case dai::DatatypeEnum::ImgDetections:
-                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, name, 10)};
+                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh,
+                    // name, 10)};
                     break;
                 case dai::DatatypeEnum::ImgFrame:
-                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, name, 10)};
+                    _pub_t[name] =
+                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::NNData:
-                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, 10)};
+                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name,
+                    // 10)};
                     break;
                 case dai::DatatypeEnum::SpatialImgDetections:
                     break;
@@ -251,7 +254,8 @@ protected:
                 case dai::DatatypeEnum::SystemInformation:
                     break;
                 case dai::DatatypeEnum::Tracklets:
-                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, 10)};
+                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh,
+                    // name, 10)};
                     break;
                 default:
                     break;
@@ -272,14 +276,17 @@ protected:
             std::cout << static_cast<int>(common_type) << "\n";
 
             auto conn = this->getConnection();
-            std::unique_ptr<dai::XLinkStream> stream = std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
+            std::unique_ptr<dai::XLinkStream> stream =
+                    std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
 
             // create appropriate subscriber using the common_type
             switch (common_type) {
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    _sub[name] = _sub_nh.subscribe(name, 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl, dai::DatatypeEnum::CameraControl>(stream));
+                    _sub[name] = _sub_nh.subscribe(name, 1000,
+                            generate_cb_lambda<depthai_datatype_msgs::RawCameraControl,
+                                    dai::DatatypeEnum::CameraControl>(stream));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;

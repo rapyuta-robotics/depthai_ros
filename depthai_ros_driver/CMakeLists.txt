@@ -89,7 +89,7 @@ include_directories (SYSTEM
 #     ${PROJECT_NAME}_lib
 # )
 
-add_library(gen2_ros_queue src/ros_xlink.cpp)
+add_library(gen2_ros_queue src/dai_utils.cpp)
 target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai-core range-v3)
 
 add_executable(gen2_ros_driver src/depthai_loader.cpp)
