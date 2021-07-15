@@ -96,9 +96,14 @@ add_executable(gen2_ros_driver src/depthai_loader.cpp)
 target_link_libraries(gen2_ros_driver gen2_ros_queue)
 
 catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
+catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
 if(TARGET ${PROJECT_NAME}_depthai_api)
     target_link_libraries(${PROJECT_NAME}_depthai_api gen2_ros_queue gtest_main)
     target_compile_options(${PROJECT_NAME}_depthai_api PRIVATE "-g")
+endif()
+if(TARGET ${PROJECT_NAME}_dai_utils)
+    target_link_libraries(${PROJECT_NAME}_dai_utils gen2_ros_queue gtest_main)
+    target_compile_options(${PROJECT_NAME}_dai_utils PRIVATE "-g")
 endif()
 
 #############

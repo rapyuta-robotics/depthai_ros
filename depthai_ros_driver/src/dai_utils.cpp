@@ -18,12 +18,6 @@ void switchEndianness(const std::uint8_t* const data, std::uint8_t* const out) {
     }
 };
 
-std::uint32_t switchEndianness(uint8_t* data) {
-    std::uint32_t num;
-    switchEndianness(data, reinterpret_cast<std::uint8_t*>(&num));
-    return num;
-};
-
 std::uint32_t switchEndianness(std::uint32_t data) {
     std::uint32_t num;
     switchEndianness(reinterpret_cast<std::uint8_t*>(&data), reinterpret_cast<std::uint8_t*>(&num));

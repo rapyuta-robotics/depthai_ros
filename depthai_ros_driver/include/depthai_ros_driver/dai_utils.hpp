@@ -286,6 +286,5 @@ auto getOutputOf(const NodeConstPtr& node, const std::string& out) {
  * @return std::uint32_t data, but with different endianness
  */
 void switchEndianness(const std::uint8_t* const data, std::uint8_t* const out);
-std::uint32_t switchEndianness(uint8_t* data);
 std::uint32_t switchEndianness(std::uint32_t data);
 }  // namespace rr
