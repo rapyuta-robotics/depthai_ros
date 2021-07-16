@@ -217,7 +217,7 @@ protected:
             const auto& name = node->getStreamName();
 
             auto common_type = getCommonType(node_links.out_from);
-            std::cout << static_cast<int>(common_type) << "\n";
+            std::cout << name << " (pub): " << static_cast<int>(common_type) << "\n";
 
             // create appropriate publisher using the common_type
             switch (common_type) {
@@ -242,8 +242,7 @@ protected:
                             std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::NNData:
-                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name,
-                    // 10)};
+                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::SpatialImgDetections:
                     break;
@@ -273,8 +272,7 @@ protected:
             const auto& name = node->getStreamName();
 
             auto common_type = getCommonType(node_links.in_to);
-            std::cout << static_cast<int>(common_type) << "\n";
-
+            std::cout << name << " (sub): "  << static_cast<int>(common_type) << "\n";
             auto conn = this->getConnection();
 
             // create appropriate subscriber using the common_type

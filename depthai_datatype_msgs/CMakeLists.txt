@@ -20,8 +20,8 @@ add_message_files (
   Tracklet.msg
   RawTracklets.msg
 
-  TensorInfoDataType.msg
-  TensorInfoStorageOrder.msg
+  # TensorInfoDataType.msg
+  # TensorInfoStorageOrder.msg
   TensorInfo.msg
   RawNNData.msg
 

@@ -1,5 +1,5 @@
-TensorInfoStorageOrder order
-TensorInfoDataType dataType
+int32 order
+int32 dataType
 uint32 numDimensions
 uint32[] dims
 uint32[] strides
