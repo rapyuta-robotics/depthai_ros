@@ -276,17 +276,17 @@ protected:
             std::cout << static_cast<int>(common_type) << "\n";
 
             auto conn = this->getConnection();
-            std::unique_ptr<dai::XLinkStream> stream =
-                    std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
 
             // create appropriate subscriber using the common_type
             switch (common_type) {
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
+                    _streams[name] =
+                        std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
                     _sub[name] = _sub_nh.subscribe(name, 1000,
                             generate_cb_lambda<depthai_datatype_msgs::RawCameraControl,
-                                    dai::DatatypeEnum::CameraControl>(stream));
+                                    dai::DatatypeEnum::CameraControl>(_streams[name]));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;
@@ -317,6 +317,7 @@ protected:
     // shared ptr for the callbacks to be called
     std::unordered_map<std::string, std::thread> _pub_t;
     std::unordered_map<std::string, ros::Subscriber> _sub;
+    std::unordered_map<std::string, std::unique_ptr<dai::XLinkStream>> _streams;
 
     std::shared_ptr<std::uint8_t> _active;
     std::unordered_map<streamId_t, std::string> _stream_node_map;
