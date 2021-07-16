@@ -61,11 +61,7 @@ public:
     }
     ~PacketReader() { _stream.readRawRelease(); }
 
-    auto fromLE(uint8_t* data) {
-        std::uint32_t num;
-        switchEndianness(data, reinterpret_cast<std::uint8_t*>(&num));
-        return num;
-    }
+    auto fromLE(uint8_t* data) { return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256; };
 
     auto getPacket() { return _packet; }
     [[deprecated("Uses dai interface, to be removed soon")]] auto getData() {
@@ -106,8 +102,11 @@ public:
     PacketWriter(dai::XLinkStream& stream)
             : _stream(stream) {}
 
-    auto toLE(std::uint32_t num, std::uint8_t* le_data) {
-        switchEndianness(reinterpret_cast<std::uint8_t*>(&num), le_data);
+    auto toLE(uint32_t num, uint8_t* le_data) {
+        le_data[0] = static_cast<uint8_t>((num & 0x000000ff) >> 0u);
+        le_data[1] = static_cast<uint8_t>((num & 0x0000ff00) >> 8u);
+        le_data[2] = static_cast<uint8_t>((num & 0x00ff0000) >> 16u);
+        le_data[3] = static_cast<uint8_t>((num & 0xff000000) >> 24u);
     };
 
     void write(const uint8_t* dat, size_t dat_size, const uint8_t* ser, size_t ser_size, uint32_t datatype) {
