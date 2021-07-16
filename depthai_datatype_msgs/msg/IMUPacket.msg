@@ -1,0 +1,4 @@
+IMUReportAccelerometer acceleroMeter
+IMUReportGyroscope gyroscope
+IMUReportMagneticField magneticField
+IMUReportRotationVectorWAcc rotationVector
