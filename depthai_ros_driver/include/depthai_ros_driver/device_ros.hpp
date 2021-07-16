@@ -15,12 +15,7 @@
 
 #include <msgpack.hpp>
 
-#include <depthai_datatype_msgs/RawImgDetections.h>
-#include <depthai_datatype_msgs/RawTracklets.h>
-#include <depthai_datatype_msgs/RawNNData.h>
-#include <depthai_datatype_msgs/RawImgFrame.h>
-
-#include <depthai_datatype_msgs/RawCameraControl.h>
+#include <depthai_datatype_msgs/datatype_msgs.h>
 
 namespace rr {
 /**
@@ -147,8 +142,6 @@ protected:
     template <class MsgType, dai::DatatypeEnum DataType>
     auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream)
             -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
-        // auto conn = this->getConnection();
-        // const auto core_sub_lambda = [stream = dai::XLinkStream{*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE}](
         const auto core_sub_lambda = [&stream](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
@@ -318,10 +311,8 @@ protected:
     std::unordered_map<std::string, std::unique_ptr<dai::XLinkStream>> _streams;
 
     std::shared_ptr<std::uint8_t> _active;
-    std::unordered_map<streamId_t, std::string> _stream_node_map;
     ros::CallbackQueue _pub_q, _sub_q;
     ros::NodeHandle _pub_nh, _sub_nh;
-    // std::unordered_map<std::string, ros::Publisher> _pub_map;
     std::atomic<bool> _running = true;
 };
 }  // namespace rr

@@ -36,8 +36,6 @@ set (PKG_DEPS
     node_interface
 )
 
-add_compile_definitions(MSGPACK_USE_DEFINE_MAP)
-
 find_package (catkin REQUIRED COMPONENTS ${PKG_DEPS})
 
 find_package (OpenCV REQUIRED)
@@ -94,6 +92,7 @@ target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai-core range-v3)
 
 add_executable(gen2_ros_driver src/depthai_loader.cpp)
 target_link_libraries(gen2_ros_driver gen2_ros_queue)
+target_compile_definitions(gen2_ros_driver PUBLIC MSGPACK_USE_DEFINE_MAP)
 
 catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
 catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
