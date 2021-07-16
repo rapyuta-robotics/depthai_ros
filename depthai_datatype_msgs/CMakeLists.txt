@@ -16,7 +16,7 @@ add_message_files (
   ImgDetection.msg
   RawImgDetections.msg
 
-  TrackingStatus.msg
+  # TrackingStatus.msg
   Tracklet.msg
   RawTracklets.msg
 
@@ -29,15 +29,15 @@ add_message_files (
   RawImgFrameSpecs.msg
   RawImgFrame.msg
 
-  # IMU data type not converted due to duplicate field names
-  IMUReportAccuracy.msg
-  IMUReport.msg
-  IMUReportAccelerometer.msg
-  IMUReportGyroscope.msg
-  IMUReportMagneticField.msg
-  # IMUReportRotationVectorWAcc.msg
-  # IMUPacket.msg
-  # RawIMUData.msg
+  # # IMU data type not converted due to duplicate field names
+  # IMUReportAccuracy.msg
+  # IMUReport.msg
+  # IMUReportAccelerometer.msg
+  # IMUReportGyroscope.msg
+  # IMUReportMagneticField.msg
+  # # IMUReportRotationVectorWAcc.msg
+  # # IMUPacket.msg
+  # # RawIMUData.msg
 
   # RawCameraControlAntiBandingMode.msg
   # RawCameraControlAutoFocusMode.msg
