@@ -271,11 +271,11 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    _streams[name] =
-                        std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
-                    _sub[name] = _sub_nh.subscribe(name, 1000,
-                            generate_cb_lambda<depthai_datatype_msgs::RawCameraControl,
-                                    dai::DatatypeEnum::CameraControl>(_streams[name]));
+                    // _streams[name] =
+                    //     std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
+                    // _sub[name] = _sub_nh.subscribe(name, 1000,
+                    //         generate_cb_lambda<depthai_datatype_msgs::RawCameraControl,
+                    //                 dai::DatatypeEnum::CameraControl>(_streams[name]));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;
