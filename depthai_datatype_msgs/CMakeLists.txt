@@ -42,9 +42,9 @@ add_message_files (
   # RawCameraControlAntiBandingMode.msg
   # RawCameraControlAutoFocusMode.msg
   # RawCameraControlAutoWhiteBalanceMode.msg
-  RawCameraControlCaptureIntent.msg
-  RawCameraControlCommand.msg
-  RawCameraControlControlMode.msg
+  # RawCameraControlCaptureIntent.msg
+  # RawCameraControlCommand.msg
+  # RawCameraControlControlMode.msg
   # RawCameraControlEffectMode.msg
   # RawCameraControlSceneMode.msg
   ManualExposureParams.msg

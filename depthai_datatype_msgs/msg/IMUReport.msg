@@ -1,3 +1,3 @@
 int32 sequence
-IMUReportAccuracy accuracy
+uint8 accuracy
 depthai_common_msgs/Timestamp timestamp
