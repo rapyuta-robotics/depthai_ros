@@ -1,0 +1,2 @@
+#undef MSGPACK_USE_DEFINE_MAP
+

@@ -42,8 +42,6 @@ catkin_package (
   DEPENDS msgpack-c
 )
 
-add_compile_definitions(INTERFACE MSGPACK_USE_DEFINE_MAP)
-
 #############
 ## Install ##
 #############
