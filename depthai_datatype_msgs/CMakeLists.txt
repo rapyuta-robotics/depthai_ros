@@ -6,6 +6,7 @@ find_package (catkin REQUIRED COMPONENTS
   message_generation
   depthai_common_msgs
 )
+
 get_filename_component (MSGPACK "${CMAKE_CURRENT_LIST_DIR}/../external/msgpack-c" REALPATH)
 
 ################################################
@@ -67,8 +68,6 @@ catkin_package (
   CATKIN_DEPENDS message_runtime
   DEPENDS msgpack-c
 )
-
-add_compile_definitions(gen2_ros_driver INTERFACE MSGPACK_USE_DEFINE_MAP)
 
 #############
 ## Install ##

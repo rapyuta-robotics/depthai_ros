@@ -1,3 +1,5 @@
+#define MSGPACK_USE_DEFINE_MAP
+
 #include <msgpack.hpp>
 
 #include <depthai-shared/datatype/RawNNData.hpp>
