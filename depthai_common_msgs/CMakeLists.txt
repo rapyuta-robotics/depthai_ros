@@ -12,16 +12,16 @@ find_package (catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files (
   FILES
-  CameraBoardSocket.msg
-  CameraImageOrientation.msg
-  CameraModel.msg
+  # CameraBoardSocket.msg
+  # CameraImageOrientation.msg
+  # CameraModel.msg
   ChipTemperature.msg
   CpuUsage.msg
-  DetectionNetworkType.msg
+  # DetectionNetworkType.msg
   MemoryInfo.msg
   Point2f.msg
   Point3f.msg
-  ProcessorType.msg
+  # ProcessorType.msg
   Rect.msg
   RotatedRect.msg
   Size2f.msg
