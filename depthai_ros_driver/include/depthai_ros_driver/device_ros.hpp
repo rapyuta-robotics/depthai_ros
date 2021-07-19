@@ -13,8 +13,6 @@
 #include <memory>
 #include <thread>
 
-#include <msgpack.hpp>
-
 #include <depthai_datatype_msgs/datatype_msgs.h>
 
 namespace rr {

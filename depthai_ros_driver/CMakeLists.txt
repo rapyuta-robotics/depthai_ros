@@ -4,7 +4,6 @@ set (CMAKE_CXX_STANDARD 17)
 
 get_filename_component (DEPTHAI_CORE "${CMAKE_CURRENT_LIST_DIR}/../external/depthai-core" REALPATH)
 get_filename_component (DEPTHAI_SHARED "${CMAKE_CURRENT_LIST_DIR}/../external/depthai-core/shared/depthai-shared" REALPATH)
-get_filename_component (MSGPACK "${CMAKE_CURRENT_LIST_DIR}/../external/msgpack-c" REALPATH)
 
 include ("${DEPTHAI_CORE}/cmake/HunterGate.cmake")
 
@@ -63,7 +62,6 @@ include_directories (include)
 include_directories (SYSTEM
     ${Boost_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
-    ${MSGPACK}/include
     ${DEPTHAI_SHARED}/include
     ${catkin_INCLUDE_DIRS}
 )
@@ -92,7 +90,6 @@ target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai-core range-v3)
 
 add_executable(gen2_ros_driver src/depthai_loader.cpp)
 target_link_libraries(gen2_ros_driver gen2_ros_queue)
-target_compile_definitions(gen2_ros_driver PUBLIC MSGPACK_USE_DEFINE_MAP)
 
 catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
 catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
