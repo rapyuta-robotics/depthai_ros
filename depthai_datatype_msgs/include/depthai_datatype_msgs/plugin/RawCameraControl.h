@@ -1,3 +1,5 @@
+#include <msgpack.hpp>
+
 #include <depthai-shared/datatype/RawCameraControl.hpp>
 
 MSGPACK_ADD_ENUM(dai::RawCameraControl::AutoFocusMode);
