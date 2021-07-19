@@ -28,14 +28,15 @@ jobs:
       image: ${{ matrix.images }}
     strategy:
       matrix:
-        images: ['ros:noetic-perception', 'ros:melodic-perception']
+        # images: ['ros:noetic-perception', 'ros:melodic-perception']
+        images: ['ros:noetic-perception']
         # compiler: ["/usr/bin/g++", "/usr/bin/clang++"]
     steps:
     - name: 'Install dependencies'
       shell: bash
       run: |
         apt update
-        apt install -y libusb-1.0-0{,-dev}
+        apt install -y git libusb-1.0-0{,-dev}
     - uses: actions/download-artifact@v2
       with:
         name: workspace
