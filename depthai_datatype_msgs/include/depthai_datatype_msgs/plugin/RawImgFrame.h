@@ -1,3 +1,5 @@
+#include <msgpack.hpp>
+
 #include <depthai-shared/datatype/RawImgFrame.hpp>
 
 MSGPACK_ADD_ENUM(dai::RawImgFrame::Type);

@@ -1,3 +1,5 @@
+#include <msgpack.hpp>
+
 #define DEPTHAI_DATATYPE_MSGS_MESSAGE_RAWIMGFRAMESPECS_PLUGIN_CLASS_BODY \
     MSGPACK_DEFINE(\
         type,\

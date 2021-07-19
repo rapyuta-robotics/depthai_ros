@@ -1,3 +1,5 @@
+#include <msgpack.hpp>
+
 #include <depthai-shared/datatype/RawNNData.hpp>
 
 MSGPACK_ADD_ENUM(dai::TensorInfo::StorageOrder);

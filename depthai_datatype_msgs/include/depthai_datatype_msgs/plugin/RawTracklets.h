@@ -1,3 +1,5 @@
+#include <msgpack.hpp>
+
 #include <depthai-shared/datatype/RawTracklets.hpp>
 
 MSGPACK_ADD_ENUM(dai::Tracklet::TrackingStatus);
