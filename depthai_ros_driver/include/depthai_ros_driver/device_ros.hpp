@@ -201,14 +201,14 @@ protected:
     void _setup_publishers(const dai::Pipeline& pipeline) {
         // get all XLinkOut
         const auto& out_links = getAllInputs(pipeline);
-        std::cout << "Required publishers: " << out_links.size() << "\n";
+        ROS_INFO_STREAM("Required publishers: " << out_links.size());
         for (const auto& node_links : out_links) {
             const auto& node = node_links.node_to;
             // get name for publisher
             const auto& name = node->getStreamName();
 
             auto common_type = getCommonType(node_links.out_from);
-            std::cout << name << " (pub): " << static_cast<int>(common_type) << "\n";
+            ROS_INFO_STREAM(name << " (pub): " << static_cast<int>(common_type));
 
             // create appropriate publisher using the common_type
             switch (common_type) {
@@ -219,6 +219,7 @@ protected:
                     // name, 10)};
                     break;
                 case dai::DatatypeEnum::IMUData:
+                    // @TODO: support IMU
                     // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawIMUData>(_pub_nh, name,
                     // 10)}; // Not supported
                     break;
@@ -254,14 +255,14 @@ protected:
     void _setup_subscribers(const dai::Pipeline& pipeline) {
         // get all XLinkIn
         const auto& in_links = getAllOutputs(pipeline);
-        std::cout << "Required subscribers: " << in_links.size() << "\n";
+        ROS_INFO_STREAM("Required subscribers: " << in_links.size());
         for (const auto& node_links : in_links) {
             const auto& node = node_links.node_from;
             // get name for publisher
             const auto& name = node->getStreamName();
 
             auto common_type = getCommonType(node_links.in_to);
-            std::cout << name << " (sub): "  << static_cast<int>(common_type) << "\n";
+            ROS_INFO_STREAM(name << " (sub): "  << static_cast<int>(common_type));
             auto conn = this->getConnection();
 
             // create appropriate subscriber using the common_type
@@ -269,6 +270,7 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
+                    // @TODO: make writer to xlinkin to work
                     // _sbuf[name] = msgpack::sbuffer();
                     // _writer_buf[name] = std::vector<uint8_t>();
                     // _streams[name] =
