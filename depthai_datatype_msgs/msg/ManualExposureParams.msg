@@ -1,0 +1,3 @@
+uint32 exposureTimeUs
+uint32 sensitivityIso
+uint32 frameDurationUs
