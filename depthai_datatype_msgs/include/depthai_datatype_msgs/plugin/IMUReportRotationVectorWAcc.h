@@ -1,6 +1,4 @@
-#define MSGPACK_USE_DEFINE_MAP
-
-#include <msgpack.hpp>
+#include <depthai_common_msgs/msgpack.hpp>
 
 #include <depthai-shared/datatype/RawIMUData.hpp>
 
