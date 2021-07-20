@@ -51,43 +51,41 @@ public:
     PacketReader(dai::XLinkStream& stream)
             : _stream(stream) {
         _packet = _stream.readRaw();  // blocking read
+
+        _msgpack_size = static_cast<uint32_t>(fromLE(_packet->data + _packet->length - 4));
+        if (_msgpack_size < 0) {
+            throw std::runtime_error("Bad packet, couldn't parse");
+        }
+
+        _buf_size = _packet->length - 8 - _msgpack_size;
     }
     ~PacketReader() { _stream.readRawRelease(); }
 
-    auto fromLE(uint8_t* data) { return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256; };
+    auto packet() { return _packet; }
 
-    auto getPacket() { return _packet; }
+    uint32_t msgpackSize() { return _msgpack_size; };
+
+    uint8_t* msgpackBeginPtr() { return _packet->data + _buf_size; }
+
+    auto bufferData() {
+        // copy data part
+        std::vector<uint8_t> data(_packet->data, _packet->data + _buf_size);
+        return data;
+    }
+
     [[deprecated("Uses dai interface, to be removed soon")]] auto getData() {
         return dai::StreamPacketParser::parsePacketToADatatype(_packet);
     }
 
-    auto serialRange() {
-        uint32_t serializedObjectSize = static_cast<uint32_t>(fromLE(_packet->data + _packet->length - 4));
-        if (serializedObjectSize < 0) {
-            throw std::runtime_error("Bad packet, couldn't parse");
-        }
-        std::uint32_t bufferLength = _packet->length - 8 - serializedObjectSize;
-        auto* msgpackStart = _packet->data + bufferLength;
-
-        return std::tuple<uint32_t, uint32_t>(bufferLength, serializedObjectSize);
-    }
-
-    auto bufferData() {
-        int serializedObjectSize = fromLE(_packet->data + _packet->length - 4);
-        if (serializedObjectSize < 0) {
-            throw std::runtime_error("Bad packet, couldn't parse");
-        }
-
-        std::uint32_t bufferLength = _packet->length - 8 - serializedObjectSize;
-
-        // copy data part
-        std::vector<uint8_t> data(_packet->data, _packet->data + bufferLength);
-
-        return data;
-    }
+private:
+    uint32_t fromLE(uint8_t* data) { return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256; };
 
     dai::XLinkStream& _stream;
     streamPacketDesc_t* _packet;
+
+    uint32_t _msgpack_size;
+    uint32_t _buf_size;
+
 };
 
 class PacketWriter {
@@ -172,11 +170,10 @@ protected:
             while (this->_running) {
                 // block till data is read
                 PacketReader reader{stream};
-                auto packet = reader.getPacket();
+                auto packet = reader.packet();
 
-                auto [ser_start, ser_size] = reader.serialRange();
                 msgpack::object_handle oh =
-                        msgpack::unpack(reinterpret_cast<const char*>(packet->data + ser_start), ser_size);
+                        msgpack::unpack(reinterpret_cast<const char*>(reader.msgpackBeginPtr()), reader.msgpackSize());
                 msgpack::object obj = oh.get();
 
                 MsgType msg;
