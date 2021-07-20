@@ -102,17 +102,18 @@ public:
         le_data[3] = static_cast<uint8_t>((num & 0xff000000) >> 24u);
     };
 
-    void write(const uint8_t* dat, size_t dat_size, const uint8_t* ser, size_t ser_size, uint32_t datatype) {
+    void write(const uint8_t* dat, size_t dat_size, const uint8_t* ser, size_t ser_size, uint32_t datatype,
+               std::vector<uint8_t>& buf) {
         size_t packet_size = dat_size + ser_size + 8;
 
-        std::vector<uint8_t> packet(packet_size);
-        toLE(datatype, packet.data() + packet_size - 8);
-        toLE(dat_size, packet.data() + packet_size - 4);
+        buf.resize(packet_size);
+        toLE(datatype, buf.data() + packet_size - 8);
+        toLE(dat_size, buf.data() + packet_size - 4);
 
-        memcpy(packet.data(), dat, dat_size);
-        memcpy(packet.data() + dat_size, ser, ser_size);
+        memcpy(buf.data(), dat, dat_size);
+        memcpy(buf.data() + dat_size, ser, ser_size);
 
-        _stream.write(packet);
+        _stream.write(buf);
     }
 
     dai::XLinkStream& _stream;
@@ -139,16 +140,17 @@ protected:
     // create stream based on name at the time of subscription
     template <class MsgType, dai::DatatypeEnum DataType>
     auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream,
-                            msgpack::sbuffer& sbuf)
+                            msgpack::sbuffer& sbuf, std::vector<uint8_t>& writer_buf)
             -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
-        const auto core_sub_lambda = [&stream, &sbuf](const boost::shared_ptr<MsgType const>& msg) {
+        const auto core_sub_lambda = [&stream, &sbuf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             // convert msg to data
             msgpack::pack(sbuf, *msg);
             PacketWriter writer(*stream);
             writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<uint8_t*>(sbuf.data()), sbuf.size(),
-                    static_cast<uint32_t>(DataType));
+                    static_cast<uint32_t>(DataType),
+                    writer_buf);
 
             sbuf.clear();  // Prevent the sbuf data is accumeted
 
@@ -270,11 +272,13 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
+                    // _sbuf[name] = msgpack::sbuffer();
+                    // _writer_buf[name] = std::vector<uint8_t>();
                     // _streams[name] =
                     //     std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
                     // _sub[name] = _sub_nh.subscribe(name, 1000,
                     //         generate_cb_lambda<depthai_datatype_msgs::RawCameraControl,
-                    //                 dai::DatatypeEnum::CameraControl>(_streams[name]));
+                    //                 dai::DatatypeEnum::CameraControl>(_streams[name], _sbuf[name], _writer_buf[name]));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;
@@ -306,8 +310,9 @@ protected:
     std::unordered_map<std::string, std::thread> _pub_t;
     std::unordered_map<std::string, ros::Subscriber> _sub;
     std::unordered_map<std::string, std::unique_ptr<dai::XLinkStream>> _streams;
-    msgpack::sbuffer _sbuf;  // buffer for subscribed messages
 
+    std::unordered_map<std::string, msgpack::sbuffer> _sbuf;  // buffer for deserializing subscribed messages
+    std::unordered_map<std::string, std::vector<uint8_t>> _writer_buf;  // buffer for writing to xlinkin
 
     std::shared_ptr<std::uint8_t> _active;
     ros::CallbackQueue _pub_q, _sub_q;
