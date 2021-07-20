@@ -9,13 +9,19 @@
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "temp");
-    ros::NodeHandle nh;
-    std::string pipeline_name = "rr::DefaultPipeline";
-    if (!nh.getParam("pipeline", pipeline_name)) {
-        nh.setParam("pipeline", pipeline_name);
-    }
 
     ros::NodeHandle private_nh("~");
+
+    std::string pipeline_name = "rr::DefaultPipeline";
+    if (!private_nh.getParam("pipeline", pipeline_name)) {
+        private_nh.setParam("pipeline", pipeline_name);
+    }
+
+    std::string config;
+    if (!private_nh.getParam("config", config)) {
+        private_nh.setParam("config", config);
+    }
+
     std::string blob_file = "./mobilenet-ssd.blob";
     private_nh.getParam("blob_file", blob_file);
     auto openvino_version = dai::OpenVINO::Version::VERSION_2020_3;
@@ -24,7 +30,7 @@ int main(int argc, char** argv) {
     pluginlib::ClassLoader<rr::Pipeline> pipeline_loader("depthai_ros_driver", "rr::Pipeline");
     try {
     const auto loader = pipeline_loader.createUniqueInstance(pipeline_name);
-    loader->configure("");
+    loader->configure(config);
     } catch (pluginlib::LibraryLoadException& ex) {
         ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
     }
