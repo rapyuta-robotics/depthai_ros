@@ -39,7 +39,11 @@ generate_messages ()
 catkin_package (
   INCLUDE_DIRS include ${MSGPACK}/include
   CATKIN_DEPENDS message_runtime
-  DEPENDS msgpack-c
+)
+
+include_directories (SYSTEM
+  ${MSGPACK}/include
+  ${catkin_INCLUDE_DIRS}
 )
 
 #############
@@ -48,4 +52,8 @@ catkin_package (
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h"
+)
+install(DIRECTORY ${MSGPACK}/include/
+  DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
 )

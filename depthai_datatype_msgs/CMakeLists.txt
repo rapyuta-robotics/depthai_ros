@@ -66,7 +66,11 @@ generate_messages (
 catkin_package (
   INCLUDE_DIRS include ${MSGPACK}/include
   CATKIN_DEPENDS message_runtime
-  DEPENDS msgpack-c
+)
+
+include_directories (SYSTEM
+  ${MSGPACK}/include
+  ${catkin_INCLUDE_DIRS}
 )
 
 #############
