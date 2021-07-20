@@ -138,18 +138,19 @@ public:
 protected:
     // create stream based on name at the time of subscription
     template <class MsgType, dai::DatatypeEnum DataType>
-    auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream)
+    auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream,
+                            msgpack::sbuffer& sbuf)
             -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
-        const auto core_sub_lambda = [&stream](const boost::shared_ptr<MsgType const>& msg) {
+        const auto core_sub_lambda = [&stream, &sbuf](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             // convert msg to data
-            msgpack::sbuffer sbuf;
             msgpack::pack(sbuf, *msg);
-
             PacketWriter writer(*stream);
             writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<uint8_t*>(sbuf.data()), sbuf.size(),
                     static_cast<uint32_t>(DataType));
+
+            sbuf.clear();  // Prevent the sbuf data is accumeted
 
             guard.disable();
         };
@@ -305,6 +306,8 @@ protected:
     std::unordered_map<std::string, std::thread> _pub_t;
     std::unordered_map<std::string, ros::Subscriber> _sub;
     std::unordered_map<std::string, std::unique_ptr<dai::XLinkStream>> _streams;
+    msgpack::sbuffer _sbuf;  // buffer for subscribed messages
+
 
     std::shared_ptr<std::uint8_t> _active;
     ros::CallbackQueue _pub_q, _sub_q;
