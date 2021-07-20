@@ -271,13 +271,11 @@ protected:
                     break;
                 case dai::DatatypeEnum::CameraControl:
                     // @TODO: make writer to xlinkin to work
-                    // _sbuf[name] = msgpack::sbuffer();
-                    // _writer_buf[name] = std::vector<uint8_t>();
                     // _streams[name] =
                     //     std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
                     // _sub[name] = _sub_nh.subscribe(name, 1000,
                     //         generate_cb_lambda<depthai_datatype_msgs::RawCameraControl,
-                    //                 dai::DatatypeEnum::CameraControl>(_streams[name], _sbuf[name], _writer_buf[name]));
+                    //                 dai::DatatypeEnum::CameraControl>(_streams[name], _sbuf, _writer_buf));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;
@@ -310,8 +308,8 @@ protected:
     std::unordered_map<std::string, ros::Subscriber> _sub;
     std::unordered_map<std::string, std::unique_ptr<dai::XLinkStream>> _streams;
 
-    std::unordered_map<std::string, msgpack::sbuffer> _sbuf;  // buffer for deserializing subscribed messages
-    std::unordered_map<std::string, std::vector<uint8_t>> _writer_buf;  // buffer for writing to xlinkin
+    msgpack::sbuffer _sbuf;  // buffer for deserializing subscribed messages
+    std::vector<uint8_t> _writer_buf;  // buffer for writing to xlinkin
 
     std::shared_ptr<std::uint8_t> _active;
     ros::CallbackQueue _pub_q, _sub_q;
