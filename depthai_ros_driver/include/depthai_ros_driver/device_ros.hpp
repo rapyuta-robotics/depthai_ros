@@ -52,7 +52,7 @@ public:
             : _stream(stream) {
         _packet = _stream.readRaw();  // blocking read
 
-        _msgpack_size = static_cast<uint32_t>(fromLE(_packet->data + _packet->length - 4));
+        _msgpack_size = static_cast<std::uint32_t>(fromLE(_packet->data + _packet->length - 4));
         if (_msgpack_size > _packet->length) {
             throw std::runtime_error("Bad packet, couldn't parse");
         }
@@ -63,13 +63,13 @@ public:
 
     auto packet() { return _packet; }
 
-    uint32_t msgpackSize() { return _msgpack_size; };
+    std::uint32_t msgpackSize() { return _msgpack_size; };
 
-    uint8_t* msgpackBeginPtr() { return _packet->data + _buf_size; }
+    std::uint8_t* msgpackBeginPtr() { return _packet->data + _buf_size; }
 
     auto bufferData() {
         // copy data part
-        std::vector<uint8_t> data(_packet->data, _packet->data + _buf_size);
+        std::vector<std::uint8_t> data(_packet->data, _packet->data + _buf_size);
         return data;
     }
 
@@ -78,13 +78,13 @@ public:
     }
 
 private:
-    uint32_t fromLE(uint8_t* data) { return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256; };
+    std::uint32_t fromLE(std::uint8_t* data) { return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256; };
 
     dai::XLinkStream& _stream;
     streamPacketDesc_t* _packet;
 
-    uint32_t _msgpack_size;
-    uint32_t _buf_size;
+    std::uint32_t _msgpack_size;
+    std::uint32_t _buf_size;
 
 };
 
@@ -93,23 +93,23 @@ public:
     PacketWriter(dai::XLinkStream& stream)
             : _stream(stream) {}
 
-    auto toLE(uint32_t num, uint8_t* le_data) {
-        le_data[0] = static_cast<uint8_t>((num & 0x000000ff) >> 0u);
-        le_data[1] = static_cast<uint8_t>((num & 0x0000ff00) >> 8u);
-        le_data[2] = static_cast<uint8_t>((num & 0x00ff0000) >> 16u);
-        le_data[3] = static_cast<uint8_t>((num & 0xff000000) >> 24u);
+    auto toLE(std::uint32_t num, std::uint8_t* le_data) {
+        le_data[0] = static_cast<std::uint8_t>((num & 0x000000ff) >> 0u);
+        le_data[1] = static_cast<std::uint8_t>((num & 0x0000ff00) >> 8u);
+        le_data[2] = static_cast<std::uint8_t>((num & 0x00ff0000) >> 16u);
+        le_data[3] = static_cast<std::uint8_t>((num & 0xff000000) >> 24u);
     };
 
-    void write(const uint8_t* dat, size_t dat_size, const uint8_t* ser, size_t ser_size, uint32_t datatype,
-               std::vector<uint8_t>& buf) {
+    void write(const std::uint8_t* dat, size_t dat_size, const std::uint8_t* ser, size_t ser_size, std::uint32_t datatype,
+               std::vector<std::uint8_t>& buf) {
         size_t packet_size = dat_size + ser_size + 8;
 
         buf.resize(packet_size);
         toLE(datatype, buf.data() + packet_size - 8);
         toLE(dat_size, buf.data() + packet_size - 4);
 
-        memcpy(buf.data(), dat, dat_size);
-        memcpy(buf.data() + dat_size, ser, ser_size);
+        std::memcpy(buf.data(), dat, dat_size);
+        std::memcpy(buf.data() + dat_size, ser, ser_size);
 
         _stream.write(buf);
     }
@@ -138,7 +138,7 @@ protected:
     // create stream based on name at the time of subscription
     template <class MsgType, dai::DatatypeEnum DataType>
     auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream,
-                            msgpack::sbuffer& sbuf, std::vector<uint8_t>& writer_buf)
+                            msgpack::sbuffer& sbuf, std::vector<std::uint8_t>& writer_buf)
             -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
         const auto core_sub_lambda = [&stream, &sbuf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
@@ -146,8 +146,8 @@ protected:
             // convert msg to data
             msgpack::pack(sbuf, *msg);
             PacketWriter writer(*stream);
-            writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<uint8_t*>(sbuf.data()), sbuf.size(),
-                    static_cast<uint32_t>(DataType),
+            writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<std::uint8_t*>(sbuf.data()), sbuf.size(),
+                    static_cast<std::uint32_t>(DataType),
                     writer_buf);
 
             sbuf.clear();  // Prevent the sbuf data is accumeted
@@ -309,7 +309,7 @@ protected:
     std::unordered_map<std::string, std::unique_ptr<dai::XLinkStream>> _streams;
 
     msgpack::sbuffer _sbuf;  // buffer for deserializing subscribed messages
-    std::vector<uint8_t> _writer_buf;  // buffer for writing to xlinkin
+    std::vector<std::uint8_t> _writer_buf;  // buffer for writing to xlinkin
 
     std::shared_ptr<std::uint8_t> _active;
     ros::CallbackQueue _pub_q, _sub_q;
