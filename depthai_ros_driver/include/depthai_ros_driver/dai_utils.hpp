@@ -46,7 +46,7 @@ std::vector<NodeConstPtr> filterNodesByNames(const dai::Pipeline& pipeline, cons
  * @return vector of node shared pointers
  * @sa filterNodesByNames
  */
-inline std::vector<NodeConstPtr> filterNodesByName(const dai::Pipeline& pipeline, std::string name);
+std::vector<NodeConstPtr> filterNodesByName(const dai::Pipeline& pipeline, std::string name);
 
 namespace detail {
 template <class T>
@@ -103,7 +103,7 @@ inline auto getConnectionsTo(const NodeConstPtr& node);
  * @return vector of connections that start from the specified node
  * @sa getConnectionsTo
  */
-inline std::vector<dai::Node::Connection> getConnectionsFrom(const NodeConstPtr& node);
+std::vector<dai::Node::Connection> getConnectionsFrom(const NodeConstPtr& node);
 
 /**
  * @brief Get the Outputs that are connected to the specified input of the specified node
@@ -276,13 +276,23 @@ auto getOutputOf(const NodeConstPtr& node, const std::string& out) {
     return ins;
 }
 
-std::vector<NodeConstPtr> filterNodesByName(const dai::Pipeline& pipeline, std::string name) {
-    return filterNodesByNames(pipeline, rv::single(name));
-}
+/**
+ * @brief inverts the 4 bytes as follows:
+ * Original: | A | B | C | D |  <-- data
+ * Returned: | D | C | B | A |  <-- out
+ *           |MSB|...|...|LSB| (Most and Least Significant bits)
+ *
+ * @param data pointer to data, at least 4 byte wide
+ * @param out pointer, at least 4 byte wide
+ */
+void switchEndianness(const std::uint8_t* const data, std::uint8_t* const out);
 
-std::vector<dai::Node::Connection> getConnectionsFrom(const NodeConstPtr& node) {
-    const auto& connectionMap = node->getParentPipeline().getConnectionMap();
-    return connectionMap | rv::values | rv::join |
-           rv::filter([&](const auto& conn) { return conn.outputId == node->id; }) | ranges::to<std::vector>;
-}
+/**
+ * @brief Switches the endianness of the input
+ *
+ * @param data number to convert
+ * @return std::uint32_t data, but in a different endian format
+ * @sa switchEndianness
+ */
+std::uint32_t switchEndianness(std::uint32_t data);
 }  // namespace rr

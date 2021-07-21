@@ -3,11 +3,13 @@ cmake_minimum_required (VERSION 3.10.2)  # CMake version in Ubuntu 18.04 LTS
 set (CMAKE_CXX_STANDARD 17)
 
 get_filename_component (DEPTHAI_CORE "${CMAKE_CURRENT_LIST_DIR}/../external/depthai-core" REALPATH)
+get_filename_component (DEPTHAI_SHARED "${CMAKE_CURRENT_LIST_DIR}/../external/depthai-core/shared/depthai-shared" REALPATH)
 
 include ("${DEPTHAI_CORE}/cmake/HunterGate.cmake")
 
 set (CMAKE_POSITION_INDEPENDENT_CODE ON)
 set (HUNTER_CONFIGURATION_TYPES "Release" CACHE STRING "Hunter dependencies list of build configurations")
+set (MSGPACK_CXX17 ON)
 
 HunterGate (
     URL "https://github.com/cpp-pm/hunter/archive/v0.23.304.tar.gz"
@@ -22,6 +24,8 @@ set (PKG_DEPS
     camera_info_manager
     cv_bridge
     depthai_ros_msgs
+    depthai_common_msgs
+    depthai_datatype_msgs
     image_transport
     message_generation
     nodelet
@@ -58,6 +62,7 @@ include_directories (include)
 include_directories (SYSTEM
     ${Boost_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
+    ${DEPTHAI_SHARED}/include
     ${catkin_INCLUDE_DIRS}
 )
 
@@ -80,16 +85,21 @@ include_directories (SYSTEM
 #     ${PROJECT_NAME}_lib
 # )
 
-add_library(gen2_ros_queue src/ros_xlink.cpp)
+add_library(gen2_ros_queue src/dai_utils.cpp)
 target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai-core range-v3)
 
 add_executable(gen2_ros_driver src/depthai_loader.cpp)
 target_link_libraries(gen2_ros_driver gen2_ros_queue)
 
 catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
+catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
 if(TARGET ${PROJECT_NAME}_depthai_api)
     target_link_libraries(${PROJECT_NAME}_depthai_api gen2_ros_queue gtest_main)
     target_compile_options(${PROJECT_NAME}_depthai_api PRIVATE "-g")
+endif()
+if(TARGET ${PROJECT_NAME}_dai_utils)
+    target_link_libraries(${PROJECT_NAME}_dai_utils gen2_ros_queue gtest_main)
+    target_compile_options(${PROJECT_NAME}_dai_utils PRIVATE "-g")
 endif()
 
 #############
