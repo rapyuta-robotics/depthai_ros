@@ -53,7 +53,7 @@ public:
         _packet = _stream.readRaw();  // blocking read
 
         _msgpack_size = static_cast<uint32_t>(fromLE(_packet->data + _packet->length - 4));
-        if (_msgpack_size < 0) {
+        if (_msgpack_size > _packet->length) {
             throw std::runtime_error("Bad packet, couldn't parse");
         }
 
