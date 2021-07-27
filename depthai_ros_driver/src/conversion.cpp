@@ -1,20 +1,21 @@
 #include "depthai_ros_driver/conversion.hpp"
 
-cv::Mat rr::chw2hwc(const cv::Mat& mat) {
+namespace rr {
+cv::Mat chw2hwc(const cv::Mat& mat) {
     cv::Mat new_mat = cv::Mat(mat.size(), mat.type());
-    const auto WH = mat.cols * mat.rows;  // WH = (W * H)
-    for (int hWw = 0; hWw < WH; ++hWw) {
-        // hWw = h * (W) + w
-        auto& pt = new_mat.at<cv::Vec3b>(hWw);
-        for (int c = 0; c < 3; ++c) {
-            // essentially hwc = c * (W * H) + h * (W) + w
-            pt[c] = *(mat.data + c * WH + hWw);
-        }
+    const auto WH = mat.cols * mat.rows;
+
+    const uchar* src = mat.data;
+    uchar* dst = new_mat.data;
+    for (int i = 0; i < WH; ++i) {
+        dst[3 * i + 0] = src[0 * WH + i];
+        dst[3 * i + 1] = src[1 * WH + i];
+        dst[3 * i + 2] = src[2 * WH + i];
     }
     return new_mat;
 }
 
-// prepare the cv size and cv type given dai::RawImgFrame::Type 
+// prepare the cv size and cv type given dai::RawImgFrame::Type
 cv::Mat prepare_cv_mat_from_dai_type(dai::RawImgFrame::Type dai_type, int rows, int cols, int size) {
     cv::Size cv_size = {0, 0};
     int cv_type = 0;
@@ -68,7 +69,7 @@ cv::Mat prepare_cv_mat_from_dai_type(dai::RawImgFrame::Type dai_type, int rows, 
     return cv::Mat(cv_size, cv_type);
 }
 
-cv::Mat rr::convert_img(const depthai_datatype_msgs::RawImgFrame& input) {
+cv::Mat convert_img(const depthai_datatype_msgs::RawImgFrame& input) {
     // prepare cv_mat
     cv::Mat mat = prepare_cv_mat_from_dai_type(
             static_cast<dai::RawImgFrame::Type>(input.fb.type), input.fb.height, input.fb.width, input.data.size());
@@ -88,5 +89,16 @@ cv::Mat rr::convert_img(const depthai_datatype_msgs::RawImgFrame& input) {
     assert(input.data.size() <= static_cast<long>(mat.dataend - mat.datastart));
     std::memcpy(mat.data, input.data.data(), input.data.size());
 
+    // handle weird case
+    if (static_cast<dai::RawImgFrame::Type>(input.fb.type) == dai::RawImgFrame::Type::NV12) {
+        // weird case when 'video' image is type dai::RawImgFrame::Type::NV12 instead of BGR
+        cv::cvtColor(mat, mat, cv::COLOR_YUV2BGR_NV12);
+    } else if (static_cast<dai::RawImgFrame::Type>(input.fb.type) == dai::RawImgFrame::Type::BGR888p) {
+        // weird case of 'preview' image when setInterleaved is set to False
+        mat = chw2hwc(mat);
+    }
+
     return mat;
 }
+
+}  // namespace rr

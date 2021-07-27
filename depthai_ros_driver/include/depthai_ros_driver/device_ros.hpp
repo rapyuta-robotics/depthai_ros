@@ -162,7 +162,7 @@ protected:
 
     template <class MsgType>
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {  // name: copied
-        ros::Publisher pub = nh.advertise<adapt_dai2ros_output_t<MsgType>>(name, q_size);
+        auto pub = adapt_dai2ros<MsgType>::create_publisher(nh, name, q_size);
 
         const auto pub_lambda = [this, pub, name]() {
             auto conn = this->getConnection();
