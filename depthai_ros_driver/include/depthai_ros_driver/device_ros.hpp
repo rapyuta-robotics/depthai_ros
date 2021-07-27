@@ -1,10 +1,12 @@
 #include <depthai_ros_driver/dai_utils.hpp>
+#include <depthai_ros_driver/conversion.hpp>
 
 #include <depthai/device/DeviceBase.hpp>
 #include <depthai/pipeline/datatype/StreamPacketParser.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 #include <depthai/pipeline/node/XLinkIn.hpp>
 
+#include <ros/publisher.h>
 #include <ros/ros.h>
 #include <ros/callback_queue.h>
 
@@ -160,7 +162,7 @@ protected:
 
     template <class MsgType>
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {  // name: copied
-        ros::Publisher pub = nh.advertise<MsgType>(name, q_size);
+        ros::Publisher pub = nh.advertise<adapt_dai2ros_output_t<MsgType>>(name, q_size);
 
         const auto pub_lambda = [this, pub, name]() {
             auto conn = this->getConnection();
@@ -170,6 +172,11 @@ protected:
             while (this->_running) {
                 // block till data is read
                 PacketReader reader{stream};
+
+                // skip the rest of code to save computation if no one is listening
+                if (pub.getNumSubscribers() <= 0) {
+                    continue;
+                }
                 auto packet = reader.packet();
 
                 msgpack::object_handle oh =
@@ -181,7 +188,7 @@ protected:
                 msg.data = reader.bufferData();
 
                 // publish data
-                pub.publish(msg);
+                pub.publish(adapt_dai2ros<MsgType>::convert(msg));
             }
 
             guard.disable();
