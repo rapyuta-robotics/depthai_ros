@@ -2,12 +2,13 @@
 
 cv::Mat rr::chw2hwc(const cv::Mat& mat) {
     cv::Mat new_mat = cv::Mat(mat.size(), mat.type());
-    for (int h = 0; h < mat.rows; ++h) {
-        for (int w = 0; w < mat.cols; ++w) {
-            auto& pt = new_mat.at<cv::Vec3b>(h, w);
-            for (int c = 0; c < 3; ++c) {
-                pt[c] = *(mat.data + c * mat.cols * mat.rows + h * mat.rows + w);
-            }
+    const auto WH = mat.cols * mat.rows;  // WH = (W * H)
+    for (int hWw = 0; hWw < WH; ++hWw) {
+        // hWw = h * (W) + w
+        auto& pt = new_mat.at<cv::Vec3b>(hWw);
+        for (int c = 0; c < 3; ++c) {
+            // essentially hwc = c * (W * H) + h * (W) + w
+            pt[c] = *(mat.data + c * WH + hWw);
         }
     }
     return new_mat;
