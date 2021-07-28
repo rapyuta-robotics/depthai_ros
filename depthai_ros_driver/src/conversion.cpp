@@ -80,6 +80,9 @@ cv::Mat convert_img(const depthai_datatype_msgs::RawImgFrame& input) {
     if (actualSize < requiredSize) {
         ROS_WARN_STREAM("ImgFrame doesn't have enough data to encode specified frame, required "
                         << requiredSize << ", actual " << actualSize << ". Maybe metadataOnly transfer was made?");
+    } else if (actualSize > requiredSize) {
+        ROS_WARN_STREAM("ImgFrame has too much data to encode specified frame, required " << requiredSize << ", actual "
+                                                                                          << actualSize << ".");
     }
     if (input.fb.width <= 0 || input.fb.height <= 0) {
         ROS_WARN("ImgFrame metadata not valid (width or height = 0)");
