@@ -10,22 +10,29 @@
 #include <ros/console.h>
 
 namespace rr {
-
 template <typename T>
+using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+
+template <class T>
 struct adapt_dai2ros {
-    using InputType = std::remove_cv_t<std::remove_reference_t<T>>;
-    using OutputType = std::remove_cv_t<std::remove_reference_t<T>>;
-    using PublisherType = ros::Publisher;
+    using InputType = remove_cvref_t<T>;
+    using OutputType = remove_cvref_t<T>;
 
     // by default, return stuff as it is
     static inline OutputType convert(const InputType& input, const std::string& frame_id) { return input; }
-
-    // by default create ros::Publisher
-    static inline PublisherType create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t q_size) {
-        PublisherType result = nh.advertise<OutputType>(name, q_size);
-        return result;
-    }
 };
+
+// by default create ros::Publisher
+template <class T>
+ros::Publisher create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t q_size) {
+    auto result = nh.advertise<typename adapt_dai2ros<T>::OutputType>(name, q_size);
+    return result;
+}
+
+template <class T>
+auto convert(const T& input, const std::string& frame_id) {
+    return adapt_dai2ros<T>::convert(input, frame_id);
+}
 
 // retrieve input_t of the adapt_dai2ros
 template <typename T>
@@ -49,10 +56,9 @@ cv::Mat chw2hwc(const cv::Mat& mat);
 template <>
 struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
     using InputType = depthai_datatype_msgs::RawImgFrame;
-    using OutputType = sensor_msgs::ImagePtr;
-    using PublisherType = image_transport::Publisher;
+    using OutputType = sensor_msgs::Image;
 
-    static OutputType convert(const InputType& input, const std::string& frame_id) {
+    static OutputType::ConstPtr convert(const InputType& input, const std::string& frame_id) {
         cv_bridge::CvImage bridge;
         bridge.image = convert_img(input);
 
@@ -75,14 +81,6 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
         bridge.header.stamp.nsec = input.ts.nsec;
 
         return bridge.toImageMsg();
-    }
-
-    static inline PublisherType create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t q_size) {
-        PublisherType result;
-        image_transport::ImageTransport it(nh);
-        result = it.advertise(name, q_size);
-
-        return result;
     }
 };
 
