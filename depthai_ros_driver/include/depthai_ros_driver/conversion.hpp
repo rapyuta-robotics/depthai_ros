@@ -18,7 +18,7 @@ struct adapt_dai2ros {
     using PublisherType = ros::Publisher;
 
     // by default, return stuff as it is
-    static inline OutputType convert(const InputType& input) { return input; }
+    static inline OutputType convert(const InputType& input, const std::string& frame_id) { return input; }
 
     // by default create ros::Publisher
     static inline PublisherType create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t q_size) {
@@ -52,7 +52,7 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
     using OutputType = sensor_msgs::ImagePtr;
     using PublisherType = image_transport::Publisher;
 
-    static OutputType convert(const InputType& input) {
+    static OutputType convert(const InputType& input, const std::string& frame_id) {
         cv_bridge::CvImage bridge;
         bridge.image = convert_img(input);
 
@@ -70,7 +70,7 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
                 ROS_WARN_STREAM_ONCE("Unknown type: " << bridge.image.type() << " in adapt_dai2ros::convert");
                 break;
         }
-        // bridge.header.frame_id = ? TODO:
+        bridge.header.frame_id = frame_id;
         bridge.header.stamp.sec = input.ts.sec;
         bridge.header.stamp.nsec = input.ts.nsec;
 

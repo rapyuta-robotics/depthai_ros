@@ -188,7 +188,7 @@ protected:
                 msg.data = reader.bufferData();
 
                 // publish data
-                pub.publish(adapt_dai2ros<MsgType>::convert(msg));
+                pub.publish(adapt_dai2ros<MsgType>::convert(msg, name));
             }
 
             guard.disable();
