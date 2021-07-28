@@ -19,7 +19,7 @@ protected:
     void onConfigure(const std::string& config_json) {
         ROS_WARN("For running this stereo example pipeline, "
                  "Please specify \"stream_list\" as "
-                 "\"[left, right, disparity, depth, rectified_left, rectified_right]\". "
+                 "\"[left, right, depth, rectified_left, rectified_right]\". "
                  "Missing streams linked in this example will fail streaming the data.");
         // TODO - split this example into two separate examples
         bool withDepth = true;
@@ -29,7 +29,6 @@ protected:
         auto xoutLeft  = _pipeline.create<dai::node::XLinkOut>();
         auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
         auto stereo    = withDepth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
-        auto xoutDisp  = _pipeline.create<dai::node::XLinkOut>();
         auto xoutDepth = _pipeline.create<dai::node::XLinkOut>();
         auto xoutRectifL = _pipeline.create<dai::node::XLinkOut>();
         auto xoutRectifR = _pipeline.create<dai::node::XLinkOut>();
@@ -38,7 +37,6 @@ protected:
         xoutLeft->setStreamName("left");
         xoutRight->setStreamName("right");
         if (withDepth) {
-            xoutDisp->setStreamName("disparity");
             xoutDepth->setStreamName("depth");
             xoutRectifL->setStreamName("rectified_left");
             xoutRectifR->setStreamName("rectified_right");
@@ -52,7 +50,7 @@ protected:
         monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
         //monoRight->setFps(5.0);
 
-        bool outputDepth = false;
+        bool outputDepth = true;
         bool outputRectified = true;
         bool lrcheck  = true;
         bool extended = false;
@@ -87,7 +85,6 @@ protected:
                 stereo->rectifiedLeft.link(xoutRectifL->input);
                 stereo->rectifiedRight.link(xoutRectifR->input);
             }
-            stereo->disparity.link(xoutDisp->input);
             stereo->depth.link(xoutDepth->input);
 
         } else {
