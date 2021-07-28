@@ -174,7 +174,7 @@ protected:
                 PacketReader reader{stream};
 
                 // skip the rest of code to save computation if no one is listening
-                if (pub.getNumSubscribers() <= 0) {
+                if (getNumSubscribers(pub) <= 0) {
                     continue;
                 }
                 auto packet = reader.packet();
@@ -188,7 +188,7 @@ protected:
                 msg.data = reader.bufferData();
 
                 // publish data
-                pub.publish(convert(msg, name));
+                publish(pub, msg, name);
             }
 
             guard.disable();
