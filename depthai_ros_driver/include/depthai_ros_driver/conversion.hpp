@@ -105,7 +105,8 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
 
     static ImagePublishers create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t q_size) {
         ImagePublishers pubs;
-        pubs.image_pub = nh.advertise<OutputType>(name + "/image_raw", q_size);
+        pubs.image_pub =
+                nh.advertise<OutputType>(name + "/image_raw", q_size);  // @TODO(kunaltyagi): compressed if needed
         pubs.camera_info_pub = nh.advertise<OutputType>(name + "/camera_info", q_size);
         return pubs;
     }
