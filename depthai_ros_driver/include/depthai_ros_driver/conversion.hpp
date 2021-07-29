@@ -129,9 +129,11 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
         pubs.compressed_image_pub = nh.advertise<OutputType>(name + "/image_raw/compressed", q_size);
         pubs.camera_info_pub = nh.advertise<sensor_msgs::CameraInfo>(name + "/camera_info", q_size);
 
-        // @TODO(kunaltyagi): sneak in the camera model name
-        const std::string camera_uri = "package://depthai_ros_driver/params/camera";
-        const auto uri = camera_uri /* + _camera_name */ + "/" + name + ".yaml";
+        std::string camera_name = "default";
+        if (!nh.getParam("camera_name", camera_name)) {
+            nh.setParam("camera_name", camera_name);
+        }
+        const auto uri = "package://depthai_ros_driver/params/camera" + camera_name + "/" + name + ".yaml";
         pubs.info_manager_ptr =
                 std::make_shared<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, name}, name, uri);
         return pubs;
