@@ -23,7 +23,6 @@ project (depthai_ros_driver VERSION 0.1.0 LANGUAGES C CXX)  # C needed for depen
 set (PKG_DEPS
     camera_info_manager
     cv_bridge
-    depthai_ros_msgs
     depthai_common_msgs
     depthai_datatype_msgs
     image_transport

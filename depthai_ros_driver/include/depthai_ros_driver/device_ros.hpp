@@ -162,7 +162,7 @@ protected:
 
     template <class MsgType>
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {  // name: copied
-        auto pub = adapt_dai2ros<MsgType>::create_publisher(nh, name, q_size);
+        auto pub = create_publisher<MsgType>(nh, name, q_size);
 
         const auto pub_lambda = [this, pub, name]() {
             auto conn = this->getConnection();
@@ -174,7 +174,7 @@ protected:
                 PacketReader reader{stream};
 
                 // skip the rest of code to save computation if no one is listening
-                if (pub.getNumSubscribers() <= 0) {
+                if (getNumSubscribers(pub) <= 0) {
                     continue;
                 }
                 auto packet = reader.packet();
@@ -188,7 +188,7 @@ protected:
                 msg.data = reader.bufferData();
 
                 // publish data
-                pub.publish(adapt_dai2ros<MsgType>::convert(msg, name));
+                publish(pub, msg, name);
             }
 
             guard.disable();

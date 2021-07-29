@@ -10,22 +10,47 @@
 #include <ros/console.h>
 
 namespace rr {
-
 template <typename T>
+using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+
+struct ImagePublishers {
+    ros::Publisher image_pub, camera_info_pub;
+};
+
+auto getNumSubscribers(const ros::Publisher& pub) {
+    return pub.getNumSubscribers();
+}
+
+auto getNumSubscribers(const ImagePublishers& pubs) {
+    return pubs.image_pub.getNumSubscribers() + pubs.camera_info_pub.getNumSubscribers();
+}
+
+template <class T>
 struct adapt_dai2ros {
-    using InputType = std::remove_cv_t<std::remove_reference_t<T>>;
-    using OutputType = std::remove_cv_t<std::remove_reference_t<T>>;
-    using PublisherType = ros::Publisher;
+    using InputType = remove_cvref_t<T>;
+    using OutputType = remove_cvref_t<T>;
 
     // by default, return stuff as it is
-    static inline OutputType convert(const InputType& input, const std::string& frame_id) { return input; }
+    static void publish(const ros::Publisher& pub, InputType& input, const std::string& frame_id) {
+        pub.publish(std::move(input));
+    }
 
-    // by default create ros::Publisher
-    static inline PublisherType create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t q_size) {
-        PublisherType result = nh.advertise<OutputType>(name, q_size);
+    // by default, use ros::Publisher
+    static ros::Publisher create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t q_size) {
+        auto result = nh.advertise<OutputType>(name, q_size);
         return result;
     }
 };
+
+template <class T>
+auto create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t q_size) {
+    return adapt_dai2ros<T>::create_publisher(nh, name, q_size);
+}
+
+template <class Pub, class T>
+void publish(const Pub& pub, T& input, const std::string& frame_id) {
+    adapt_dai2ros<T>::publish(pub, input, frame_id);
+}
 
 // retrieve input_t of the adapt_dai2ros
 template <typename T>
@@ -49,10 +74,9 @@ cv::Mat chw2hwc(const cv::Mat& mat);
 template <>
 struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
     using InputType = depthai_datatype_msgs::RawImgFrame;
-    using OutputType = sensor_msgs::ImagePtr;
-    using PublisherType = image_transport::Publisher;
+    using OutputType = sensor_msgs::Image;
 
-    static OutputType convert(const InputType& input, const std::string& frame_id) {
+    static void publish(const ImagePublishers& pub, InputType& input, const std::string& frame_id) {
         cv_bridge::CvImage bridge;
         bridge.image = convert_img(input);
 
@@ -70,20 +94,21 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
                 ROS_WARN_STREAM_ONCE("Unknown type: " << bridge.image.type() << " in adapt_dai2ros::convert");
                 break;
         }
-        bridge.header.frame_id = frame_id;
+        bridge.header.frame_id = frame_id + "_optical_frame";
         bridge.header.stamp.sec = input.ts.sec;
         bridge.header.stamp.nsec = input.ts.nsec;
 
-        return bridge.toImageMsg();
+        pub.image_pub.publish(bridge.toImageMsg());
+        sensor_msgs::CameraInfo info;  // @TODO(kunaltyagi): get camera info from somewhere
+        pub.camera_info_pub.publish(info);
     }
 
-    static inline PublisherType create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t q_size) {
-        PublisherType result;
-        image_transport::ImageTransport it(nh);
-        result = it.advertise(name, q_size);
-
-        return result;
+    static ImagePublishers create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t q_size) {
+        ImagePublishers pubs;
+        pubs.image_pub =
+                nh.advertise<OutputType>(name + "/image_raw", q_size);  // @TODO(kunaltyagi): compressed if needed
+        pubs.camera_info_pub = nh.advertise<sensor_msgs::CameraInfo>(name + "/camera_info", q_size);
+        return pubs;
     }
 };
-
 }  // namespace rr
