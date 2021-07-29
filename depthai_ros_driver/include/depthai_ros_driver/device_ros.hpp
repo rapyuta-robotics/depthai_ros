@@ -80,14 +80,15 @@ public:
     }
 
 private:
-    std::uint32_t fromLE(std::uint8_t* data) { return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256; };
+    std::uint32_t fromLE(std::uint8_t* data) {
+        return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256;
+    };
 
     dai::XLinkStream& _stream;
     streamPacketDesc_t* _packet;
 
     std::uint32_t _msgpack_size;
     std::uint32_t _buf_size;
-
 };
 
 class PacketWriter {
@@ -102,8 +103,8 @@ public:
         le_data[3] = static_cast<std::uint8_t>((num & 0xff000000) >> 24u);
     };
 
-    void write(const std::uint8_t* dat, size_t dat_size, const std::uint8_t* ser, size_t ser_size, std::uint32_t datatype,
-               std::vector<std::uint8_t>& buf) {
+    void write(const std::uint8_t* dat, size_t dat_size, const std::uint8_t* ser, size_t ser_size,
+            std::uint32_t datatype, std::vector<std::uint8_t>& buf) {
         size_t packet_size = dat_size + ser_size + 8;
 
         buf.resize(packet_size);
@@ -139,9 +140,8 @@ public:
 protected:
     // create stream based on name at the time of subscription
     template <class MsgType, dai::DatatypeEnum DataType>
-    auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream,
-                            msgpack::sbuffer& sbuf, std::vector<std::uint8_t>& writer_buf)
-            -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
+    auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream, msgpack::sbuffer& sbuf,
+            std::vector<std::uint8_t>& writer_buf) -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
         const auto core_sub_lambda = [&stream, &sbuf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
@@ -149,8 +149,7 @@ protected:
             msgpack::pack(sbuf, *msg);
             PacketWriter writer(*stream);
             writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<std::uint8_t*>(sbuf.data()), sbuf.size(),
-                    static_cast<std::uint32_t>(DataType),
-                    writer_buf);
+                    static_cast<std::uint32_t>(DataType), writer_buf);
 
             sbuf.clear();  // Prevent the sbuf data is accumeted
 
@@ -233,14 +232,16 @@ protected:
                 case dai::DatatypeEnum::ImageManipConfig:
                     break;
                 case dai::DatatypeEnum::ImgDetections:
-                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, name, 10)};
+                    _pub_t[name] = std::thread{
+                            generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::ImgFrame:
                     _pub_t[name] =
                             std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::NNData:
-                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, 10)};
+                    _pub_t[name] =
+                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::SpatialImgDetections:
                     break;
@@ -251,7 +252,8 @@ protected:
                 case dai::DatatypeEnum::SystemInformation:
                     break;
                 case dai::DatatypeEnum::Tracklets:
-                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, 10)};
+                    _pub_t[name] =
+                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, 10)};
                     break;
                 default:
                     break;
@@ -269,7 +271,7 @@ protected:
             const auto& name = node->getStreamName();
 
             auto common_type = getCommonType(node_links.in_to);
-            ROS_INFO_STREAM(name << " (sub): "  << static_cast<int>(common_type));
+            ROS_INFO_STREAM(name << " (sub): " << static_cast<int>(common_type));
             auto conn = this->getConnection();
 
             // create appropriate subscriber using the common_type
@@ -315,7 +317,7 @@ protected:
     std::unordered_map<std::string, ros::Subscriber> _sub;
     std::unordered_map<std::string, std::unique_ptr<dai::XLinkStream>> _streams;
 
-    msgpack::sbuffer _sbuf;  // buffer for deserializing subscribed messages
+    msgpack::sbuffer _sbuf;                 // buffer for deserializing subscribed messages
     std::vector<std::uint8_t> _writer_buf;  // buffer for writing to xlinkin
 
     std::shared_ptr<std::uint8_t> _active;
