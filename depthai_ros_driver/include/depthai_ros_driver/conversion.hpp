@@ -31,7 +31,7 @@ struct adapt_dai2ros {
     using OutputType = remove_cvref_t<T>;
 
     // by default, return stuff as it is
-    static void publish(const ros::Publisher& pub, InputType input, const std::string& frame_id) {
+    static void publish(const ros::Publisher& pub, InputType& input, const std::string& frame_id) {
         pub.publish(std::move(input));
     }
 
@@ -48,8 +48,8 @@ auto create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t 
 }
 
 template <class Pub, class T>
-void publish(const Pub& pub, T input, const std::string& frame_id) {
-    adapt_dai2ros<T>::publish(pub, std::move(input), frame_id);
+void publish(const Pub& pub, T& input, const std::string& frame_id) {
+    adapt_dai2ros<T>::publish(pub, input, frame_id);
 }
 
 // retrieve input_t of the adapt_dai2ros
@@ -76,7 +76,7 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
     using InputType = depthai_datatype_msgs::RawImgFrame;
     using OutputType = sensor_msgs::Image;
 
-    static void publish(const ImagePublishers& pub, const InputType& input, const std::string& frame_id) {
+    static void publish(const ImagePublishers& pub, InputType& input, const std::string& frame_id) {
         cv_bridge::CvImage bridge;
         bridge.image = convert_img(input);
 
