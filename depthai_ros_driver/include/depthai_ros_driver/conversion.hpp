@@ -1,6 +1,6 @@
 #pragma once
 
-// core ros dependencies
+// core ros headers
 #include <camera_info_manager/camera_info_manager.h>
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
@@ -8,14 +8,14 @@
 #include <ros/publisher.h>
 #include <sensor_msgs/image_encodings.h>
 
-// lib dependencies
+// lib headers
 #include <opencv2/core.hpp>
 
-// messages
+// message headers
 #include <depthai_datatype_msgs/RawImgFrame.h>
 #include <sensor_msgs/Image.h>
 
-// std includes
+// std headers
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -94,29 +94,35 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
 
     static void publish(const ImagePublishers& pub, InputType& input, const std::string& frame_id) {
         cv_bridge::CvImage bridge;
-        bridge.image = convert_img(input);
-
-        switch (bridge.image.type()) {
-            case CV_8UC3:
-                bridge.encoding = sensor_msgs::image_encodings::TYPE_8UC3;
-                break;
-            case CV_8UC1:
-                bridge.encoding = sensor_msgs::image_encodings::TYPE_8UC1;
-                break;
-            case CV_16UC1:
-                bridge.encoding = sensor_msgs::image_encodings::TYPE_16UC1;
-                break;
-            default:
-                ROS_WARN_STREAM_ONCE("Unknown type: " << bridge.image.type() << " in adapt_dai2ros::convert");
-                break;
-        }
         bridge.header.frame_id = frame_id + "_optical_frame";
         bridge.header.stamp.sec = input.ts.sec;
         bridge.header.stamp.nsec = input.ts.nsec;
 
-        // @TODO(kunaltyagi): switch between raw and compressed publishers
-        const ros::Publisher* image_pub = &pub.raw_image_pub;
-        image_pub->publish(bridge.toImageMsg());
+        if (static_cast<dai::RawImgFrame::Type>(input.fb.type) == dai::RawImgFrame::Type::BITSTREAM) {
+            auto msg = boost::make_shared<sensor_msgs::CompressedImage>();
+            msg->header = bridge.header;
+            msg->format = "jpeg";  // @TODO: read from encoder
+            msg->data = std::move(input.data);
+            pub.compressed_image_pub.publish(msg);
+        } else {
+            bridge.image = convert_img(input);
+
+            switch (bridge.image.type()) {
+                case CV_8UC3:
+                    bridge.encoding = sensor_msgs::image_encodings::TYPE_8UC3;
+                    break;
+                case CV_8UC1:
+                    bridge.encoding = sensor_msgs::image_encodings::TYPE_8UC1;
+                    break;
+                case CV_16UC1:
+                    bridge.encoding = sensor_msgs::image_encodings::TYPE_16UC1;
+                    break;
+                default:
+                    ROS_WARN_STREAM_ONCE("Unknown type: " << bridge.image.type() << " in adapt_dai2ros::convert");
+                    break;
+            }
+            pub.raw_image_pub.publish(bridge.toImageMsg());
+        }
 
         const auto camera_info = boost::make_shared<sensor_msgs::CameraInfo>(pub.info_manager_ptr->getCameraInfo());
         camera_info->header = bridge.header;

@@ -1,20 +1,28 @@
-#include <depthai_ros_driver/dai_utils.hpp>
+// package headers
 #include <depthai_ros_driver/conversion.hpp>
+#include <depthai_ros_driver/dai_utils.hpp>
 
+// relevant 3rd party headers
 #include <depthai/device/DeviceBase.hpp>
 #include <depthai/pipeline/datatype/StreamPacketParser.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 #include <depthai/pipeline/node/XLinkIn.hpp>
 
+// ros headers
+#include <camera_info_manager/camera_info_manager.h>
+#include <ros/callback_queue.h>
 #include <ros/publisher.h>
 #include <ros/ros.h>
-#include <ros/callback_queue.h>
 
-#include <range/v3/view.hpp>
+// lib headers
 #include <range/v3/algorithm/find.hpp>
+#include <range/v3/view.hpp>
+
+// std headers
 #include <memory>
 #include <thread>
 
+// message headers
 #include <depthai_datatype_msgs/datatype_msgs.h>
 
 namespace rr {
@@ -151,7 +159,7 @@ protected:
             writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<std::uint8_t*>(sbuf.data()), sbuf.size(),
                     static_cast<std::uint32_t>(DataType), writer_buf);
 
-            sbuf.clear();  // Prevent the sbuf data is accumeted
+            sbuf.clear();  // Else the sbuf data is accumulated
 
             guard.disable();
         };
@@ -212,6 +220,7 @@ protected:
             const auto& node = node_links.node_to;
             // get name for publisher
             const auto& name = node->getStreamName();
+            _stream_names.push_back(name);
 
             auto common_type = getCommonType(node_links.out_from);
             ROS_INFO_STREAM(name << " (pub): " << static_cast<int>(common_type));
@@ -269,6 +278,7 @@ protected:
             const auto& node = node_links.node_from;
             // get name for publisher
             const auto& name = node->getStreamName();
+            _stream_names.push_back(name);
 
             auto common_type = getCommonType(node_links.in_to);
             ROS_INFO_STREAM(name << " (sub): " << static_cast<int>(common_type));
@@ -279,7 +289,7 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    // @TODO: make writer to xlinkin to work
+                    // @TODO: make writer to xLinkIn to work
                     // _streams[name] =
                     //     std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
                     // _sub[name] = _sub_nh.subscribe(name, 1000,
@@ -312,17 +322,26 @@ protected:
         }
     }
 
+
+    template <class T>
+    using Map = std::unordered_map<std::string, T>;
+    Map<std::thread> _pub_t;
+    Map<ros::Subscriber> _sub;
+    Map<std::unique_ptr<dai::XLinkStream>> _streams;
+
+    Map<msgpack::sbuffer> _serial_bufs;           // buffer for deserializing subscribed messages
+    Map<std::vector<std::uint8_t>> _writer_bufs;  // buffer for writing to xLinkIn
+
+    std::vector<std::string> _stream_names;
+    std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;
+    ros::ServiceServer _camera_info_default;
+
     // shared ptr for the callbacks to be called
-    std::unordered_map<std::string, std::thread> _pub_t;
-    std::unordered_map<std::string, ros::Subscriber> _sub;
-    std::unordered_map<std::string, std::unique_ptr<dai::XLinkStream>> _streams;
-
-    msgpack::sbuffer _sbuf;                 // buffer for deserializing subscribed messages
-    std::vector<std::uint8_t> _writer_buf;  // buffer for writing to xlinkin
-
     std::shared_ptr<std::uint8_t> _active;
+
     ros::CallbackQueue _pub_q, _sub_q;
     ros::NodeHandle _pub_nh, _sub_nh;
+
     std::atomic<bool> _running = true;
 };
 }  // namespace rr
