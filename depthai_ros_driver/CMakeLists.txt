@@ -23,7 +23,6 @@ project (depthai_ros_driver VERSION 0.1.0 LANGUAGES C CXX)  # C needed for depen
 set (PKG_DEPS
     camera_info_manager
     cv_bridge
-    depthai_ros_msgs
     depthai_common_msgs
     depthai_datatype_msgs
     image_transport
@@ -85,14 +84,18 @@ include_directories (SYSTEM
 #     ${PROJECT_NAME}_lib
 # )
 
+add_library(gen2_ros_conversion src/conversion.cpp)
+target_link_libraries(gen2_ros_conversion ${catkin_LIBRARIES} depthai-core ${OpenCV_LIBS})
+
 add_library(gen2_ros_queue src/dai_utils.cpp)
 target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai-core range-v3)
 
 add_executable(gen2_ros_driver src/depthai_loader.cpp)
-target_link_libraries(gen2_ros_driver gen2_ros_queue)
+target_link_libraries(gen2_ros_driver gen2_ros_queue gen2_ros_conversion)
 
 catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
 catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
+catkin_add_gtest(${PROJECT_NAME}_conversion test/conversion.cpp)
 if(TARGET ${PROJECT_NAME}_depthai_api)
     target_link_libraries(${PROJECT_NAME}_depthai_api gen2_ros_queue gtest_main)
     target_compile_options(${PROJECT_NAME}_depthai_api PRIVATE "-g")
@@ -100,6 +103,10 @@ endif()
 if(TARGET ${PROJECT_NAME}_dai_utils)
     target_link_libraries(${PROJECT_NAME}_dai_utils gen2_ros_queue gtest_main)
     target_compile_options(${PROJECT_NAME}_dai_utils PRIVATE "-g")
+endif()
+if(TARGET ${PROJECT_NAME}_conversion)
+    target_link_libraries(${PROJECT_NAME}_conversion gen2_ros_conversion gtest_main)
+    target_compile_options(${PROJECT_NAME}_conversion PRIVATE "-g")
 endif()
 
 #############

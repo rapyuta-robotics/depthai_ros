@@ -64,6 +64,49 @@ int main(int argc, char** argv) {
         cam->preview.link(out->input);
         cam->preview.link(nn1->input);
         nn1->out.link(nno->input);
+
+        // video output
+        auto xout_video = p.create<XLinkOut>();
+        xout_video->setStreamName("video");
+        cam->video.link(xout_video->input);
+
+        // mono left
+        auto mono_left = p.create<MonoCamera>();
+        auto xout_left = p.create<XLinkOut>();
+        xout_left->setStreamName("left");
+        mono_left->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
+        mono_left->setBoardSocket(dai::CameraBoardSocket::LEFT);
+        mono_left->out.link(xout_left->input);
+
+        // mono right
+        auto mono_right = p.create<MonoCamera>();
+        auto xout_right = p.create<XLinkOut>();
+        xout_right->setStreamName("right");
+        mono_right->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
+        mono_right->setBoardSocket(dai::CameraBoardSocket::RIGHT);
+        mono_right->out.link(xout_right->input);
+
+        // stereo
+        auto stereo = p.create<dai::node::StereoDepth>();
+        stereo->setConfidenceThreshold(200);
+        stereo->setRectifyEdgeFillColor(0);
+        stereo->setLeftRightCheck(false);
+        stereo->setExtendedDisparity(false);
+        stereo->setSubpixel(false);
+        mono_left->out.link(stereo->left);
+        mono_right->out.link(stereo->right);
+        stereo->syncedLeft.link(xout_left->input);
+        stereo->syncedRight.link(xout_right->input);
+
+        // depth
+        auto xout_depth = p.create<XLinkOut>();
+        xout_depth->setStreamName("depth");
+        stereo->depth.link(xout_depth->input);
+
+        // disparity
+        auto xout_disparity = p.create<XLinkOut>();
+        xout_disparity->setStreamName("disparity");
+        stereo->disparity.link(xout_disparity->input);
     }
 
     rr::DeviceROS driver(openvino_version);
