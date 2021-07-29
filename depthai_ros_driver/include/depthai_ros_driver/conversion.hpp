@@ -67,8 +67,9 @@ using adapt_dai2ros_publisher_t = typename adapt_dai2ros<T>::PublisherType;
 // conversion from depthai_datatype_msgs::RawImgFrame to cv::Mat
 cv::Mat convert_img(const depthai_datatype_msgs::RawImgFrame& input);
 
-// convert opencv order from (Channel, Height, Width) to (Height, Width, Channel)
-cv::Mat chw2hwc(const cv::Mat& mat);
+cv::Mat planar2interleaved(const cv::Mat& mat);
+
+cv::Mat interleaved2planar(const cv::Mat& mat);
 
 // template specialization for converting depthai_datatype_msgs::RawImgFrame to sensor_msgs::Image
 template <>

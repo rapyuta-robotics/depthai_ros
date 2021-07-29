@@ -1,17 +1,48 @@
 #include "depthai_ros_driver/conversion.hpp"
 
 namespace rr {
-cv::Mat chw2hwc(const cv::Mat& mat) {
-    cv::Mat new_mat = cv::Mat(mat.size(), mat.type());
+cv::Mat planar2interleaved(const cv::Mat& mat) {
+    cv::Mat new_mat(mat.size(), mat.type());
+    
+    assert (mat.channels() == 3);
+    const auto WH = mat.cols * mat.rows;
+    
+    const uchar* src = mat.data;
+    uchar* dst = new_mat.data;
+    for (int i = 0; i < WH; ++i) {
+      uint8_t b = src[i + WH * 0];
+      dst[i * 3 + 0] = b;
+    }
+    for (int i = 0; i < WH; ++i) {
+      uint8_t g = src[i + WH * 1];
+      dst[i * 3 + 1] = g;
+    }
+    for (int i = 0; i < WH; ++i) {
+      uint8_t r = src[i + WH * 2];
+      dst[i * 3 + 2] = r;
+    }
+
+    return new_mat; 
+}
+
+cv::Mat interleaved2planar(const cv::Mat &mat) {
+    cv::Mat new_mat(mat.size(), mat.type());
+    
+    assert (mat.channels() == 3);
     const auto WH = mat.cols * mat.rows;
 
     const uchar* src = mat.data;
     uchar* dst = new_mat.data;
     for (int i = 0; i < WH; ++i) {
-        dst[3 * i + 0] = src[0 * WH + i];
-        dst[3 * i + 1] = src[1 * WH + i];
-        dst[3 * i + 2] = src[2 * WH + i];
+      auto b = src[i * 3 + 0];
+      auto g = src[i * 3 + 1];
+      auto r = src[i * 3 + 2];
+
+      dst[i + WH * 0] = b;
+      dst[i + WH * 1] = g;
+      dst[i + WH * 2] = r;
     }
+
     return new_mat;
 }
 
@@ -92,13 +123,14 @@ cv::Mat convert_img(const depthai_datatype_msgs::RawImgFrame& input) {
     assert(input.data.size() <= static_cast<long>(mat.dataend - mat.datastart));
     std::memcpy(mat.data, input.data.data(), input.data.size());
 
-    // handle weird case
+    // handle special case
     if (static_cast<dai::RawImgFrame::Type>(input.fb.type) == dai::RawImgFrame::Type::NV12) {
-        // weird case when 'video' image is type dai::RawImgFrame::Type::NV12 instead of BGR
+        // special case when 'video' image is type dai::RawImgFrame::Type::NV12 instead of BGR
         cv::cvtColor(mat, mat, cv::COLOR_YUV2BGR_NV12);
     } else if (static_cast<dai::RawImgFrame::Type>(input.fb.type) == dai::RawImgFrame::Type::BGR888p) {
-        // weird case of 'preview' image when setInterleaved is set to False
-        mat = chw2hwc(mat);
+        // special case of 'preview' image when setInterleaved is set to False
+        // for neural network input optimization
+        mat = planar2interleaved(mat);
     }
 
     return mat;

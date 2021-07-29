@@ -13,7 +13,13 @@ bool cvMatAreEqual(const cv::Mat& a, const cv::Mat& b) {
     return cv::countNonZero(temp.reshape(1)) == 0;
 }
 
-TEST(chw2hwc, base_comparison) {
+void iota_fill(uchar* data, int n) {
+    for (int i = 0; i < n; ++i) {
+        data[i] = i;
+    }
+}
+
+TEST(conversion, base_comparison) {
     // test that cvMatAreEqual is working as expected
     uchar* a = new uchar[3]{1, 2, 3};
     uchar* b = new uchar[3]{1, 2, 3};
@@ -32,22 +38,72 @@ TEST(chw2hwc, base_comparison) {
     delete[] c;
 }
 
-TEST(chw2hwc, tripleTrip) {
-    cv::Mat mat(3, 3, CV_8UC3);
-    uchar* mat_ptr = mat.data;
-    for (int i = 1; i <= 27; ++i) {
-        mat_ptr[i] = i;
-    }
+TEST(conversion, base_fill) {
+    // test that iota_fill is working as expected
+    cv::Mat A(1, 2, CV_8UC3);
 
-    cv::Mat once = chw2hwc(mat);
-    cv::Mat twice = chw2hwc(chw2hwc(mat));
-    cv::Mat thrice = chw2hwc(chw2hwc(chw2hwc(mat)));
+    iota_fill(A.data, A.cols * A.rows * A.channels());
 
-    // expect doing three times resulting the original, rest gonna be different
-    // chw -> hwc -> wch -> chw
-    EXPECT_FALSE(cvMatAreEqual(mat, once));
-    EXPECT_FALSE(cvMatAreEqual(mat, twice));
-    EXPECT_TRUE(cvMatAreEqual(mat, thrice));
+    auto pt1 = A.at<cv::Vec3b>(0);
+    auto pt2 = A.at<cv::Vec3b>(1);
+
+    EXPECT_EQ(pt1[0], 0);
+    EXPECT_EQ(pt1[1], 1);
+    EXPECT_EQ(pt1[2], 2);
+
+    EXPECT_EQ(pt2[0], 3);
+    EXPECT_EQ(pt2[1], 4);
+    EXPECT_EQ(pt2[2], 5);
+}
+
+TEST(conversion, planar2interleaved2planar_3x3) {
+    cv::Mat planar_source(3, 3, CV_8UC3);
+    uchar* src = planar_source.data;
+    iota_fill(src, planar_source.rows * planar_source.cols * planar_source.channels());
+
+    cv::Mat interleaved = rr::planar2interleaved(planar_source);
+    cv::Mat planar = rr::interleaved2planar(interleaved);
+
+    EXPECT_FALSE(cvMatAreEqual(planar_source, interleaved));
+    EXPECT_TRUE(cvMatAreEqual(planar_source, planar));
+}
+
+TEST(conversion, interleaved2planar2interleaved_3x3) {
+    cv::Mat interleaved_source(3, 3, CV_8UC3);
+    uchar* src = interleaved_source.data;
+    iota_fill(src, interleaved_source.rows * interleaved_source.cols * interleaved_source.channels());
+
+
+    cv::Mat planar = rr::interleaved2planar(interleaved_source);
+    cv::Mat interleaved = rr::planar2interleaved(planar);
+
+    EXPECT_FALSE(cvMatAreEqual(interleaved_source, planar));
+    EXPECT_TRUE(cvMatAreEqual(interleaved_source, interleaved));
+}
+
+TEST(conversion, planar2interleaved2planar_5x5) {
+    cv::Mat planar_source(5, 5, CV_8UC3);
+    uchar* src = planar_source.data;
+    iota_fill(src, planar_source.rows * planar_source.cols * planar_source.channels());
+
+    cv::Mat interleaved = rr::planar2interleaved(planar_source);
+    cv::Mat planar = rr::interleaved2planar(interleaved);
+
+    EXPECT_FALSE(cvMatAreEqual(planar_source, interleaved));
+    EXPECT_TRUE(cvMatAreEqual(planar_source, planar));
+}
+
+TEST(conversion, interleaved2planar2interleaved_5x5) {
+    cv::Mat interleaved_source(5, 5, CV_8UC3);
+    uchar* src = interleaved_source.data;
+    iota_fill(src, interleaved_source.rows * interleaved_source.cols * interleaved_source.channels());
+
+
+    cv::Mat planar = rr::interleaved2planar(interleaved_source);
+    cv::Mat interleaved = rr::planar2interleaved(planar);
+
+    EXPECT_FALSE(cvMatAreEqual(interleaved_source, planar));
+    EXPECT_TRUE(cvMatAreEqual(interleaved_source, interleaved));
 }
 
 }  // namespace rr
