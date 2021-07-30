@@ -24,6 +24,8 @@ namespace rr {
 template <typename T>
 using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
 
+const static std::string camera_param_uri{"package://depthai_ros_driver/params/camera"};
+
 struct ImagePublishers {
     ros::Publisher raw_image_pub, compressed_image_pub, camera_info_pub;
     // needs to be shared_ptr since:
@@ -139,7 +141,7 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
         if (!nh.getParam("camera_name", camera_name)) {
             nh.setParam("camera_name", camera_name);
         }
-        const auto uri = "package://depthai_ros_driver/params/camera" + camera_name + "/" + name + ".yaml";
+        const auto uri = camera_param_uri + camera_name + "/" + name + ".yaml";
         pubs.info_manager_ptr =
                 std::make_shared<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, name}, name, uri);
         return pubs;

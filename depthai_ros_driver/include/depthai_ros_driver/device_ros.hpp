@@ -24,6 +24,7 @@
 
 // message headers
 #include <depthai_datatype_msgs/datatype_msgs.h>
+#include <depthai_ros_msgs/TriggerNamed.h>
 
 namespace rr {
 /**
@@ -322,6 +323,34 @@ protected:
         }
     }
 
+    bool defaultCameraInfo(
+            depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res) {
+        const auto it = std::find(_stream_names.cbegin(), _stream_names.cend(), req.name);
+        if (it == _stream_names.cend()) {
+            res.success = false;
+            res.message = "No such camera known";
+            return true;
+        }
+
+        const auto& name = req.name;
+        const auto uri = camera_param_uri + "/default/" + name + ".yaml";
+        if (_defaultManager == nullptr) {
+            _defaultManager = std::make_unique<camera_info_manager::CameraInfoManager>(
+                    ros::NodeHandle{_pub_nh, "_default"}, name, uri);
+        } else {
+            _defaultManager->setCameraName(name);
+            _defaultManager->loadCameraInfo(uri);
+        }
+        const auto index = std::distance(_stream_names.cbegin(), it);
+        const auto cameraInfo = _defaultManager->getCameraInfo();
+        // @TODO(kunaltyagi): how to acces the info managers?
+        res.success = false;
+        // res.success = _camera_info_manager[index]->setCameraInfo(cameraInfo);
+
+        _defaultManager->setCameraName("_default");
+        _defaultManager->loadCameraInfo("");
+        return true;
+    }
 
     template <class T>
     using Map = std::unordered_map<std::string, T>;
