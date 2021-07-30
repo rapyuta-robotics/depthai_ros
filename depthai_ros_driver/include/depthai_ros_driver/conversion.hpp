@@ -34,13 +34,9 @@ struct ImagePublishers {
     std::shared_ptr<camera_info_manager::CameraInfoManager> info_manager_ptr;
 };
 
-auto getNumSubscribers(const ros::Publisher& pub) {
-    return pub.getNumSubscribers();
-}
+std::uint32_t getNumSubscribers(const ros::Publisher& pub);
 
-auto getNumSubscribers(const ImagePublishers& pubs) {
-    return pubs.raw_image_pub.getNumSubscribers() + pubs.camera_info_pub.getNumSubscribers();
-}
+std::uint32_t getNumSubscribers(const ImagePublishers& pubs);
 
 template <class T>
 struct adapt_dai2ros {

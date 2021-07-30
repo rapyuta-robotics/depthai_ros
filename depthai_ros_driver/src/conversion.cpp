@@ -1,46 +1,55 @@
 #include "depthai_ros_driver/conversion.hpp"
 
 namespace rr {
-cv::Mat planar2interleaved(const cv::Mat& mat) {
-    cv::Mat new_mat(mat.size(), mat.type());
-    
-    assert (mat.channels() == 3);
-    const auto WH = mat.cols * mat.rows;
-    
-    const uchar* src = mat.data;
-    uchar* dst = new_mat.data;
-    for (int i = 0; i < WH; ++i) {
-      uint8_t b = src[i + WH * 0];
-      dst[i * 3 + 0] = b;
-    }
-    for (int i = 0; i < WH; ++i) {
-      uint8_t g = src[i + WH * 1];
-      dst[i * 3 + 1] = g;
-    }
-    for (int i = 0; i < WH; ++i) {
-      uint8_t r = src[i + WH * 2];
-      dst[i * 3 + 2] = r;
-    }
-
-    return new_mat; 
+std::uint32_t getNumSubscribers(const ros::Publisher& pub) {
+    return pub.getNumSubscribers();
 }
 
-cv::Mat interleaved2planar(const cv::Mat &mat) {
+std::uint32_t getNumSubscribers(const ImagePublishers& pubs) {
+    return pubs.raw_image_pub.getNumSubscribers() + pubs.compressed_image_pub.getNumSubscribers() +
+           pubs.camera_info_pub.getNumSubscribers();
+}
+
+cv::Mat planar2interleaved(const cv::Mat& mat) {
     cv::Mat new_mat(mat.size(), mat.type());
-    
-    assert (mat.channels() == 3);
+
+    assert(mat.channels() == 3);
     const auto WH = mat.cols * mat.rows;
 
     const uchar* src = mat.data;
     uchar* dst = new_mat.data;
     for (int i = 0; i < WH; ++i) {
-      auto b = src[i * 3 + 0];
-      auto g = src[i * 3 + 1];
-      auto r = src[i * 3 + 2];
+        uint8_t b = src[i + WH * 0];
+        dst[i * 3 + 0] = b;
+    }
+    for (int i = 0; i < WH; ++i) {
+        uint8_t g = src[i + WH * 1];
+        dst[i * 3 + 1] = g;
+    }
+    for (int i = 0; i < WH; ++i) {
+        uint8_t r = src[i + WH * 2];
+        dst[i * 3 + 2] = r;
+    }
 
-      dst[i + WH * 0] = b;
-      dst[i + WH * 1] = g;
-      dst[i + WH * 2] = r;
+    return new_mat;
+}
+
+cv::Mat interleaved2planar(const cv::Mat& mat) {
+    cv::Mat new_mat(mat.size(), mat.type());
+
+    assert(mat.channels() == 3);
+    const auto WH = mat.cols * mat.rows;
+
+    const uchar* src = mat.data;
+    uchar* dst = new_mat.data;
+    for (int i = 0; i < WH; ++i) {
+        auto b = src[i * 3 + 0];
+        auto g = src[i * 3 + 1];
+        auto r = src[i * 3 + 2];
+
+        dst[i + WH * 0] = b;
+        dst[i + WH * 1] = g;
+        dst[i + WH * 2] = r;
     }
 
     return new_mat;
