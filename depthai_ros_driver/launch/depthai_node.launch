@@ -14,8 +14,6 @@
   <arg name="blob_file" default="$(find depthai_ros_driver)/resources/mobilenet_ssd.blob"/>
   <arg name="blob_file_config" default="$(find depthai_ros_driver)/resources/mobilenet-ssd.json"/>
 
-  <arg name="config_file" default="$(find depthai_ros_driver)/params/depthai_node.yaml"/>
-
   <arg name="use_gdb" default="false"/>
   <arg name="launch_prefix" value="/usr/bin/gdb --args" if="$(arg use_gdb)"/>
   <arg name="launch_prefix" value="" unless="$(arg use_gdb)"/>
@@ -49,7 +47,6 @@
       <param name="blob_file" value="$(arg blob_file)"/>
       <param name="blob_file_config" value="$(arg blob_file_config)"/>
 
-      <rosparam file="$(arg config_file)" command="load"/>
       <rosparam param="stream_list" subst_value="True">$(arg stream_list)</rosparam>
     </node>
   </group>

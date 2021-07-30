@@ -8,7 +8,6 @@
 
 #include <depthai_ros_driver/pipeline.hpp>
 #include <depthai_ros_driver/depthai_base.hpp>
-#include <depthai_ros_driver/control/focus_control.hpp>
 
 
 namespace rr {
@@ -27,15 +26,15 @@ bool DepthAIBase<Node>::has_stream(const std::string& stream) const {
 //     }
 // }
 
-template <class Node>
-void DepthAIBase<Node>::focusControlCallback(const depthai_ros_msgs::FocusControlCommand& msg) {
-    auto focus_control = FocusControl::createControl(msg);
-    if (focus_control) {
-        _color_control_queue->send(*focus_control);
-    } else {
-        ROS_ERROR_STREAM_NAMED(this->getName(), "Invalid Focus mode is requested: " << msg);
-    }
-}
+// template <class Node>
+// void DepthAIBase<Node>::focusControlCallback(const depthai_ros_msgs::FocusControlCommand& msg) {
+//     auto focus_control = FocusControl::createControl(msg);
+//     if (focus_control) {
+//         _color_control_queue->send(*focus_control);
+//     } else {
+//         ROS_ERROR_STREAM_NAMED(this->getName(), "Invalid Focus mode is requested: " << msg);
+//     }
+// }
 
 template <class Node>
 void DepthAIBase<Node>::publishObjectInfoMsg(NNDataConstPtr detections, const ros::Time& stamp) {
@@ -370,7 +369,7 @@ void DepthAIBase<Node>::onInit() {
     for (const auto& input_queue: input_queues) {
         if (input_queue == "control") {
             _color_control_queue = _depthai->getInputQueue("control");
-            _focus_ctrl_sub = nh.subscribe("focus_ctrl", _queue_size, &DepthAIBase::focusControlCallback, this);
+            // _focus_ctrl_sub = nh.subscribe("focus_ctrl", _queue_size, &DepthAIBase::focusControlCallback, this);
             // _disparity_conf_sub = nh.subscribe("disparity_confidence", _queue_size, &DepthAIBase::disparityConfCb, this);
         } else if (input_queue == "config") {
             _color_config_queue = _depthai->getInputQueue("config");
