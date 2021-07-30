@@ -4,7 +4,7 @@
 #include <depthai_ros_driver/pipeline.hpp>
 
 #include <depthai/pipeline/node/ColorCamera.hpp>
-#include <depthai/pipeline/node/NeuralNetwork.hpp>
+#include <depthai/pipeline/node/DetectionNetwork.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 
 
@@ -35,27 +35,30 @@ protected:
             return;
         }
 
-        auto colorCam = _pipeline.create<dai::node::ColorCamera>();
-        auto xoutColor = _pipeline.create<dai::node::XLinkOut>();
-        auto nn1 = _pipeline.create<dai::node::NeuralNetwork>();
+        // Define sources and outputs
+        auto camRgb = _pipeline.create<dai::node::ColorCamera>();
+        auto nn = _pipeline.create<dai::node::MobileNetDetectionNetwork>();
+        auto xoutRgb = _pipeline.create<dai::node::XLinkOut>();
         auto nnOut = _pipeline.create<dai::node::XLinkOut>();
 
-        nn1->setBlobPath(nnPath);
+        xoutRgb->setStreamName("rgb");
+        nnOut->setStreamName("nn");
 
-        // XLinkOut
-        xoutColor->setStreamName("preview");
-        nnOut->setStreamName("detections");
+        // Properties
+        camRgb->setPreviewSize(300, 300);  // NN input
+        camRgb->setInterleaved(false);
+        camRgb->setFps(30);
 
-        // Color camera
-        colorCam->setPreviewSize(300, 300);
-        colorCam->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
-        colorCam->setInterleaved(false);
-        colorCam->setColorOrder(dai::ColorCameraProperties::ColorOrder::BGR);
+        // Define a neural network that will make predictions based on the source frames
+        nn->setConfidenceThreshold(0.5);
+        nn->setBlobPath(nnPath);
+        nn->setNumInferenceThreads(2);
+        nn->input.setBlocking(false);
 
-        // Link plugins CAM -> NN -> XLINK
-        colorCam->preview.link(nn1->input);
-        colorCam->preview.link(xoutColor->input);
-        nn1->out.link(nnOut->input);
+        // Link pipelines CAM -> NN -> XLINK
+        camRgb->preview.link(xoutRgb->input);
+        camRgb->preview.link(nn->input);
+        nn->out.link(nnOut->input);
 
         ROS_INFO("Mobilenet SSD pipeline initialized.");
     }

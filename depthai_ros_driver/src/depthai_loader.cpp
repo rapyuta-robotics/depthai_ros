@@ -7,38 +7,52 @@
 #include <pluginlib/class_loader.h>
 #include <ros/ros.h>
 
+// For generating pipeline config config
+#include <regex>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
+
 int main(int argc, char** argv) {
     ros::init(argc, argv, "temp");
 
     ros::NodeHandle private_nh("~");
 
-    std::string pipeline_name = "depthai_ros_driver/PreviewPipeline";
+    std::string pipeline_name = "depthai_ros_driver/MobilenetSSDPipeline";
     if (!private_nh.getParam("pipeline", pipeline_name)) {
         private_nh.setParam("pipeline", pipeline_name);
     }
 
-    std::string config;
-    if (!private_nh.getParam("config", config)) {
-        private_nh.setParam("config", config);
+    std::string blob_file = "./mobilenet-ssd.blob";
+    if (!private_nh.getParam("blob_file", blob_file)) {
+        private_nh.setParam("blob_file", blob_file);
     }
 
-    std::string blob_file = "./mobilenet-ssd.blob";
-    private_nh.getParam("blob_file", blob_file);
+    // Generating config string
+    std::string config;
+    {
+        boost::property_tree::ptree root, ai;
+        ai.put("blob_file", blob_file);
+        root.add_child("ai", ai);
+
+        std::ostringstream oss;
+        std::regex reg("\"(null|true|false|[0-9]+(\\.[0-9]+)?)\"");
+        boost::property_tree::write_json(oss, root);
+        config = std::regex_replace(oss.str(), reg, "$1");
+    }
 
     // load pipeline using pluginlib
     dai::Pipeline p;
     pluginlib::ClassLoader<rr::Pipeline> pipeline_loader("depthai_ros_driver", "rr::Pipeline");
     try {
         auto plugin = pipeline_loader.createUniqueInstance(pipeline_name);
-        plugin->configure("");
+        plugin->configure(config);
         p = plugin->getPipeline();
     } catch (pluginlib::LibraryLoadException& ex) {
         ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
     }
 
-    // auto openvino_version = dai::OpenVINO::Version::VERSION_2020_3;
-    // rr::DeviceROS driver(openvino_version);
-    rr::DeviceROS driver;
+    auto openvino_version = dai::OpenVINO::Version::VERSION_2020_3;
+    rr::DeviceROS driver(openvino_version);
     driver.startPipeline(p);
 
     ros::spin();

@@ -36,8 +36,7 @@ set (PKG_DEPS
 
 find_package (catkin REQUIRED COMPONENTS ${PKG_DEPS})
 
-find_package (OpenCV REQUIRED)
-find_package (Boost REQUIRED)
+find_package (Boost REQUIRED COMPONENTS system)
 
 hunter_add_package(range-v3)
 find_package(range-v3 REQUIRED)
