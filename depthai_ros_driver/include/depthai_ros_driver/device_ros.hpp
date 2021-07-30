@@ -1,10 +1,12 @@
 #include <depthai_ros_driver/dai_utils.hpp>
+#include <depthai_ros_driver/conversion.hpp>
 
 #include <depthai/device/DeviceBase.hpp>
 #include <depthai/pipeline/datatype/StreamPacketParser.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 #include <depthai/pipeline/node/XLinkIn.hpp>
 
+#include <ros/publisher.h>
 #include <ros/ros.h>
 #include <ros/callback_queue.h>
 
@@ -51,43 +53,41 @@ public:
     PacketReader(dai::XLinkStream& stream)
             : _stream(stream) {
         _packet = _stream.readRaw();  // blocking read
+
+        _msgpack_size = static_cast<std::uint32_t>(fromLE(_packet->data + _packet->length - 4));
+        if (_msgpack_size > _packet->length) {
+            throw std::runtime_error("Bad packet, couldn't parse");
+        }
+
+        _buf_size = _packet->length - 8 - _msgpack_size;
     }
     ~PacketReader() { _stream.readRawRelease(); }
 
-    auto fromLE(uint8_t* data) { return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256; };
+    auto packet() { return _packet; }
 
-    auto getPacket() { return _packet; }
+    std::uint32_t msgpackSize() { return _msgpack_size; };
+
+    std::uint8_t* msgpackBeginPtr() { return _packet->data + _buf_size; }
+
+    auto bufferData() {
+        // copy data part
+        std::vector<std::uint8_t> data(_packet->data, _packet->data + _buf_size);
+        return data;
+    }
+
     [[deprecated("Uses dai interface, to be removed soon")]] auto getData() {
         return dai::StreamPacketParser::parsePacketToADatatype(_packet);
     }
 
-    auto serialRange() {
-        uint32_t serializedObjectSize = static_cast<uint32_t>(fromLE(_packet->data + _packet->length - 4));
-        if (serializedObjectSize < 0) {
-            throw std::runtime_error("Bad packet, couldn't parse");
-        }
-        std::uint32_t bufferLength = _packet->length - 8 - serializedObjectSize;
-        auto* msgpackStart = _packet->data + bufferLength;
-
-        return std::tuple<uint32_t, uint32_t>(bufferLength, serializedObjectSize);
-    }
-
-    auto bufferData() {
-        int serializedObjectSize = fromLE(_packet->data + _packet->length - 4);
-        if (serializedObjectSize < 0) {
-            throw std::runtime_error("Bad packet, couldn't parse");
-        }
-
-        std::uint32_t bufferLength = _packet->length - 8 - serializedObjectSize;
-
-        // copy data part
-        std::vector<uint8_t> data(_packet->data, _packet->data + bufferLength);
-
-        return data;
-    }
+private:
+    std::uint32_t fromLE(std::uint8_t* data) { return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256; };
 
     dai::XLinkStream& _stream;
     streamPacketDesc_t* _packet;
+
+    std::uint32_t _msgpack_size;
+    std::uint32_t _buf_size;
+
 };
 
 class PacketWriter {
@@ -95,24 +95,25 @@ public:
     PacketWriter(dai::XLinkStream& stream)
             : _stream(stream) {}
 
-    auto toLE(uint32_t num, uint8_t* le_data) {
-        le_data[0] = static_cast<uint8_t>((num & 0x000000ff) >> 0u);
-        le_data[1] = static_cast<uint8_t>((num & 0x0000ff00) >> 8u);
-        le_data[2] = static_cast<uint8_t>((num & 0x00ff0000) >> 16u);
-        le_data[3] = static_cast<uint8_t>((num & 0xff000000) >> 24u);
+    auto toLE(std::uint32_t num, std::uint8_t* le_data) {
+        le_data[0] = static_cast<std::uint8_t>((num & 0x000000ff) >> 0u);
+        le_data[1] = static_cast<std::uint8_t>((num & 0x0000ff00) >> 8u);
+        le_data[2] = static_cast<std::uint8_t>((num & 0x00ff0000) >> 16u);
+        le_data[3] = static_cast<std::uint8_t>((num & 0xff000000) >> 24u);
     };
 
-    void write(const uint8_t* dat, size_t dat_size, const uint8_t* ser, size_t ser_size, uint32_t datatype) {
+    void write(const std::uint8_t* dat, size_t dat_size, const std::uint8_t* ser, size_t ser_size, std::uint32_t datatype,
+               std::vector<std::uint8_t>& buf) {
         size_t packet_size = dat_size + ser_size + 8;
 
-        std::vector<uint8_t> packet(packet_size);
-        toLE(datatype, packet.data() + packet_size - 8);
-        toLE(dat_size, packet.data() + packet_size - 4);
+        buf.resize(packet_size);
+        toLE(datatype, buf.data() + packet_size - 8);
+        toLE(dat_size, buf.data() + packet_size - 4);
 
-        memcpy(packet.data(), dat, dat_size);
-        memcpy(packet.data() + dat_size, ser, ser_size);
+        std::memcpy(buf.data(), dat, dat_size);
+        std::memcpy(buf.data() + dat_size, ser, ser_size);
 
-        _stream.write(packet);
+        _stream.write(buf);
     }
 
     dai::XLinkStream& _stream;
@@ -139,16 +140,17 @@ protected:
     // create stream based on name at the time of subscription
     template <class MsgType, dai::DatatypeEnum DataType>
     auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream,
-                            msgpack::sbuffer& sbuf)
+                            msgpack::sbuffer& sbuf, std::vector<std::uint8_t>& writer_buf)
             -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
-        const auto core_sub_lambda = [&stream, &sbuf](const boost::shared_ptr<MsgType const>& msg) {
+        const auto core_sub_lambda = [&stream, &sbuf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             // convert msg to data
             msgpack::pack(sbuf, *msg);
             PacketWriter writer(*stream);
-            writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<uint8_t*>(sbuf.data()), sbuf.size(),
-                    static_cast<uint32_t>(DataType));
+            writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<std::uint8_t*>(sbuf.data()), sbuf.size(),
+                    static_cast<std::uint32_t>(DataType),
+                    writer_buf);
 
             sbuf.clear();  // Prevent the sbuf data is accumeted
 
@@ -160,7 +162,7 @@ protected:
 
     template <class MsgType>
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {  // name: copied
-        ros::Publisher pub = nh.advertise<MsgType>(name, q_size);
+        auto pub = create_publisher<MsgType>(nh, name, q_size);
 
         const auto pub_lambda = [this, pub, name]() {
             auto conn = this->getConnection();
@@ -170,11 +172,15 @@ protected:
             while (this->_running) {
                 // block till data is read
                 PacketReader reader{stream};
-                auto packet = reader.getPacket();
 
-                auto [ser_start, ser_size] = reader.serialRange();
+                // skip the rest of code to save computation if no one is listening
+                if (getNumSubscribers(pub) <= 0) {
+                    continue;
+                }
+                auto packet = reader.packet();
+
                 msgpack::object_handle oh =
-                        msgpack::unpack(reinterpret_cast<const char*>(packet->data + ser_start), ser_size);
+                        msgpack::unpack(reinterpret_cast<const char*>(reader.msgpackBeginPtr()), reader.msgpackSize());
                 msgpack::object obj = oh.get();
 
                 MsgType msg;
@@ -182,7 +188,7 @@ protected:
                 msg.data = reader.bufferData();
 
                 // publish data
-                pub.publish(msg);
+                publish(pub, msg, name);
             }
 
             guard.disable();
@@ -202,14 +208,14 @@ protected:
     void _setup_publishers(const dai::Pipeline& pipeline) {
         // get all XLinkOut
         const auto& out_links = getAllInputs(pipeline);
-        std::cout << "Required publishers: " << out_links.size() << "\n";
+        ROS_INFO_STREAM("Required publishers: " << out_links.size());
         for (const auto& node_links : out_links) {
             const auto& node = node_links.node_to;
             // get name for publisher
             const auto& name = node->getStreamName();
 
             auto common_type = getCommonType(node_links.out_from);
-            std::cout << name << " (pub): " << static_cast<int>(common_type) << "\n";
+            ROS_INFO_STREAM(name << " (pub): " << static_cast<int>(common_type));
 
             // create appropriate publisher using the common_type
             switch (common_type) {
@@ -220,6 +226,7 @@ protected:
                     // name, 10)};
                     break;
                 case dai::DatatypeEnum::IMUData:
+                    // @TODO: support IMU
                     // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawIMUData>(_pub_nh, name,
                     // 10)}; // Not supported
                     break;
@@ -255,14 +262,14 @@ protected:
     void _setup_subscribers(const dai::Pipeline& pipeline) {
         // get all XLinkIn
         const auto& in_links = getAllOutputs(pipeline);
-        std::cout << "Required subscribers: " << in_links.size() << "\n";
+        ROS_INFO_STREAM("Required subscribers: " << in_links.size());
         for (const auto& node_links : in_links) {
             const auto& node = node_links.node_from;
             // get name for publisher
             const auto& name = node->getStreamName();
 
             auto common_type = getCommonType(node_links.in_to);
-            std::cout << name << " (sub): "  << static_cast<int>(common_type) << "\n";
+            ROS_INFO_STREAM(name << " (sub): "  << static_cast<int>(common_type));
             auto conn = this->getConnection();
 
             // create appropriate subscriber using the common_type
@@ -270,11 +277,12 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
+                    // @TODO: make writer to xlinkin to work
                     // _streams[name] =
                     //     std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
                     // _sub[name] = _sub_nh.subscribe(name, 1000,
                     //         generate_cb_lambda<depthai_datatype_msgs::RawCameraControl,
-                    //                 dai::DatatypeEnum::CameraControl>(_streams[name]));
+                    //                 dai::DatatypeEnum::CameraControl>(_streams[name], _sbuf, _writer_buf));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;
@@ -306,8 +314,9 @@ protected:
     std::unordered_map<std::string, std::thread> _pub_t;
     std::unordered_map<std::string, ros::Subscriber> _sub;
     std::unordered_map<std::string, std::unique_ptr<dai::XLinkStream>> _streams;
-    msgpack::sbuffer _sbuf;  // buffer for subscribed messages
 
+    msgpack::sbuffer _sbuf;  // buffer for deserializing subscribed messages
+    std::vector<std::uint8_t> _writer_buf;  // buffer for writing to xlinkin
 
     std::shared_ptr<std::uint8_t> _active;
     ros::CallbackQueue _pub_q, _sub_q;
