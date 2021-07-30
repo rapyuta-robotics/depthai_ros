@@ -46,6 +46,10 @@ find_package(range-v3 REQUIRED)
 # Add depthai-core dependency
 add_subdirectory (${DEPTHAI_CORE} depthai-core)
 
+# needed for conda-forge
+find_package(PkgConfig)
+pkg_check_modules(libudev libudev)
+
 catkin_package (
     INCLUDE_DIRS include
     LIBRARIES ${PROJECT_NAME}_nodelet
@@ -64,7 +68,6 @@ include_directories (include)
 include_directories (SYSTEM
     ${Boost_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
-    ${DEPTHAI_SHARED}/include
     ${catkin_INCLUDE_DIRS}
 )
 
@@ -87,11 +90,18 @@ include_directories (SYSTEM
 #     ${PROJECT_NAME}_lib
 # )
 
+add_library(depthai INTERFACE)
+target_link_libraries(depthai INTERFACE depthai-core ${libudev_LIBRARIES})
+target_include_directories(depthai SYSTEM INTERFACE
+    ${DEPTHAI_SHARED}/include
+    ${libudev_INCLUDE_DIRS}
+)
+
 add_library(gen2_ros_conversion src/conversion.cpp)
-target_link_libraries(gen2_ros_conversion ${catkin_LIBRARIES} depthai-core ${OpenCV_LIBS})
+target_link_libraries(gen2_ros_conversion ${catkin_LIBRARIES} depthai ${OpenCV_LIBS})
 
 add_library(gen2_ros_queue src/dai_utils.cpp)
-target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai-core range-v3)
+target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai range-v3)
 
 add_executable(gen2_ros_driver src/depthai_loader.cpp)
 target_link_libraries(gen2_ros_driver gen2_ros_queue gen2_ros_conversion)
