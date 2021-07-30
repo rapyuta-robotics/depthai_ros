@@ -141,7 +141,7 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
         if (!nh.getParam("camera_name", camera_name)) {
             nh.setParam("camera_name", camera_name);
         }
-        const auto uri = camera_param_uri + camera_name + "/" + name + ".yaml";
+        const auto uri = camera_param_uri + "/" + camera_name + "/" + name + ".yaml";
         pubs.info_manager_ptr =
                 std::make_shared<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, name}, name, uri);
         return pubs;
