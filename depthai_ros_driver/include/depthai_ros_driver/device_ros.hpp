@@ -139,7 +139,9 @@ public:
     DeviceROS(ros::NodeHandle nh, Args... args)
             : Base(args...)
             , _pub_nh(nh)
-            , _sub_nh(nh) {}
+            , _sub_nh(nh) {
+        _camera_info_default = nh.advertiseService("reset_camera_info", &DeviceROS::defaultCameraInfo, this);
+    }
 
     void closeImpl() override {
         _active.reset();
@@ -171,6 +173,9 @@ protected:
     template <class MsgType>
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {  // name: copied
         auto pub = create_publisher<MsgType>(nh, name, q_size);
+        if constexpr (std::is_same_v<MsgType, depthai_datatype_msgs::RawImgFrame>) {
+            _camera_info_manager[name] = pub.info_manager_ptr;
+        }
 
         const auto pub_lambda = [this, pub, name]() {
             auto conn = this->getConnection();
@@ -221,7 +226,6 @@ protected:
             const auto& node = node_links.node_to;
             // get name for publisher
             const auto& name = node->getStreamName();
-            _stream_names.push_back(name);
 
             auto common_type = getCommonType(node_links.out_from);
             ROS_INFO_STREAM(name << " (pub): " << static_cast<int>(common_type));
@@ -279,7 +283,6 @@ protected:
             const auto& node = node_links.node_from;
             // get name for publisher
             const auto& name = node->getStreamName();
-            _stream_names.push_back(name);
 
             auto common_type = getCommonType(node_links.in_to);
             ROS_INFO_STREAM(name << " (sub): " << static_cast<int>(common_type));
@@ -325,14 +328,14 @@ protected:
 
     bool defaultCameraInfo(
             depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res) {
-        const auto it = std::find(_stream_names.cbegin(), _stream_names.cend(), req.name);
-        if (it == _stream_names.cend()) {
+        const auto& name = req.name;
+        const auto it = _camera_info_manager.find(name);
+        if (it == _camera_info_manager.cend()) {
             res.success = false;
             res.message = "No such camera known";
             return true;
         }
 
-        const auto& name = req.name;
         const auto uri = camera_param_uri + "/default/" + name + ".yaml";
         if (_defaultManager == nullptr) {
             _defaultManager = std::make_unique<camera_info_manager::CameraInfoManager>(
@@ -341,11 +344,8 @@ protected:
             _defaultManager->setCameraName(name);
             _defaultManager->loadCameraInfo(uri);
         }
-        const auto index = std::distance(_stream_names.cbegin(), it);
         const auto cameraInfo = _defaultManager->getCameraInfo();
-        // @TODO(kunaltyagi): how to acces the info managers?
-        res.success = false;
-        // res.success = _camera_info_manager[index]->setCameraInfo(cameraInfo);
+        res.success = it->second->setCameraInfo(std::move(cameraInfo));
 
         _defaultManager->setCameraName("_default");
         _defaultManager->loadCameraInfo("");
@@ -356,12 +356,12 @@ protected:
     using Map = std::unordered_map<std::string, T>;
     Map<std::thread> _pub_t;
     Map<ros::Subscriber> _sub;
+    Map<std::shared_ptr<camera_info_manager::CameraInfoManager>> _camera_info_manager;
     Map<std::unique_ptr<dai::XLinkStream>> _streams;
 
     Map<msgpack::sbuffer> _serial_bufs;           // buffer for deserializing subscribed messages
     Map<std::vector<std::uint8_t>> _writer_bufs;  // buffer for writing to xLinkIn
 
-    std::vector<std::string> _stream_names;
     std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;
     ros::ServiceServer _camera_info_default;
 
