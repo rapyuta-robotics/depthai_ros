@@ -1,21 +1,30 @@
-#include <depthai_ros_driver/dai_utils.hpp>
+// package headers
 #include <depthai_ros_driver/conversion.hpp>
+#include <depthai_ros_driver/dai_utils.hpp>
 
+// relevant 3rd party headers
 #include <depthai/device/DeviceBase.hpp>
 #include <depthai/pipeline/datatype/StreamPacketParser.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 #include <depthai/pipeline/node/XLinkIn.hpp>
 
+// ros headers
+#include <camera_info_manager/camera_info_manager.h>
+#include <ros/callback_queue.h>
 #include <ros/publisher.h>
 #include <ros/ros.h>
-#include <ros/callback_queue.h>
 
-#include <range/v3/view.hpp>
+// lib headers
 #include <range/v3/algorithm/find.hpp>
+#include <range/v3/view.hpp>
+
+// std headers
 #include <memory>
 #include <thread>
 
+// message headers
 #include <depthai_datatype_msgs/datatype_msgs.h>
+#include <depthai_ros_msgs/TriggerNamed.h>
 
 namespace rr {
 /**
@@ -80,14 +89,15 @@ public:
     }
 
 private:
-    std::uint32_t fromLE(std::uint8_t* data) { return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256; };
+    std::uint32_t fromLE(std::uint8_t* data) {
+        return data[0] + data[1] * 256 + data[2] * 256 * 256 + data[3] * 256 * 256 * 256;
+    };
 
     dai::XLinkStream& _stream;
     streamPacketDesc_t* _packet;
 
     std::uint32_t _msgpack_size;
     std::uint32_t _buf_size;
-
 };
 
 class PacketWriter {
@@ -102,8 +112,8 @@ public:
         le_data[3] = static_cast<std::uint8_t>((num & 0xff000000) >> 24u);
     };
 
-    void write(const std::uint8_t* dat, size_t dat_size, const std::uint8_t* ser, size_t ser_size, std::uint32_t datatype,
-               std::vector<std::uint8_t>& buf) {
+    void write(const std::uint8_t* dat, size_t dat_size, const std::uint8_t* ser, size_t ser_size,
+            std::uint32_t datatype, std::vector<std::uint8_t>& buf) {
         size_t packet_size = dat_size + ser_size + 8;
 
         buf.resize(packet_size);
@@ -129,7 +139,9 @@ public:
     DeviceROS(ros::NodeHandle nh, Args... args)
             : Base(args...)
             , _pub_nh(nh)
-            , _sub_nh(nh) {}
+            , _sub_nh(nh) {
+        _camera_info_default = nh.advertiseService("reset_camera_info", &DeviceROS::defaultCameraInfo, this);
+    }
 
     void closeImpl() override {
         _active.reset();
@@ -139,9 +151,8 @@ public:
 protected:
     // create stream based on name at the time of subscription
     template <class MsgType, dai::DatatypeEnum DataType>
-    auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream,
-                            msgpack::sbuffer& sbuf, std::vector<std::uint8_t>& writer_buf)
-            -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
+    auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream, msgpack::sbuffer& sbuf,
+            std::vector<std::uint8_t>& writer_buf) -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
         const auto core_sub_lambda = [&stream, &sbuf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
@@ -149,10 +160,9 @@ protected:
             msgpack::pack(sbuf, *msg);
             PacketWriter writer(*stream);
             writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<std::uint8_t*>(sbuf.data()), sbuf.size(),
-                    static_cast<std::uint32_t>(DataType),
-                    writer_buf);
+                    static_cast<std::uint32_t>(DataType), writer_buf);
 
-            sbuf.clear();  // Prevent the sbuf data is accumeted
+            sbuf.clear();  // Else the sbuf data is accumulated
 
             guard.disable();
         };
@@ -163,6 +173,9 @@ protected:
     template <class MsgType>
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {  // name: copied
         auto pub = create_publisher<MsgType>(nh, name, q_size);
+        if constexpr (std::is_same_v<MsgType, depthai_datatype_msgs::RawImgFrame>) {
+            _camera_info_manager[name] = pub.info_manager_ptr;
+        }
 
         const auto pub_lambda = [this, pub, name]() {
             auto conn = this->getConnection();
@@ -233,14 +246,16 @@ protected:
                 case dai::DatatypeEnum::ImageManipConfig:
                     break;
                 case dai::DatatypeEnum::ImgDetections:
-                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, name, 10)};
+                    _pub_t[name] = std::thread{
+                            generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::ImgFrame:
                     _pub_t[name] =
                             std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::NNData:
-                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, 10)};
+                    _pub_t[name] =
+                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, 10)};
                     break;
                 case dai::DatatypeEnum::SpatialImgDetections:
                     break;
@@ -251,7 +266,8 @@ protected:
                 case dai::DatatypeEnum::SystemInformation:
                     break;
                 case dai::DatatypeEnum::Tracklets:
-                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, 10)};
+                    _pub_t[name] =
+                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, 10)};
                     break;
                 default:
                     break;
@@ -269,7 +285,7 @@ protected:
             const auto& name = node->getStreamName();
 
             auto common_type = getCommonType(node_links.in_to);
-            ROS_INFO_STREAM(name << " (sub): "  << static_cast<int>(common_type));
+            ROS_INFO_STREAM(name << " (sub): " << static_cast<int>(common_type));
             auto conn = this->getConnection();
 
             // create appropriate subscriber using the common_type
@@ -277,7 +293,7 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    // @TODO: make writer to xlinkin to work
+                    // @TODO: make writer to xLinkIn to work
                     // _streams[name] =
                     //     std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
                     // _sub[name] = _sub_nh.subscribe(name, 1000,
@@ -310,17 +326,51 @@ protected:
         }
     }
 
+    bool defaultCameraInfo(
+            depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res) {
+        const auto& name = req.name;
+        const auto it = _camera_info_manager.find(name);
+        if (it == _camera_info_manager.cend()) {
+            res.success = false;
+            res.message = "No such camera known";
+            return true;
+        }
+
+        const auto uri = camera_param_uri + "/default/" + name + ".yaml";
+        if (_defaultManager == nullptr) {
+            _defaultManager = std::make_unique<camera_info_manager::CameraInfoManager>(
+                    ros::NodeHandle{_pub_nh, "_default"}, name, uri);
+        } else {
+            _defaultManager->setCameraName(name);
+            _defaultManager->loadCameraInfo(uri);
+        }
+        const auto cameraInfo = _defaultManager->getCameraInfo();
+        res.success = it->second->setCameraInfo(std::move(cameraInfo));
+
+        _defaultManager->setCameraName("_default");
+        _defaultManager->loadCameraInfo("");
+        return true;
+    }
+
+    template <class T>
+    using Map = std::unordered_map<std::string, T>;
+    Map<std::thread> _pub_t;
+    Map<ros::Subscriber> _sub;
+    Map<std::shared_ptr<camera_info_manager::CameraInfoManager>> _camera_info_manager;
+    Map<std::unique_ptr<dai::XLinkStream>> _streams;
+
+    Map<msgpack::sbuffer> _serial_bufs;           // buffer for deserializing subscribed messages
+    Map<std::vector<std::uint8_t>> _writer_bufs;  // buffer for writing to xLinkIn
+
+    std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;
+    ros::ServiceServer _camera_info_default;
+
     // shared ptr for the callbacks to be called
-    std::unordered_map<std::string, std::thread> _pub_t;
-    std::unordered_map<std::string, ros::Subscriber> _sub;
-    std::unordered_map<std::string, std::unique_ptr<dai::XLinkStream>> _streams;
-
-    msgpack::sbuffer _sbuf;  // buffer for deserializing subscribed messages
-    std::vector<std::uint8_t> _writer_buf;  // buffer for writing to xlinkin
-
     std::shared_ptr<std::uint8_t> _active;
+
     ros::CallbackQueue _pub_q, _sub_q;
     ros::NodeHandle _pub_nh, _sub_nh;
+
     std::atomic<bool> _running = true;
 };
 }  // namespace rr
