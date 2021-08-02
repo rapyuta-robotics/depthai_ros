@@ -17,11 +17,6 @@ protected:
      * @brief Default implementation for configure step, does nothing
      */
     void onConfigure(const std::string& config_json) {
-        ROS_WARN("For running this stereo example pipeline, "
-                 "Please specify \"stream_list\" as "
-                 "\"[left, right, disparity, depth, rectified_left, rectified_right]\". "
-                 "Missing streams linked in this example will fail streaming the data.");
-        // TODO - split this example into two separate examples
         bool withDepth = true;
 
         auto monoLeft  = _pipeline.create<dai::node::MonoCamera>();
