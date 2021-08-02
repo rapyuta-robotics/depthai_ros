@@ -75,11 +75,8 @@ add_library (${PROJECT_NAME}_pipelines
 )
 target_link_libraries (${PROJECT_NAME}_pipelines
     ${catkin_LIBRARIES}
-    ${OpenCV_LIBRARIES}
-    ${Boost_LIBRARIES}
     depthai-core
 )
-# add_dependencies (${PROJECT_NAME}_pipelines ${catkin_EXPORTED_TARGETS})
 
 # add_library (${PROJECT_NAME}_nodelet src/depthai_nodelet.cpp)
 # target_link_libraries (${PROJECT_NAME}_nodelet
