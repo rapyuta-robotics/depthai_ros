@@ -68,21 +68,18 @@ include_directories (SYSTEM
     ${catkin_INCLUDE_DIRS}
 )
 
-add_library (${PROJECT_NAME}_pipeline
+add_library (${PROJECT_NAME}_pipelines
     src/pipelines/preview_pipeline.cpp
     src/pipelines/stereo_pipeline.cpp
     src/pipelines/mobilenet_ssd_pipeline.cpp
 )
-target_link_libraries (${PROJECT_NAME}_pipeline
+target_link_libraries (${PROJECT_NAME}_pipelines
     ${catkin_LIBRARIES}
     ${OpenCV_LIBRARIES}
     ${Boost_LIBRARIES}
     depthai-core
 )
-target_link_libraries (${PROJECT_NAME}_pipeline
-    depthai-core
-)
-# add_dependencies (${PROJECT_NAME}_pipeline ${catkin_EXPORTED_TARGETS})
+# add_dependencies (${PROJECT_NAME}_pipelines ${catkin_EXPORTED_TARGETS})
 
 # add_library (${PROJECT_NAME}_nodelet src/depthai_nodelet.cpp)
 # target_link_libraries (${PROJECT_NAME}_nodelet
