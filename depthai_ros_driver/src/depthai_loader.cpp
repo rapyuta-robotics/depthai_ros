@@ -1,5 +1,6 @@
 #include <depthai_ros_driver/device_ros.hpp>
 #include <depthai_ros_driver/pipeline.hpp>
+#include <depthai_ros_driver/pipeline_loader.hpp>
 
 #include <depthai/pipeline/nodes.hpp>
 #include <depthai/openvino/OpenVINO.hpp>
@@ -41,15 +42,9 @@ int main(int argc, char** argv) {
     }
 
     // load pipeline using pluginlib
-    dai::Pipeline p;
-    pluginlib::ClassLoader<rr::Pipeline> pipeline_loader("depthai_ros_driver", "rr::Pipeline");
-    try {
-        auto plugin = pipeline_loader.createUniqueInstance(pipeline_name);
-        plugin->configure(config);
-        p = plugin->getPipeline();
-    } catch (pluginlib::LibraryLoadException& ex) {
-        ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
-    }
+    auto plugin = rr::load_pipeline(pipeline_name);
+    plugin->configure(config);
+    dai::Pipeline p = plugin->getPipeline();
 
     auto openvino_version = dai::OpenVINO::Version::VERSION_2020_3;
     rr::DeviceROS driver(openvino_version);

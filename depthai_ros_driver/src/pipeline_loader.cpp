@@ -1,7 +1,7 @@
 #include <depthai_ros_driver/pipeline_loader.hpp>
 
 namespace rr {
-pluginlib::UniquePtr<Pipeline> load_pipeline(std::string plugin_name) {
+pluginlib::UniquePtr<Pipeline> load_pipeline(const std::string& plugin_name) {
     static pluginlib::ClassLoader<Pipeline> pipeline_loader("depthai_ros_driver", "rr::Pipeline");
 
     try {

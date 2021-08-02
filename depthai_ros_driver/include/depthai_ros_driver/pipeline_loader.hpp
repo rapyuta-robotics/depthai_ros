@@ -7,5 +7,5 @@
 #include <depthai_ros_driver/pipeline.hpp>
 
 namespace rr {
-[[nodiscard]] pluginlib::UniquePtr<Pipeline> load_pipeline(std::string plugin_name);
+[[nodiscard]] pluginlib::UniquePtr<Pipeline> load_pipeline(const std::string& plugin_name);
 }  // namespace rr

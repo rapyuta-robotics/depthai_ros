@@ -93,11 +93,14 @@ target_link_libraries (${PROJECT_NAME}_pipelines
 add_library(gen2_ros_conversion src/conversion.cpp)
 target_link_libraries(gen2_ros_conversion ${catkin_LIBRARIES} depthai-core ${OpenCV_LIBS})
 
+add_library(gen2_ros_pipeline_loader src/pipeline_loader.cpp)
+target_link_libraries(gen2_ros_pipeline_loader ${catkin_LIBRARIES} depthai-core)
+
 add_library(gen2_ros_queue src/dai_utils.cpp)
 target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai-core range-v3)
 
 add_executable(gen2_ros_driver src/depthai_loader.cpp)
-target_link_libraries(gen2_ros_driver gen2_ros_queue gen2_ros_conversion)
+target_link_libraries(gen2_ros_driver gen2_ros_queue gen2_ros_pipeline_loader gen2_ros_conversion)
 
 catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
 catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
