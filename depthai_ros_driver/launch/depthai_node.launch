@@ -13,8 +13,10 @@
 
   <arg name="cmd_file" default="$(find depthai_ros_driver)/resources/depthai.cmd"/>
   <arg name="calibration_file" default="$(find depthai_ros_driver)/resources/calibration/$(arg camera_name)/depthai.calib"/>
-  <arg name="blob_file" default="$(find depthai_ros_driver)/resources/mobilenet_ssd.blob"/>
-  <arg name="blob_file_config" default="$(find depthai_ros_driver)/resources/mobilenet-ssd.json"/>
+  <arg name="blob_file" default="$(find depthai_ros_driver)/resources/model_2021_3.blob"/>
+  <arg name="blob_file_config" default="$(find depthai_ros_driver)/resources/model.json"/>
+  <!-- <arg name="blob_file" default="$(find depthai_ros_driver)/resources/mobilenet_ssd.blob"/>
+  <arg name="blob_file_config" default="$(find depthai_ros_driver)/resources/mobilenet-ssd.json"/> -->
 
   <arg name="force_usb2" default="false"/>
   <arg name="sync_video_meta" default="false"/>
@@ -76,14 +78,14 @@
 
       <param name="queue_size" value="$(arg queue_size)"/>
     </node>
-    <node if="$(arg manager)" pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager">
+    <!-- <node if="$(arg manager)" pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager">
       <param name="num_worker_threads" value="10"/>
     </node>
     <node pkg="nodelet" type="nodelet" name="img_detections_stamper" args="load depthai_ros_driver/ImgDetectionsStamper $(arg manager_name)">
       <remap from="nn" to="/depthai/detections" />
       <remap from="img" to="/depthai/preview/image_raw" />
       <remap from="nn_stamped" to="/depthai/detections_stamped" />
-    </node>
+    </node> -->
   </group>
 
   <!-- Publish tf -->

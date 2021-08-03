@@ -24,7 +24,8 @@ int main(int argc, char** argv) {
 
     std::string blob_file = "./mobilenet-ssd.blob";
     private_nh.getParam("blob_file", blob_file);
-    auto openvino_version = dai::OpenVINO::Version::VERSION_2020_3;
+    // auto openvino_version = dai::OpenVINO::Version::VERSION_2020_3;
+    auto openvino_version = dai::OpenVINO::Version::VERSION_2021_3;
 
     // load pipeline using pluginlib
     pluginlib::ClassLoader<rr::Pipeline> pipeline_loader("depthai_ros_driver", "rr::Pipeline");
@@ -51,7 +52,8 @@ int main(int argc, char** argv) {
         ctl->setStreamName("control");
 
         // Color camera
-        cam->setPreviewSize(300, 300);
+        // cam->setPreviewSize(300, 300);
+        cam->setPreviewSize(256, 256);
         cam->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
         cam->setInterleaved(false);
         cam->setColorOrder(dai::ColorCameraProperties::ColorOrder::BGR);
@@ -110,6 +112,7 @@ int main(int argc, char** argv) {
     }
 
     rr::DeviceROS driver(openvino_version);
+    // rr::DeviceROS driver;
     driver.startPipeline(p);
 
     ros::spin();
