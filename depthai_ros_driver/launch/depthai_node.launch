@@ -2,6 +2,8 @@
 <launch>
   <arg name="ns" default="depthai"/>
   <arg name="node_name" default="driver"/>
+  <arg name="manager" default="true"/>
+  <arg name="manager_name" default="$(arg ns)_manager"/>
 
   <arg name="queue_size" default="1"/>
 
@@ -73,6 +75,14 @@
       <param name="nn_engines" value="$(arg nn_engines)"/>
 
       <param name="queue_size" value="$(arg queue_size)"/>
+    </node>
+    <node if="$(arg manager)" pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager">
+      <param name="num_worker_threads" value="10"/>
+    </node>
+    <node pkg="nodelet" type="nodelet" name="img_detections_stamper" args="load depthai_ros_driver/ImgDetectionsStamper $(arg manager_name)">
+      <remap from="nn" to="/depthai/detections" />
+      <remap from="img" to="/depthai/preview/image_raw" />
+      <remap from="nn_stamped" to="/depthai/detections_stamped" />
     </node>
   </group>
 

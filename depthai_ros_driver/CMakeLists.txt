@@ -106,6 +106,15 @@ target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai range-v3)
 add_executable(gen2_ros_driver src/depthai_loader.cpp)
 target_link_libraries(gen2_ros_driver gen2_ros_queue gen2_ros_conversion)
 
+add_library(img_detections_stamper src/img_detections_stamper.cpp)
+target_link_libraries(img_detections_stamper ${catkin_LIBRARIES})
+
+add_library(img_detections_stamper_nodelet src/img_detections_stamper_nodelet.cpp)
+target_link_libraries(img_detections_stamper_nodelet img_detections_stamper)
+
+add_executable(img_detections_stamper_node src/img_detections_stamper_node.cpp)
+target_link_libraries(img_detections_stamper_node img_detections_stamper)
+
 catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
 catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
 catkin_add_gtest(${PROJECT_NAME}_conversion test/conversion.cpp)

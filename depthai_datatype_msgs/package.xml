@@ -14,6 +14,7 @@
 
   <build_depend>message_generation</build_depend>
   <depend>depthai_common_msgs</depend>
+  <depend>std_msgs</depend>
 
   <exec_depend>msgpack-c</exec_depend>
   <exec_depend>message_runtime</exec_depend>

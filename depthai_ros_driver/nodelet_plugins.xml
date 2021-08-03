@@ -7,3 +7,8 @@
         </description>
     </class>
 </library>
+<library path="lib/libimg_detections_stamper_nodelet">
+    <class name="depthai_ros_driver/ImgDetectionsStamper" type="rr::ImgDetectionsStamperNodelet" base_class_type="nodelet::Nodelet" >
+        <description>Nodelet to stamp the ImgDetection(NN) based on the image timestamp</description>
+    </class>
+</library>
