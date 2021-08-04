@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 
+#include <ros/ros.h>
+
 #include <depthai/device/Device.hpp>
 #include <depthai/pipeline/Node.hpp>
 #include <depthai/pipeline/Pipeline.hpp>
@@ -17,10 +19,10 @@ public:
 
     /**
      * @brief The first function to get called, should have the setup ready for any future calls
-     * @param[in] config_data value stored in "config" private parameter of the node/nodelet
+     * @param[in] nh private node handle for the driver node
      *
      */
-    void configure(const std::string& config_data = "") { onConfigure(config_data); }
+    void configure(ros::NodeHandle& nh) { onConfigure(nh); }
 
     /**
      * @brief interface called by the driver to get a pipeline ready-to-go
@@ -35,12 +37,12 @@ public:
 protected:
     /**
      * @brief Default implementation for configure step, does nothing
-     * @param[in] config_data value stored in "config" private parameter of the node/nodelet
+     * @param[in] nh private node handle for the driver node
      */
-    virtual void onConfigure(const std::string& config_data) {}
+    virtual void onConfigure(ros::NodeHandle& nh) {}
 
     /**
-     * @brief Returns a pipeline in constant time
+     * @brief Default implementation for pipeline getter preprocessor, does nothing
      */
     virtual void onGetPipeline() const {}
 };

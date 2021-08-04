@@ -14,9 +14,9 @@ public:
 
 protected:
     /**
-     * @brief Default implementation for configure step, does nothing
+     * @brief Configuring stereo pipeline
      */
-    void onConfigure(const std::string& config_json) {
+    void onConfigure(ros::NodeHandle& nh) {
         bool withDepth = true;
 
         auto monoLeft  = _pipeline.create<dai::node::MonoCamera>();
@@ -88,7 +88,7 @@ protected:
     }
 
     /**
-     * @brief Returns a pipeline in constant time
+     * @brief Preprocessor for the pipeline getter preprocessor
      */
     void onGetPipeline() const {};
 };

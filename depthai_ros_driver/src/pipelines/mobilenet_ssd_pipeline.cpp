@@ -15,24 +15,13 @@ public:
 
 protected:
     /**
-     * @brief Configuring mobilenet-ssd configuration
+     * @brief Configuring mobilenet-ssd pipeline
      */
-    void onConfigure(const std::string& config_json) {
-        // convert json string to nlohmann::json
-        const nlohmann::json json = nlohmann::json::parse(config_json);
-        if (!json.contains("ai")) {
-            ROS_ERROR("mobilenet_ssd pipline needs \"ai\" tag for config_json.");
-            return;
-        }
+    void onConfigure(ros::NodeHandle& nh) {
 
-        std::string nnPath;
-        const auto& config = json["ai"];
-        try {
-            nnPath = config.at("blob_file");
-
-        } catch(const std::exception& ex) { // const nlohmann::basic_json::out_of_range& ex
-            ROS_ERROR(ex.what());
-            return;
+        std::string blob_file = "./mobilenet-ssd.blob";
+        if (!nh.getParam("blob_file", blob_file)) {
+            nh.setParam("blob_file", blob_file);
         }
 
         // Define sources and outputs
@@ -51,7 +40,7 @@ protected:
 
         // Define a neural network that will make predictions based on the source frames
         nn->setConfidenceThreshold(0.5);
-        nn->setBlobPath(nnPath);
+        nn->setBlobPath(blob_file);
         nn->setNumInferenceThreads(2);
         nn->input.setBlocking(false);
 
@@ -64,7 +53,7 @@ protected:
     }
 
     /**
-     * @brief Returns a pipeline in constant time
+     * @brief Preprocessor for the pipeline getter preprocessor
      */
     void onGetPipeline() const {};
 };

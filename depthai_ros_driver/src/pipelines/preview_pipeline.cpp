@@ -13,9 +13,9 @@ public:
 
 protected:
     /**
-     * @brief Default implementation for configure step, does nothing
+     * @brief Configuring preview pipeline
      */
-    void onConfigure(const std::string& config_json) {
+    void onConfigure(ros::NodeHandle& nh) {
         auto colorCam = _pipeline.create<dai::node::ColorCamera>();
         auto xlinkOut = _pipeline.create<dai::node::XLinkOut>();
         xlinkOut->setStreamName("preview");
@@ -29,7 +29,7 @@ protected:
     }
 
     /**
-     * @brief Returns a pipeline in constant time
+     * @brief Preprocessor for the pipeline getter preprocessor
      */
     void onGetPipeline() const {};
 };
