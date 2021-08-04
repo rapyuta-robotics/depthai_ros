@@ -11,6 +11,7 @@
 namespace depthai_ros_driver
 {
 class MobilenetSSDPipeline : public rr::Pipeline {
+    using OpenvVINOVersion = dai::OpenVINO::Version;
 public:
 
 protected:
@@ -18,10 +19,14 @@ protected:
      * @brief Configuring mobilenet-ssd pipeline
      */
     void onConfigure(ros::NodeHandle& nh) {
-
         std::string blob_file = "./mobilenet-ssd.blob";
+        int openvino_version = static_cast<int>(_pipeline.getOpenVINOVersion());
+
         if (!nh.getParam("blob_file", blob_file)) {
             nh.setParam("blob_file", blob_file);
+        }
+        if (!nh.getParam("openvino_version", openvino_version)) {
+            nh.setParam("openvino_version", openvino_version);
         }
 
         // Define sources and outputs
@@ -29,6 +34,9 @@ protected:
         auto nn = _pipeline.create<dai::node::MobileNetDetectionNetwork>();
         auto xoutRgb = _pipeline.create<dai::node::XLinkOut>();
         auto nnOut = _pipeline.create<dai::node::XLinkOut>();
+
+        // Set openvino version
+        _pipeline.setOpenVINOVersion(static_cast<OpenvVINOVersion>(openvino_version));
 
         xoutRgb->setStreamName("rgb");
         nnOut->setStreamName("nn");

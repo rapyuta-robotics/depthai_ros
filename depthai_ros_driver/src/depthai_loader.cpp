@@ -24,8 +24,7 @@ int main(int argc, char** argv) {
     plugin->configure(private_nh);
     dai::Pipeline p = plugin->getPipeline();
 
-    auto openvino_version = dai::OpenVINO::Version::VERSION_2020_3;
-    rr::DeviceROS driver(openvino_version);
+    rr::DeviceROS driver(p.getOpenVINOVersion());
     driver.startPipeline(p);
 
     ros::spin();
