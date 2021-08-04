@@ -25,6 +25,7 @@ set (PKG_DEPS
     cv_bridge
     depthai_common_msgs
     depthai_datatype_msgs
+    depthai_ros_msgs
     image_transport
     message_generation
     nodelet
@@ -45,13 +46,16 @@ find_package(range-v3 REQUIRED)
 # Add depthai-core dependency
 add_subdirectory (${DEPTHAI_CORE} depthai-core)
 
-hunter_add_package(range-v3)
-find_package(range-v3 REQUIRED)
+# needed for conda-forge
+find_package(PkgConfig)
+pkg_check_modules(libudev libudev)
 
 catkin_package (
     INCLUDE_DIRS include
     LIBRARIES ${PROJECT_NAME}_nodelet
-    CATKIN_DEPENDS camera_info_manager cv_bridge image_transport nodelet roscpp sensor_msgs node_interface
+    CATKIN_DEPENDS camera_info_manager cv_bridge
+    depthai_common_msgs depthai_datatype_msgs depthai_ros_msgs
+    image_transport nodelet roscpp sensor_msgs node_interface
     DEPENDS Boost
 )
 
@@ -64,7 +68,6 @@ include_directories (include)
 include_directories (SYSTEM
     ${Boost_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
-    ${DEPTHAI_SHARED}/include
     ${catkin_INCLUDE_DIRS}
 )
 
@@ -87,14 +90,21 @@ target_link_libraries (${PROJECT_NAME}_pipelines PRIVATE
 #     ${PROJECT_NAME}_lib
 # )
 
+add_library(depthai INTERFACE)
+target_link_libraries(depthai INTERFACE depthai-core ${libudev_LIBRARIES})
+target_include_directories(depthai SYSTEM INTERFACE
+    ${DEPTHAI_SHARED}/include
+    ${libudev_INCLUDE_DIRS}
+)
+
 add_library(gen2_ros_conversion src/conversion.cpp)
-target_link_libraries(gen2_ros_conversion ${catkin_LIBRARIES} depthai-core ${OpenCV_LIBS})
+target_link_libraries(gen2_ros_conversion ${catkin_LIBRARIES} depthai ${OpenCV_LIBS})
 
 add_library(gen2_ros_pipeline_loader src/pipeline_loader.cpp)
 target_link_libraries(gen2_ros_pipeline_loader ${catkin_LIBRARIES} depthai-core)
 
 add_library(gen2_ros_queue src/dai_utils.cpp)
-target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai-core range-v3)
+target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai range-v3)
 
 add_executable(gen2_ros_driver src/depthai_loader.cpp)
 target_link_libraries(gen2_ros_driver gen2_ros_queue gen2_ros_pipeline_loader gen2_ros_conversion)
