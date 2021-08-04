@@ -2,6 +2,7 @@
 
 #include <pluginlib/class_list_macros.h>
 #include <depthai_ros_driver/pipeline.hpp>
+#include <depthai_ros_driver/pipeline_common.hpp>
 
 #include <depthai/pipeline/node/ColorCamera.hpp>
 #include <depthai/pipeline/node/DetectionNetwork.hpp>
@@ -22,12 +23,8 @@ protected:
         std::string blob_file = "./mobilenet-ssd.blob";
         int openvino_version = static_cast<int>(_pipeline.getOpenVINOVersion());
 
-        if (!nh.getParam("blob_file", blob_file)) {
-            nh.setParam("blob_file", blob_file);
-        }
-        if (!nh.getParam("openvino_version", openvino_version)) {
-            nh.setParam("openvino_version", openvino_version);
-        }
+        rr::sync_ros_param<std::string>(nh, "blob_file", blob_file);
+        rr::sync_ros_param<int>(nh, "openvino_version", openvino_version);
 
         // Define sources and outputs
         auto camRgb = _pipeline.create<dai::node::ColorCamera>();
