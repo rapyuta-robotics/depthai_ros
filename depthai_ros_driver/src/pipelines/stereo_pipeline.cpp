@@ -2,6 +2,7 @@
 
 #include <pluginlib/class_list_macros.h>
 #include <depthai_ros_driver/pipeline.hpp>
+#include <depthai_ros_driver/pipeline_common.hpp>
 
 #include <depthai/pipeline/node/MonoCamera.hpp>
 #include <depthai/pipeline/node/StereoDepth.hpp>
@@ -17,13 +18,20 @@ protected:
      * @brief Configuring stereo pipeline
      */
     void onConfigure(ros::NodeHandle& nh) {
-        bool withDepth = true;
+        bool with_depth = true;
+        bool stereo_lrcheck  = false;
+        bool stereo_extended = false;
+        bool stereo_subpixel = false;
+        rr::sync_ros_param<bool>(nh, "with_depth", with_depth);
+        rr::sync_ros_param<bool>(nh, "stereo_lrcheck", stereo_lrcheck);
+        rr::sync_ros_param<bool>(nh, "stereo_extended", stereo_extended);
+        rr::sync_ros_param<bool>(nh, "stereo_subpixel", stereo_subpixel);
 
         auto monoLeft  = _pipeline.create<dai::node::MonoCamera>();
         auto monoRight = _pipeline.create<dai::node::MonoCamera>();
         auto xoutLeft  = _pipeline.create<dai::node::XLinkOut>();
         auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
-        auto stereo    = withDepth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
+        auto stereo    = with_depth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
         auto xoutDisp  = _pipeline.create<dai::node::XLinkOut>();
         auto xoutDepth = _pipeline.create<dai::node::XLinkOut>();
         auto xoutRectifL = _pipeline.create<dai::node::XLinkOut>();
@@ -32,7 +40,7 @@ protected:
         // XLinkOut
         xoutLeft->setStreamName("left");
         xoutRight->setStreamName("right");
-        if (withDepth) {
+        if (with_depth) {
             xoutDisp->setStreamName("disparity");
             xoutDepth->setStreamName("depth");
             xoutRectifL->setStreamName("rectified_left");
@@ -47,25 +55,21 @@ protected:
         monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
         //monoRight->setFps(5.0);
 
-        bool lrcheck  = true;
-        bool extended = false;
-        bool subpixel = true;
-
         int maxDisp = 96;
-        if (extended) maxDisp *= 2;
-        if (subpixel) maxDisp *= 32; // 5 bits fractional disparity
+        if (stereo_extended) maxDisp *= 2;
+        if (stereo_subpixel) maxDisp *= 32; // 5 bits fractional disparity
 
-        if (withDepth) {
+        if (with_depth) {
             // StereoDepth
             stereo->setConfidenceThreshold(200);
             stereo->setRectifyEdgeFillColor(0); // black, to better see the cutout
             //stereo->loadCalibrationFile("../../../../depthai/resources/depthai.calib");
             //stereo->setInputResolution(1280, 720);
-            // TODO: median filtering is disabled on device with (lrcheck || extended || subpixel)
+            // TODO: median filtering is disabled on device with (stereo_lrcheck || stereo_extended || stereo_subpixel)
             //stereo->setMedianFilter(dai::StereoDepthProperties::MedianFilter::MEDIAN_OFF);
-            stereo->setLeftRightCheck(lrcheck);
-            stereo->setExtendedDisparity(extended);
-            stereo->setSubpixel(subpixel);
+            stereo->setLeftRightCheck(stereo_lrcheck);
+            stereo->setExtendedDisparity(stereo_extended);
+            stereo->setSubpixel(stereo_subpixel);
 
             // Link plugins CAM -> STEREO -> XLINK
             monoLeft->out.link(stereo->left);
