@@ -24,7 +24,7 @@ protected:
         int openvino_version = static_cast<int>(_pipeline.getOpenVINOVersion());
 
         rr::sync_ros_param<std::string>(nh, "blob_file", blob_file);
-        rr::sync_ros_param<int>(nh, "openvino_version", openvino_version);
+        rr::sync_ros_param<int>(nh, "mobilenetssd_openvino_version", openvino_version);
 
         // Define sources and outputs
         auto camRgb = _pipeline.create<dai::node::ColorCamera>();

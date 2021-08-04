@@ -18,28 +18,12 @@
 
   <!-- for MobilenetSSDPipeline -->
   <arg name="blob_file" default="$(find depthai_ros_driver)/resources/mobilenet_ssd.blob"/>
-  <arg name="openvino_version" default="2" doc="integer corresponding to dai::OpenVINO::Version"/>
+  <arg name="mobilenetssd_openvino_version" default="2" doc="integer corresponding to dai::OpenVINO::Version"/>
 
   <!-- launching parameters -->
   <arg name="use_gdb" default="false"/>
   <arg name="launch_prefix" value="/usr/bin/gdb --args" if="$(arg use_gdb)"/>
   <arg name="launch_prefix" value="" unless="$(arg use_gdb)"/>
-
-  <!--
-  Possible streams:
-  * 'left' - left mono camera preview
-  * 'right' - right mono camera preview
-  * 'previewout' - preview of stream sent to the NN
-  * 'metaout' - CNN output tensors
-  * 'depth' - the raw depth map, disparity converted to real life distance
-  * 'disparity' - disparity map, the diaparity between left and right cameras, in pixels
-  * 'disparity_color' - disparity map colorized
-  * 'meta_d2h' - device metadata stream
-  * 'video' - H.264/H.265 encoded color camera frames
-  * 'jpegout' - JPEG encoded color camera frames
-  * 'object_tracker' - Object tracker results
-  -->
-  <arg name="stream_list" default="[left, right, metaout, previewout, disparity, disparity_color, depth, video]"/>
 
   <!-- Launch the Depthai node -->
   <group ns="$(arg ns)">
@@ -58,9 +42,7 @@
 
       <!-- for MobilenetSSDPipeline -->
       <param name="blob_file" value="$(arg blob_file)"/>
-      <param name="openvino_version" value="$(arg openvino_version)"/>
-
-      <rosparam param="stream_list" subst_value="True">$(arg stream_list)</rosparam>
+      <param name="mobilenetssd_openvino_version" value="$(arg mobilenetssd_openvino_version)"/>
     </node>
   </group>
 
