@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<library path="lib/libdepthai_ros_driver_pipelines">
+    <class name="depthai_ros_driver/PreviewPipeline" type="depthai_ros_driver::PreviewPipeline" base_class_type="rr::Pipeline">
+        <description>
+        Pipeline for preview streams
+        </description>
+    </class>
+    <class name="depthai_ros_driver/StereoPipeline" type="depthai_ros_driver::StereoPipeline" base_class_type="rr::Pipeline">
+        <description>
+        Pipeline for stereo streams
+        </description>
+    </class>
+    <class name="depthai_ros_driver/MobilenetSSDPipeline" type="depthai_ros_driver::MobilenetSSDPipeline" base_class_type="rr::Pipeline">
+        <description>
+        Pipeline for Mobilenet SSD streams
+        </description>
+    </class>
+</library>

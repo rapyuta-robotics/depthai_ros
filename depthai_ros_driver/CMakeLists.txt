@@ -71,15 +71,15 @@ include_directories (SYSTEM
     ${catkin_INCLUDE_DIRS}
 )
 
-# internal library, not to be exported
-# add_library (${PROJECT_NAME}_lib src/depthai_base.cpp)
-# target_link_libraries (${PROJECT_NAME}_lib
-#     ${catkin_LIBRARIES}
-#     ${OpenCV_LIBRARIES}
-#     ${Boost_LIBRARIES}
-#     depthai-core
-# )
-# add_dependencies (${PROJECT_NAME}_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_library (${PROJECT_NAME}_pipelines
+    src/pipelines/preview_pipeline.cpp
+    src/pipelines/stereo_pipeline.cpp
+    src/pipelines/mobilenet_ssd_pipeline.cpp
+)
+target_link_libraries (${PROJECT_NAME}_pipelines PRIVATE
+    ${catkin_LIBRARIES}
+    depthai-core
+)
 
 # add_library (${PROJECT_NAME}_nodelet src/depthai_nodelet.cpp)
 # target_link_libraries (${PROJECT_NAME}_nodelet
@@ -100,11 +100,14 @@ target_include_directories(depthai SYSTEM INTERFACE
 add_library(gen2_ros_conversion src/conversion.cpp)
 target_link_libraries(gen2_ros_conversion ${catkin_LIBRARIES} depthai ${OpenCV_LIBS})
 
+add_library(gen2_ros_pipeline_loader src/pipeline_loader.cpp)
+target_link_libraries(gen2_ros_pipeline_loader ${catkin_LIBRARIES} depthai-core)
+
 add_library(gen2_ros_queue src/dai_utils.cpp)
 target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai range-v3)
 
 add_executable(gen2_ros_driver src/depthai_loader.cpp)
-target_link_libraries(gen2_ros_driver gen2_ros_queue gen2_ros_conversion)
+target_link_libraries(gen2_ros_driver gen2_ros_queue gen2_ros_pipeline_loader gen2_ros_conversion)
 
 catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
 catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
