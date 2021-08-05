@@ -31,9 +31,7 @@ private:
         pub_msg_.detections.clear();
 
         auto tensor = getTensor(msg_in, tensor_name_);
-        // test std::vector<uint8_t> instead of std::vector<uint8_t, allocator<void>>
-        std::vector<uint8_t> data_copy(msg_in->data.begin(), msg_in->data.end());
-        auto data = getLayerFp16(data_copy, tensor);
+        auto data = getLayerFp16(msg_in->data, tensor);
         float x1, y1, x2, y2;
         int idx_biggest_conf;
         float biggest_conf;
@@ -45,37 +43,39 @@ private:
         const auto dim1 = tensor.dims[1];
         const auto dim2 = tensor.dims[2];
         const auto n_cls = dim0 - 4;  // 84 - 4 = 80 classes
-        cls_items_.resize(n_cls);
 
         // 3D idx to 1D idx -> data[h, w, c] to data[h*W*C + w*C + c]
         for (int i = 0; i < dim1; ++i) {  // loop through all possible bbox
-            x1 = data[i * dim0 + 0];      // data[0 * dim1 + i];
-            y1 = data[i * dim0 + 1];      // data[1 * dim1 + i];
-            x2 = data[i * dim0 + 2];      // data[2 * dim1 + i];
-            y2 = data[i * dim0 + 3];      // data[3 * dim1 + i];
-            if (x1 > x2) std::swap(x1, x2);
-            if (y1 > y2) std::swap(y1, y2);
+            x1 = data[i * dim0 + 0];      // data[0 * dim1 + i]
+            y1 = data[i * dim0 + 1];      // data[1 * dim1 + i]
+            x2 = data[i * dim0 + 2];      // data[2 * dim1 + i]
+            y2 = data[i * dim0 + 3];      // data[3 * dim1 + i]
+            if (x1 > x2)
+                std::swap(x1, x2);
+            if (y1 > y2)
+                std::swap(y1, y2);
 
             if (x1 < 0 || x1 > 1 || y1 < 0 || y1 > 1 || x2 < 0 || x2 > 1 || y2 < 0 || y2 > 1) {
                 // skip if value is outside [0.0, 1.0]
                 continue;
             }
-
-            float max_cls_items = std::numeric_limits<float>::min();
+            biggest_conf = std::numeric_limits<float>::min();
+            idx_biggest_conf = -1;
             for (int cls = 0; cls < n_cls; ++cls) {
-                cls_items_[cls] = data[i * dim0 + (4 + cls)];  // data[(4 + cls) * dim1  + i];
-                if (cls_items_[cls] > max_cls_items) {
-                    max_cls_items = cls_items_[cls];
+                float conf = sigmoid(data[i * dim0 + (4 + cls)]);  // data[(4 + cls) * dim1 + i]
+                if (conf > biggest_conf) {
+                    biggest_conf = conf;
+                    idx_biggest_conf = cls;
                 }
             }
-            computeBiggestConf(cls_items_, max_cls_items, biggest_conf, idx_biggest_conf);
+
             if (biggest_conf < conf_threshold_) {
-                // skip if low confidence
                 continue;
             }
+
             // PUSH data if all good
-            ROS_INFO_STREAM(i << ". cls: " << idx_biggest_conf << " conf: " << biggest_conf << " x1: " << x1
-                              << " y1: " << y1 << " x2: " << x2 << " y2: " << x2);
+            // ROS_INFO_STREAM(i << ". cls: " << idx_biggest_conf << " conf: " << biggest_conf << " x1: " << x1
+            //                   << " y1: " << y1 << " x2: " << x2 << " y2: " << x2);
             depthai_datatype_msgs::ImgDetection det;
             det.confidence = biggest_conf;
             det.label = idx_biggest_conf;
@@ -87,6 +87,7 @@ private:
         }
         pub_.publish(pub_msg_);
     }
+    inline static float sigmoid(float x) { return 1.0f / (1.0f + std::exp(-x)); }
     /**
      * @brief Get the Tensor given a rawnndata and a the name of the tensor
      *
@@ -130,29 +131,6 @@ private:
         }
         return {};
     }
-    static void computeBiggestConf(
-            std::vector<float>& cls_items, float max_cls_items, float& biggest_conf, int& idx_biggest_conf) {
-        // compute softmax numerator and denominator(which is sum of all numerator)
-        float denominator = 0;
-        for (int i = 0; i < cls_items.size(); ++i) {
-            cls_items[i] = std::exp(cls_items[i] - max_cls_items);  // stable softmax
-            denominator += cls_items[i];
-        }
-        // actual compute of softmax(confidence) = numerator divided by denominator
-        idx_biggest_conf = -1;
-        biggest_conf = std::numeric_limits<float>::min();
-        float curr_conf;
-        for (int i = 0; i < cls_items.size(); ++i) {
-            curr_conf = cls_items[i] / denominator;
-            if (curr_conf > biggest_conf) {
-                biggest_conf = curr_conf;
-                idx_biggest_conf = i;
-            }
-        }
-    }
-    // variables
-    //! @brief store data of the classification value(to be computed using softmax after retrieved by tensor)
-    std::vector<float> cls_items_;
 
     // params
     //! @brief only include result that has confidence bigger than conf_threshold_
