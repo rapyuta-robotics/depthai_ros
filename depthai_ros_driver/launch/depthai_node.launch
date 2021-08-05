@@ -38,7 +38,7 @@
       <param name="with_depth" value="$(arg with_depth)"/>
       <param name="stereo_lrcheck" value="$(arg stereo_lrcheck)"/>
       <param name="stereo_extended" value="$(arg stereo_extended)"/>
-      <param name="stereo_subpixel" value="$(arg pipeline)"/>
+      <param name="stereo_subpixel" value="$(arg stereo_subpixel)"/>
 
       <!-- for MobilenetSSDPipeline -->
       <param name="blob_file" value="$(arg blob_file)"/>
