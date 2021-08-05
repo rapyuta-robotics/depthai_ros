@@ -77,15 +77,20 @@
       <param name="nn_engines" value="$(arg nn_engines)"/>
 
       <param name="queue_size" value="$(arg queue_size)"/>
+      <remap from="/depthai/detections" to="/depthai/raw_nn" />
     </node>
-    <!-- <node if="$(arg manager)" pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager">
+    <node pkg="depthai_ros_driver" type="retinanet_msg_converter_node" name="retinanet_msg_converter" output="screen">
+      <remap from="raw_nn" to="/depthai/raw_nn" />
+      <remap from="raw_det" to="/depthai/detections" />
+    </node>
+    <node if="$(arg manager)" pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager">
       <param name="num_worker_threads" value="10"/>
     </node>
     <node pkg="nodelet" type="nodelet" name="img_detections_stamper" args="load depthai_ros_driver/ImgDetectionsStamper $(arg manager_name)">
       <remap from="nn" to="/depthai/detections" />
       <remap from="img" to="/depthai/preview/image_raw" />
       <remap from="nn_stamped" to="/depthai/detections_stamped" />
-    </node> -->
+    </node>
   </group>
 
   <!-- Publish tf -->

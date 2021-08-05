@@ -115,6 +115,9 @@ target_link_libraries(img_detections_stamper_nodelet img_detections_stamper)
 add_executable(img_detections_stamper_node src/img_detections_stamper_node.cpp)
 target_link_libraries(img_detections_stamper_node img_detections_stamper)
 
+add_executable(retinanet_msg_converter_node src/retinanet_msg_converter_node.cpp)
+target_link_libraries(retinanet_msg_converter_node depthai ${catkin_LIBRARIES})
+
 catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
 catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
 catkin_add_gtest(${PROJECT_NAME}_conversion test/conversion.cpp)
