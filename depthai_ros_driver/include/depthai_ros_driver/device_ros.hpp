@@ -105,7 +105,7 @@ public:
     PacketWriter(dai::XLinkStream& stream)
             : _stream(stream) {}
 
-    auto toLE(std::uint32_t num, std::uint8_t* le_data) {
+    static auto toLE(std::uint32_t num, std::uint8_t* le_data) {
         le_data[0] = static_cast<std::uint8_t>((num & 0x000000ff) >> 0u);
         le_data[1] = static_cast<std::uint8_t>((num & 0x0000ff00) >> 8u);
         le_data[2] = static_cast<std::uint8_t>((num & 0x00ff0000) >> 16u);
@@ -117,11 +117,11 @@ public:
         size_t packet_size = dat_size + ser_size + 8;
 
         buf.resize(packet_size);
-        toLE(datatype, buf.data() + packet_size - 8);
-        toLE(dat_size, buf.data() + packet_size - 4);
 
         std::memcpy(buf.data(), dat, dat_size);
         std::memcpy(buf.data() + dat_size, ser, ser_size);
+        toLE(datatype, buf.data() + packet_size - 8);
+        toLE(ser_size, buf.data() + packet_size - 4);
 
         _stream.write(buf);
     }

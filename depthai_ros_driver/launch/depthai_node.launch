@@ -8,7 +8,7 @@
     doc="Location of parameters is {camera_param_uri}/{camera_name}/{stream}.yaml"/>
 
   <!-- pipeline name -->
-  <arg name="pipeline" default="depthai_ros_driver/MobilenetSSDPipeline"/>
+  <arg name="pipeline" default="depthai_ros_driver/MonoCameraControlPipeline"/>
 
   <!-- for StereoPipeline -->
   <arg name="with_depth" default="true"/>
