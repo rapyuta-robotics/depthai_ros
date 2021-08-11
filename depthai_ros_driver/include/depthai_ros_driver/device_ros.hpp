@@ -151,8 +151,11 @@ public:
 protected:
     // create stream based on name at the time of subscription
     template <class MsgType, dai::DatatypeEnum DataType>
-    auto generate_cb_lambda(std::unique_ptr<dai::XLinkStream>& stream, msgpack::sbuffer& sbuf,
-            std::vector<std::uint8_t>& writer_buf) -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
+    auto generate_cb_lambda(const std::string& name) -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
+                std::unique_ptr<dai::XLinkStream>& stream = _streams[name];
+                msgpack::sbuffer& sbuf = _serial_bufs[name];
+                std::vector<std::uint8_t>& writer_buf = _writer_bufs[name];
+
         const auto core_sub_lambda = [&stream, &sbuf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
@@ -294,11 +297,12 @@ protected:
                     break;
                 case dai::DatatypeEnum::CameraControl:
                     // @TODO: make writer to xLinkIn to work
-                    // _streams[name] =
-                    //     std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
-                    // _sub[name] = _sub_nh.subscribe(name, 1000,
-                    //         generate_cb_lambda<depthai_datatype_msgs::RawCameraControl,
-                    //                 dai::DatatypeEnum::CameraControl>(_streams[name], _sbuf, _writer_buf));
+                    _serial_bufs[name] = msgpack::sbuffer();
+                    _writer_bufs[name] = std::vector<std::uint8_t>();
+                    _streams[name] =
+                        std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
+                    _sub[name] = _sub_nh.subscribe(name, 1000,
+                            generate_cb_lambda<depthai_datatype_msgs::RawCameraControl, dai::DatatypeEnum::CameraControl>(name));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;

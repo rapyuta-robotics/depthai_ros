@@ -75,6 +75,7 @@ add_library (${PROJECT_NAME}_pipelines
     src/pipelines/preview_pipeline.cpp
     src/pipelines/stereo_pipeline.cpp
     src/pipelines/mobilenet_ssd_pipeline.cpp
+    src/pipelines/mono_camera_control_pipeline.cpp
 )
 target_link_libraries (${PROJECT_NAME}_pipelines PRIVATE
     ${catkin_LIBRARIES}
