@@ -1,5 +1,5 @@
-#ifndef DEPTHAI_BASE_COMMON_HPP
-#define DEPTHAI_BASE_COMMON_HPP
+#ifndef DEPTHAI_ROS_DRIVER__DEPTHAI_COMMON_HPP
+#define DEPTHAI_ROS_DRIVER__DEPTHAI_COMMON_HPP
 
 #include <regex>
 
@@ -111,69 +111,16 @@ class DepthAICommon
 {
 public:
     template <typename T>
-    DepthAICommon(T get_param_method)
-    {
-        get_param_method("calibration_file", _cfg.calib_file);
-        get_param_method("blob_file", _cfg.blob_file);
-        get_param_method("blob_file_config", _cfg.blob_file_config);
-        get_param_method("stream_list", _cfg.stream_list);
-        get_param_method("depthai_block_read", _cfg.depthai_block_read);
-        get_param_method("enable_sync", _cfg.sync_video_meta);
-        get_param_method("full_fov_nn", _cfg.full_fov_nn);
-        get_param_method("disable_depth", _cfg.compute_bbox_depth);
-        get_param_method("force_usb2", _cfg.force_usb2);
-        get_param_method("rgb_height", _cfg.rgb_height);
-        get_param_method("rgb_fps", _cfg.rgb_fps);
-        get_param_method("depth_height", _cfg.depth_height);
-        get_param_method("depth_fps", _cfg.depth_fps);
-        get_param_method("shaves", _cfg.shaves);
-        get_param_method("cmx_slices", _cfg.cmx_slices);
-        get_param_method("nn_engines", _cfg.nn_engines);
-
-        _depthai = std::make_unique<Device>("", _cfg.force_usb2);
-        _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
-
-        const auto _pipeline_config_json = create_pipeline_config(_cfg);
-        _pipeline = _depthai->create_pipeline(_pipeline_config_json);
-    }
+    DepthAICommon(T get_param_method);
 
     /// create camera stream publisher
-    template <typename T1, typename T2>
+    template <typename T>
     void create_stream(
-        T1 set_camera_info_pub_method, T2 set_stream_pub_method)
-    {
-        for (const auto& stream : _cfg.stream_list) {
-            const auto it = std::find(_stream_name.cbegin(), _stream_name.cend(), stream);
-            const auto index = static_cast<Stream>(std::distance(_stream_name.cbegin(), it));
-
-            if (index < Stream::IMAGE_END) {
-                set_camera_info_pub_method(index);
-                if (index < Stream::UNCOMPRESSED_IMG_END) {
-                    set_stream_pub_method(index, ImageMsg{});
-                } else {
-                    set_stream_pub_method(index, CompressedImageMsg{});
-                }
-                continue;
-            }
-            switch (index) {
-                case Stream::META_OUT:
-                    set_stream_pub_method(index, ObjectsMsg{});
-                    break;
-                case Stream::OBJECT_TRACKER:
-                    set_stream_pub_method(index, ObjectMsg{});
-                    break;
-                case Stream::META_D2H:
-                    set_stream_pub_method(index, ImageMsg{});
-                    break;
-                default:
-                    // TODO: roslog?
-                    std::cout << "Unknown stream requested: " << stream << std::endl;
-            }
-        }
-    }
+        std::function<void(const Stream&)> set_camera_info_pub_method,
+        T set_stream_pub_method);
 
     using PublishImageFn = 
-        std::function<void(const HostDataPacket& packet, Stream type, double ts)>;
+        std::function<void(const HostDataPacket&, Stream type, double ts)>;
     using PublishObjectsFn = 
         std::function<void(const dai::Detections& detections, double ts)>;
 
@@ -211,6 +158,72 @@ private:
     PublishImageFn _publish_img_fn;
     PublishObjectsFn _publish_objs_fn;
 };
+
+//==============================================================================
+//==============================================================================
+// TODO Move these to impl hpp
+template <typename T>
+void DepthAICommon::create_stream(
+    std::function<void(const Stream&)> set_camera_info_pub_method,
+    T set_stream_pub_method)
+{
+    for (const auto& stream : _cfg.stream_list) {
+        const auto it = std::find(_stream_name.cbegin(), _stream_name.cend(), stream);
+        const auto index = static_cast<Stream>(std::distance(_stream_name.cbegin(), it));
+
+        if (index < Stream::IMAGE_END) {
+            set_camera_info_pub_method(index);
+            if (index < Stream::UNCOMPRESSED_IMG_END) {
+                set_stream_pub_method(index, ImageMsg{});
+            } else {
+                set_stream_pub_method(index, CompressedImageMsg{});
+            }
+            continue;
+        }
+        switch (index) {
+            case Stream::META_OUT:
+                set_stream_pub_method(index, ObjectsMsg{});
+                break;
+            case Stream::OBJECT_TRACKER:
+                set_stream_pub_method(index, ObjectMsg{});
+                break;
+            case Stream::META_D2H:
+                set_stream_pub_method(index, ImageMsg{});
+                break;
+            default:
+                // TODO: roslog?
+                std::cout << "Unknown stream requested: " << stream << std::endl;
+        }
+    }
+}
+
+//==============================================================================
+template <typename T>
+DepthAICommon::DepthAICommon(T get_param_method)
+{
+    get_param_method("calibration_file", _cfg.calib_file);
+    get_param_method("blob_file", _cfg.blob_file);
+    get_param_method("blob_file_config", _cfg.blob_file_config);
+    get_param_method("stream_list", _cfg.stream_list);
+    get_param_method("depthai_block_read", _cfg.depthai_block_read);
+    get_param_method("enable_sync", _cfg.sync_video_meta);
+    get_param_method("full_fov_nn", _cfg.full_fov_nn);
+    get_param_method("disable_depth", _cfg.compute_bbox_depth);
+    get_param_method("force_usb2", _cfg.force_usb2);
+    get_param_method("rgb_height", _cfg.rgb_height);
+    get_param_method("rgb_fps", _cfg.rgb_fps);
+    get_param_method("depth_height", _cfg.depth_height);
+    get_param_method("depth_fps", _cfg.depth_fps);
+    get_param_method("shaves", _cfg.shaves);
+    get_param_method("cmx_slices", _cfg.cmx_slices);
+    get_param_method("nn_engines", _cfg.nn_engines);
+
+    _depthai = std::make_unique<Device>("", _cfg.force_usb2);
+    _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
+
+    const auto _pipeline_config_json = create_pipeline_config(_cfg);
+    _pipeline = _depthai->create_pipeline(_pipeline_config_json);
+}
 
 }  // namespace rr
 

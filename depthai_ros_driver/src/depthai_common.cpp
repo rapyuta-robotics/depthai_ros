@@ -142,6 +142,35 @@ const std::string create_pipeline_config(const DepthAIBaseConfig& cfg)
 }
 
 //==============================================================================
+
+// template <typename T>
+// DepthAICommon::DepthAICommon(T get_param_method)
+// {
+//     get_param_method("calibration_file", _cfg.calib_file);
+//     // get_param_method("blob_file", _cfg.blob_file);
+//     // get_param_method("blob_file_config", _cfg.blob_file_config);
+//     // get_param_method("stream_list", _cfg.stream_list);
+//     // get_param_method("depthai_block_read", _cfg.depthai_block_read);
+//     // get_param_method("enable_sync", _cfg.sync_video_meta);
+//     // get_param_method("full_fov_nn", _cfg.full_fov_nn);
+//     // get_param_method("disable_depth", _cfg.compute_bbox_depth);
+//     // get_param_method("force_usb2", _cfg.force_usb2);
+//     // get_param_method("rgb_height", _cfg.rgb_height);
+//     // get_param_method("rgb_fps", _cfg.rgb_fps);
+//     // get_param_method("depth_height", _cfg.depth_height);
+//     // get_param_method("depth_fps", _cfg.depth_fps);
+//     // get_param_method("shaves", _cfg.shaves);
+//     // get_param_method("cmx_slices", _cfg.cmx_slices);
+//     // get_param_method("nn_engines", _cfg.nn_engines);
+
+//     _depthai = std::make_unique<Device>("", _cfg.force_usb2);
+//     _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
+
+//     const auto _pipeline_config_json = create_pipeline_config(_cfg);
+//     _pipeline = _depthai->create_pipeline(_pipeline_config_json);
+// }
+
+//==============================================================================
 void DepthAICommon::process_and_publish_packets()
 {
     std::list<std::shared_ptr<NNetPacket>> nnet_packet;

@@ -1,0 +1,91 @@
+#ifndef DEPTHAI_ROS_DRIVER__DEPTHAI_BASE_ROS2_HPP
+#define DEPTHAI_ROS_DRIVER__DEPTHAI_BASE_ROS2_HPP
+
+#include <chrono>
+#include <functional>
+#include <memory>
+#include <string>
+#include <variant>
+
+#include <rclcpp/node.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
+#include <std_msgs/msg/float32.hpp>
+
+#include <depthai_ros_driver/depthai_common.hpp>
+
+#include <sensor_msgs/msg/image.hpp>
+#include <depthai_ros_msgs/msg/objects.hpp>
+#include <depthai_ros_msgs/msg/auto_focus_ctrl.hpp>
+#include <depthai_ros_msgs/srv/trigger_named.hpp>
+
+#include <image_transport/camera_publisher.hpp>
+#include <camera_info_manager/camera_info_manager.hpp>
+
+#include <depthai_ros_driver/visibility_control.h>
+#include <boost/make_shared.hpp>
+
+using namespace std::chrono_literals;
+using TriggerSrv = depthai_ros_msgs::srv::TriggerNamed;
+using AutoFocusCtrlMsg = depthai_ros_msgs::msg::AutoFocusCtrl;
+using Float32Msg = std_msgs::msg::Float32;
+using CameraInfoMsg = sensor_msgs::msg::CameraInfo;
+
+namespace rr {
+
+//==============================================================================
+class DepthAIBaseRos2 : public rclcpp::Node {
+public:
+    COMPOSITION_PUBLIC
+    explicit DepthAIBaseRos2(const rclcpp::NodeOptions & options);
+
+private:
+
+    void prepareStreamConfig();
+
+    void publishObjectInfoMsg(
+        const dai::Detections& detections, const rclcpp::Time& stamp);
+
+    void publishImageMsg(
+        const HostDataPacket& packet, Stream type, const rclcpp::Time& stamp);
+
+    const rclcpp::Time get_rostime(const double camera_ts);
+
+    rclcpp::TimerBase::SharedPtr _cameraReadTimer;
+    rclcpp::Subscription<Float32Msg>::SharedPtr _disparity_conf_sub;
+    rclcpp::Subscription<AutoFocusCtrlMsg>::SharedPtr _af_ctrl_sub;
+    rclcpp::Service<TriggerSrv>::SharedPtr _camera_info_default;
+
+    using ObjectPubPtr = rclcpp::Publisher<ObjectMsg>::SharedPtr;
+    using ObjectsPubPtr = rclcpp::Publisher<ObjectsMsg>::SharedPtr;
+    using ImagePubPtr = rclcpp::Publisher<ImageMsg>::SharedPtr;
+    using ComImagePubPtr = rclcpp::Publisher<CompressedImageMsg>::SharedPtr;
+    using CameraInfoPubPtr = rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr;
+
+    using StreamPubVariant = std::variant<ObjectsPubPtr, ObjectPubPtr, ImagePubPtr, ComImagePubPtr>;
+    using CameraInfoManagerPtr = std::unique_ptr<camera_info_manager::CameraInfoManager>;
+
+    std::array<StreamPubVariant, Stream::END> _stream_publishers;
+    std::array<CameraInfoPubPtr, Stream::IMAGE_END> _camera_info_publishers;
+    std::array<CameraInfoManagerPtr, Stream::IMAGE_END> _camera_info_manager;
+
+    std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;
+    std::unique_ptr<DepthAICommon> _depthai_common;
+
+    // params
+    std::string _camera_name;
+    std::string _camera_param_uri;
+    int _queue_size = 10;
+
+    rclcpp::Time _stamp;
+    double _depthai_ts_offset = -1;  // sadly, we don't have a way of measuring drift
+
+    std::array<std::string, Stream::END> _topic_name{
+        "left", "right", "rectified_left", "rectified_right", "disparity",
+        "disparity_color", "depth", "previewout", "jpeg", "mjpeg", "meta_d2h",
+        "object_info", "object_tracker"};
+};
+
+}  // namespace rr
+
+#endif

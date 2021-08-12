@@ -118,6 +118,7 @@ if($ENV{ROS_VERSION} STREQUAL 2)
         rclcpp
         sensor_msgs
         std_msgs
+        rclcpp_components
     )
     foreach(pkg ${PKG_DEPS})
         find_package(${pkg} REQUIRED)
@@ -126,26 +127,31 @@ if($ENV{ROS_VERSION} STREQUAL 2)
     add_subdirectory (${DEPTHAI_CORE} depthai-core)
 
     add_definitions(-DUSE_ROS2=1)   # <-------- Set if use ros2 macro
-    add_library (${PROJECT_NAME}_lib src/depthai_common.cpp)
+    add_library (${PROJECT_NAME}_lib 
+        src/depthai_common.cpp
+        src/depthai_base_ros2.cpp)
     target_link_libraries (${PROJECT_NAME}_lib PUBLIC
         ${OpenCV_LIBRARIES}
         ${Boost_LIBRARIES}
         depthai-core
     )
     ament_target_dependencies(${PROJECT_NAME}_lib PUBLIC
-        depthai_ros_msgs)
+        depthai_ros_msgs
+        cv_bridge
+        camera_info_manager
+        rclcpp
+        rclcpp_components
+        OpenCV
+    )
+
+    # TODO: complete and test ros2 component
+    # rclcpp_components_register_nodes(
+    #     depthai_component "depthai_ros_driver::DepthAIBaseRos2")
 
     include_directories (include)
 
     add_executable (${PROJECT_NAME}_node src/depthai_node_ros2.cpp)
     target_link_libraries(${PROJECT_NAME}_node PUBLIC ${PROJECT_NAME}_lib)
-    ament_target_dependencies(${PROJECT_NAME}_node PUBLIC
-        depthai_ros_msgs
-        cv_bridge
-        camera_info_manager
-        rclcpp
-        OpenCV
-    )
 
     install(TARGETS
         ${PROJECT_NAME}_node

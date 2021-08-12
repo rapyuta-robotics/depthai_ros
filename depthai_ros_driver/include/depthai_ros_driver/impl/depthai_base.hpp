@@ -90,7 +90,7 @@ void DepthAIBase<Node>::onInit() {
     auto& nh = this->getPrivateNodeHandle();
 
     // with templated lambda, replace type with a template-typename
-    auto get_param = [&nh](const auto& name, auto& variable) {
+    auto get_param = [&nh](const std::string& name, auto& variable) {
         if (nh.hasParam(name)) {
             nh.getParam(name, variable);
         } else {
