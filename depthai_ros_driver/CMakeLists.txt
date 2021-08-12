@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.10.2)  # CMake version in Ubuntu 18.04 LTS
 
-set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD 17)
 
 get_filename_component (DEPTHAI_CORE "${CMAKE_CURRENT_LIST_DIR}/../external/depthai-core" REALPATH)
 
@@ -17,6 +17,15 @@ HunterGate (
 
 project (depthai_ros_driver VERSION 0.1.0 LANGUAGES CXX)
 
+find_package (OpenCV REQUIRED)
+find_package (Boost REQUIRED COMPONENTS system)
+
+################################################
+# Compile in ROS
+################################################
+
+if($ENV{ROS_VERSION} STREQUAL 1)
+
 set (PKG_DEPS
     camera_info_manager
     cv_bridge
@@ -31,9 +40,6 @@ set (PKG_DEPS
 )
 
 find_package (catkin REQUIRED COMPONENTS ${PKG_DEPS})
-
-find_package (OpenCV REQUIRED)
-find_package (Boost REQUIRED COMPONENTS system)
 
 # Add depthai-core dependency
 add_subdirectory (${DEPTHAI_CORE} depthai-core)
@@ -58,7 +64,8 @@ include_directories (SYSTEM
 )
 
 # internal library, not to be exported
-add_library (${PROJECT_NAME}_lib src/depthai_base.cpp)
+add_definitions(-DUSE_ROS2=0)   # <-------- Set if use ros2 macro
+add_library (${PROJECT_NAME}_lib src/depthai_base.cpp src/depthai_common.cpp)
 target_link_libraries (${PROJECT_NAME}_lib
     ${catkin_LIBRARIES}
     ${OpenCV_LIBRARIES}
@@ -93,3 +100,58 @@ install (DIRECTORY launch resources scripts urdf params
 )
 
 install (FILES nodelet_plugins.xml DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+RETURN()
+else()
+  message(WARNING "ROS version is $ENV{ROS_VERSION}, skipping ROS1 ${PROJECT_NAME}")
+endif()
+
+################################################
+# Compile in ROS 2
+################################################
+if($ENV{ROS_VERSION} STREQUAL 2)
+    find_package(ament_cmake REQUIRED)
+    set (PKG_DEPS
+        camera_info_manager
+        cv_bridge
+        depthai_ros_msgs
+        image_transport
+        rclcpp
+        sensor_msgs
+        std_msgs
+    )
+    foreach(pkg ${PKG_DEPS})
+        find_package(${pkg} REQUIRED)
+    endforeach()
+
+    add_subdirectory (${DEPTHAI_CORE} depthai-core)
+
+    add_definitions(-DUSE_ROS2=1)   # <-------- Set if use ros2 macro
+    add_library (${PROJECT_NAME}_lib src/depthai_common.cpp)
+    target_link_libraries (${PROJECT_NAME}_lib PUBLIC
+        ${OpenCV_LIBRARIES}
+        ${Boost_LIBRARIES}
+        depthai-core
+    )
+    ament_target_dependencies(${PROJECT_NAME}_lib PUBLIC
+        depthai_ros_msgs)
+
+    include_directories (include)
+
+    add_executable (${PROJECT_NAME}_node src/depthai_node_ros2.cpp)
+    target_link_libraries(${PROJECT_NAME}_node PUBLIC ${PROJECT_NAME}_lib)
+    ament_target_dependencies(${PROJECT_NAME}_node PUBLIC
+        depthai_ros_msgs
+        cv_bridge
+        camera_info_manager
+        rclcpp
+        OpenCV
+    )
+
+    install(TARGETS
+        ${PROJECT_NAME}_node
+        DESTINATION lib/${PROJECT_NAME})
+
+    ament_package()
+else()
+    message(WARNING "ROS version is $ENV{ROS_VERSION}, skipping this ROS2 ${PROJECT_NAME}")
+endif()
