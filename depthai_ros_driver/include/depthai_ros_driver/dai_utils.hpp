@@ -158,8 +158,8 @@ dai::DatatypeEnum getCommonType(const Range& links) {
 template <class Range>
 auto getAllInputs(const Range& nodes, const dai::Pipeline& pipeline) {
     // hack to get the Output type
-    using OutVec = decltype(nodes[0]->getOutputs());
-    using Output = typename OutVec::value_type;
+    using OutVec = decltype(nodes[0]->getOutputRefs());
+    using Output = std::remove_const_t<std::remove_pointer_t<typename OutVec::value_type>>;
 
     struct ret {
         std::shared_ptr<const dai::node::XLinkOut> node_to;
@@ -171,12 +171,12 @@ auto getAllInputs(const Range& nodes, const dai::Pipeline& pipeline) {
         // for all input slots of the node
         ret data;
         data.node_to = node;
-        const auto& inputs = node->getInputs();
+        const auto& inputs = node->getInputRefs();
         for (const auto& inp : inputs) {
-            const auto& links = getInputOf(node, inp.name);
+            const auto& links = getInputOf(node, inp->name);
             // for all links to the slot
             for (const auto& link : links) {
-                data.out_from.push_back(link);
+                data.out_from.push_back(link);  // @TODO: check if this is working
             }
         }
         out.emplace_back(std::move(data));
@@ -193,8 +193,8 @@ auto getAllInputs(const dai::Pipeline& pipeline) {
 template <class Range>
 auto getAllOutputs(const Range& nodes, const dai::Pipeline& pipeline) {
     // hack to get the Input type
-    using InVec = decltype(nodes[0]->getInputs());
-    using Input = typename InVec::value_type;
+    using InVec = decltype(nodes[0]->getInputRefs());
+    using Input = std::remove_const_t<std::remove_pointer_t<typename InVec::value_type>>;
 
     struct ret {
         std::shared_ptr<const dai::node::XLinkIn> node_from;
@@ -206,12 +206,12 @@ auto getAllOutputs(const Range& nodes, const dai::Pipeline& pipeline) {
         // for all output slots of the node
         ret data;
         data.node_from = node;
-        const auto& outputs = node->getOutputs();
+        const auto& outputs = node->getOutputRefs();
         for (const auto& outp : outputs) {
-            const auto& links = getOutputOf(node, outp.name);
+            const auto& links = getOutputOf(node, outp->name);
             // for all links to the slot
             for (const auto& link : links) {
-                data.in_to.push_back(link);
+                data.in_to.push_back(link);  // @TODO: check if this is working
             }
         }
         in.emplace_back(std::move(data));

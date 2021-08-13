@@ -93,7 +93,6 @@ target_link_libraries (${PROJECT_NAME}_pipelines PRIVATE
 add_library(depthai INTERFACE)
 target_link_libraries(depthai INTERFACE depthai-core ${libudev_LIBRARIES})
 target_include_directories(depthai SYSTEM INTERFACE
-    ${DEPTHAI_SHARED}/include
     ${libudev_INCLUDE_DIRS}
 )
 
