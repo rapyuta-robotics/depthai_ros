@@ -2,7 +2,6 @@
 
 #include <depthai/pipeline/Node.hpp>
 #include <depthai/pipeline/Pipeline.hpp>
-#include <depthai/pipeline/datatype/StreamPacketParser.hpp>
 #include <depthai/pipeline/node/XLinkIn.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 #include <depthai/xlink/XLinkStream.hpp>
