@@ -4,7 +4,7 @@
 
 // relevant 3rd party headers
 #include <depthai/device/DeviceBase.hpp>
-#include <depthai/pipeline/datatype/StreamPacketParser.hpp>
+#include <depthai/pipeline/datatype/StreamMessageParser.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 #include <depthai/pipeline/node/XLinkIn.hpp>
 
@@ -85,7 +85,7 @@ public:
     }
 
     [[deprecated("Uses dai interface, to be removed soon")]] auto getData() {
-        return dai::StreamPacketParser::parsePacketToADatatype(_packet);
+        return dai::StreamMessageParser::parseMessageToADatatype(_packet);
     }
 
 private:
