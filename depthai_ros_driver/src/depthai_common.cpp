@@ -1,3 +1,21 @@
+
+/*
+ * Copyright (C) 2021 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
 #include <depthai_ros_driver/depthai_common.hpp>
 
 namespace rr {
@@ -38,8 +56,8 @@ const std::pair<std::string, cv_bridge::CvImage> get_image_data(
         }
         case Stream::JPEG_OUT:
         case Stream::VIDEO: {
-            // const auto img = boost::make_shared<sensor_msgs::CompressedImage>();
             // TODO<YL> deal with this
+            // const auto img = boost::make_shared<sensor_msgs::CompressedImage>();
             // img->header = std::move(cvImg.header);
             // img->format = "jpeg";
             // img->data.assign(packet.data->cbegin(), packet.data->cend());
@@ -77,26 +95,26 @@ const std::pair<std::string, cv_bridge::CvImage> get_image_data(
 }
 
 //==============================================================================
-const std::string create_pipeline_config(const DepthAIBaseConfig& cfg)
+const std::string DepthAICommon::create_pipeline_config()
 {
     boost::property_tree::ptree root, streams, depth, ai, board_config,
         camera, camera_rgb, camera_mono, video_config, app, ot;
     std::regex reg("\"(null|true|false|[0-9]+(\\.[0-9]+)?)\"");
     std::ostringstream oss;
-    depth.put<std::string>("calibration_file", cfg.calib_file);
+    depth.put<std::string>("calibration_file", _cfg.calib_file);
     depth.put("padding_factor", 0.3f);
 
-    ai.put("blob_file", cfg.blob_file);
-    ai.put("blob_file_config", cfg.blob_file_config);
+    ai.put("blob_file", _cfg.blob_file);
+    ai.put("blob_file_config", _cfg.blob_file_config);
     //    ai.put("blob_file2", _blob_file2);
     //    ai.put("blob_file_config2", _blob_file_config2);
-    ai.put("calc_dist_to_bb", cfg.compute_bbox_depth);
-    ai.put("keep_aspect_ratio", !cfg.full_fov_nn);
+    ai.put("calc_dist_to_bb", _cfg.compute_bbox_depth);
+    ai.put("keep_aspect_ratio", !_cfg.full_fov_nn);
     //    ai.put("camera_input", "left_right");
     ai.put("camera_input", "rgb");
-    ai.put("shaves", cfg.shaves);
-    ai.put("cmx_slices", cfg.cmx_slices);
-    ai.put("NN_engines", cfg.nn_engines);
+    ai.put("shaves", _cfg.shaves);
+    ai.put("cmx_slices", _cfg.cmx_slices);
+    ai.put("NN_engines", _cfg.nn_engines);
 
     // maximum 20 is supported
     ot.put("max_tracklets", 20);
@@ -108,10 +126,10 @@ const std::string create_pipeline_config(const DepthAIBaseConfig& cfg)
     board_config.put("left_to_right_distance_cm", 10.93f);
     board_config.put("left_to_rgb_distance_cm", 22.75f);
 
-    camera_rgb.put("resolution_h", cfg.rgb_height);
-    camera_rgb.put("fps", cfg.rgb_fps);
-    camera_mono.put("resolution_h", cfg.depth_height);
-    camera_mono.put("fps", cfg.depth_fps);
+    camera_rgb.put("resolution_h", _cfg.rgb_height);
+    camera_rgb.put("fps", _cfg.rgb_fps);
+    camera_mono.put("resolution_h", _cfg.depth_height);
+    camera_mono.put("fps", _cfg.depth_fps);
 
     camera.add_child("rgb", camera_rgb);
     camera.add_child("mono", camera_mono);
@@ -119,9 +137,9 @@ const std::string create_pipeline_config(const DepthAIBaseConfig& cfg)
     video_config.put("profile", "mjpeg");
     video_config.put("quality", 95);
 
-    app.put("sync_video_meta_streams", cfg.sync_video_meta);
+    app.put("sync_video_meta_streams", _cfg.sync_video_meta);
 
-    for (const auto& stream : cfg.stream_list) {
+    for (const auto& stream : _cfg.stream_list) {
         // std::cout << "Requested Streams: " << _stream_list[i] << std::endl;
         boost::property_tree::ptree stream_config;
         stream_config.put("", stream);
@@ -140,35 +158,6 @@ const std::string create_pipeline_config(const DepthAIBaseConfig& cfg)
     boost::property_tree::write_json(oss, root);
     return std::regex_replace(oss.str(), reg, "$1");
 }
-
-//==============================================================================
-
-// template <typename T>
-// DepthAICommon::DepthAICommon(T get_param_method)
-// {
-//     get_param_method("calibration_file", _cfg.calib_file);
-//     // get_param_method("blob_file", _cfg.blob_file);
-//     // get_param_method("blob_file_config", _cfg.blob_file_config);
-//     // get_param_method("stream_list", _cfg.stream_list);
-//     // get_param_method("depthai_block_read", _cfg.depthai_block_read);
-//     // get_param_method("enable_sync", _cfg.sync_video_meta);
-//     // get_param_method("full_fov_nn", _cfg.full_fov_nn);
-//     // get_param_method("disable_depth", _cfg.compute_bbox_depth);
-//     // get_param_method("force_usb2", _cfg.force_usb2);
-//     // get_param_method("rgb_height", _cfg.rgb_height);
-//     // get_param_method("rgb_fps", _cfg.rgb_fps);
-//     // get_param_method("depth_height", _cfg.depth_height);
-//     // get_param_method("depth_fps", _cfg.depth_fps);
-//     // get_param_method("shaves", _cfg.shaves);
-//     // get_param_method("cmx_slices", _cfg.cmx_slices);
-//     // get_param_method("nn_engines", _cfg.nn_engines);
-
-//     _depthai = std::make_unique<Device>("", _cfg.force_usb2);
-//     _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
-
-//     const auto _pipeline_config_json = create_pipeline_config(_cfg);
-//     _pipeline = _depthai->create_pipeline(_pipeline_config_json);
-// }
 
 //==============================================================================
 void DepthAICommon::process_and_publish_packets()
@@ -224,6 +213,14 @@ void DepthAICommon::process_and_publish_packets()
                 _publish_img_fn(*(packet.get()), static_cast<Stream>(index), ts);
         }
     }
+};
+
+//==============================================================================
+void DepthAICommon::register_callbacks(
+        PublishImageFn img_fn, PublishObjectsFn objs_fn)
+{
+    _publish_img_fn = std::move(img_fn);
+    _publish_objs_fn = std::move(objs_fn);
 };
 
 //==============================================================================

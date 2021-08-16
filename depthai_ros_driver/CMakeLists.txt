@@ -64,7 +64,6 @@ include_directories (SYSTEM
 )
 
 # internal library, not to be exported
-add_definitions(-DUSE_ROS2=0)   # <-------- Set if use ros2 macro
 add_library (${PROJECT_NAME}_lib src/depthai_base.cpp src/depthai_common.cpp)
 target_link_libraries (${PROJECT_NAME}_lib
     ${catkin_LIBRARIES}
@@ -102,7 +101,7 @@ install (DIRECTORY launch resources scripts urdf params
 install (FILES nodelet_plugins.xml DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 RETURN()
 else()
-  message(WARNING "ROS version is $ENV{ROS_VERSION}, skipping ROS1 ${PROJECT_NAME}")
+  message("ROS version is $ENV{ROS_VERSION}, skipping ROS1 ${PROJECT_NAME}")
 endif()
 
 ################################################
@@ -126,7 +125,7 @@ if($ENV{ROS_VERSION} STREQUAL 2)
 
     add_subdirectory (${DEPTHAI_CORE} depthai-core)
 
-    add_definitions(-DUSE_ROS2=1)   # <-------- Set if use ros2 macro
+    add_definitions(-DUSE_ROS2)   # <-------- Set to use ros2 macro
     add_library (${PROJECT_NAME}_lib 
         src/depthai_common.cpp
         src/depthai_base_ros2.cpp)
@@ -159,5 +158,5 @@ if($ENV{ROS_VERSION} STREQUAL 2)
 
     ament_package()
 else()
-    message(WARNING "ROS version is $ENV{ROS_VERSION}, skipping this ROS2 ${PROJECT_NAME}")
+    message("ROS version is $ENV{ROS_VERSION}, skipping this ROS2 ${PROJECT_NAME}")
 endif()

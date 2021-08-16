@@ -6,7 +6,9 @@
 namespace rr {
 
 template <class Node>
-void DepthAIBase<Node>::publishObjectInfoMsg(const dai::Detections& detections, const ros::Time& stamp) {
+void DepthAIBase<Node>::publishObjectInfoMsg(
+    const dai::Detections& detections, const ros::Time& stamp)
+{
     const auto* pubPtr = _stream_publishers[Stream::META_OUT].get();
     if (pubPtr == nullptr || pubPtr->getNumSubscribers() <= 0) {
         return;  // No subscribers
@@ -18,7 +20,9 @@ void DepthAIBase<Node>::publishObjectInfoMsg(const dai::Detections& detections, 
 }
 
 template <class Node>
-void DepthAIBase<Node>::publishImageMsg(const HostDataPacket& packet, Stream type, const ros::Time& stamp) {
+void DepthAIBase<Node>::publishImageMsg(
+    const HostDataPacket& packet, Stream type, const ros::Time& stamp) 
+{
     const auto* camInfoPubPtr = _camera_info_publishers[type].get();
     const auto* pubPtr = _stream_publishers[type].get();
 
@@ -37,12 +41,12 @@ void DepthAIBase<Node>::publishImageMsg(const HostDataPacket& packet, Stream typ
         return;  // No subscribers
     }
 
-    if (type == Stream::JPEG_OUT || type == Stream::JPEG_OUT){
-        const auto img = boost::make_shared<sensor_msgs::CompressedImage>();
+    if (type == Stream::JPEG_OUT || type == Stream::VIDEO){
+        const auto img = std::make_shared<sensor_msgs::CompressedImage>();
         img->header = std::move(header);
         img->format = "jpeg";
         img->data.assign(packet.data->cbegin(), packet.data->cend());
-        pubPtr->publish(img);
+        pubPtr->publish(*img);
         return;
     }
 
@@ -56,37 +60,38 @@ void DepthAIBase<Node>::publishImageMsg(const HostDataPacket& packet, Stream typ
     pubPtr->publish(msg);
 }
 
+// TODO: check if refactoring makes sense
 template <class Node>
 bool DepthAIBase<Node>::defaultCameraInfo(
-        depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res) {
+    depthai_ros_msgs::TriggerNamed::Request& req,
+    depthai_ros_msgs::TriggerNamed::Response& res)
+{
+    const auto& name = req.name;
     const auto it = std::find(_topic_name.cbegin(), _topic_name.cend(), req.name);
+    const auto index = std::distance(_topic_name.cbegin(), it);
+
     if (it == _topic_name.cend()) {
         res.success = false;
         res.message = "No such camera known";
         return true;
     }
 
-    const auto& name = req.name;
-    auto& nh = this->getPrivateNodeHandle();
-    const auto uri = _camera_param_uri + "default/" + name + ".yaml";
-    if (_defaultManager == nullptr) {
-        _defaultManager =
-                std::make_unique<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, "_default"}, name, uri);
-    } else {
-        _defaultManager->setCameraName(name);
-        _defaultManager->loadCameraInfo(uri);
+    if (!_camera_info_manager[index]) { // check if nullopt
+        res.success = false;
+        res.message = "stream index is not valid";
+        return true;
     }
-    const auto index = std::distance(_topic_name.cbegin(), it);
-    const auto cameraInfo = _defaultManager->getCameraInfo();
-    res.success = _camera_info_manager[index]->setCameraInfo(cameraInfo);
 
-    _defaultManager->setCameraName("_default");
-    _defaultManager->loadCameraInfo("");
+    const auto uri = _camera_param_uri + "default/" + name + ".yaml";
+    res.success = (
+        _camera_info_manager[index]->setCameraName(name) &&
+        _camera_info_manager[index]->loadCameraInfo(uri));
     return true;
 }
 
 template <class Node>
-void DepthAIBase<Node>::onInit() {
+void DepthAIBase<Node>::onInit()
+{
     auto& nh = this->getPrivateNodeHandle();
 
     // with templated lambda, replace type with a template-typename
@@ -125,7 +130,8 @@ void DepthAIBase<Node>::onInit() {
 }
 
 template <class Node>
-void DepthAIBase<Node>::prepareStreamConfig() {
+void DepthAIBase<Node>::prepareStreamConfig()
+{
     auto& nh = this->getNodeHandle();
 
     auto set_camera_info_pub = [&](const Stream& id) {
@@ -147,7 +153,7 @@ void DepthAIBase<Node>::prepareStreamConfig() {
                 std::make_unique<ros::Publisher>(nh.template advertise<type>(name + suffix, _queue_size));
     };
 
-    _depthai_common->create_stream(set_camera_info_pub, set_stream_pub);
+    _depthai_common->create_stream_publishers(set_camera_info_pub, set_stream_pub);
 
     _camera_info_default = nh.advertiseService("reset_camera_info", &DepthAIBase::defaultCameraInfo, this);
 

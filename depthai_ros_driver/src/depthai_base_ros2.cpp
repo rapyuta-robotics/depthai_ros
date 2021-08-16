@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2021 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
 #include <depthai_ros_driver/depthai_base_ros2.hpp>
 
 namespace rr {
@@ -51,35 +68,27 @@ void DepthAIBaseRos2::prepareStreamConfig()
             const std::shared_ptr<TriggerSrv::Request> req,
             std::shared_ptr<TriggerSrv::Response> res)
         {
+            const auto& name = req->name;
             const auto it = std::find(
-                _topic_name.cbegin(), _topic_name.cend(), req->name);
+                _topic_name.cbegin(), _topic_name.cend(), name);
+            const auto index = std::distance(_topic_name.cbegin(), it);
+
             if (it == _topic_name.cend()) {
                 res->success = false;
                 res->message = "No such camera known";
                 return;
             }
 
-            const auto& name = req->name;
+            if (!_camera_info_manager[index]) { // check if nullopt
+                res->success = false;
+                res->message = "stream index is not valid";
+                return;
+            }
+
             const auto uri = _camera_param_uri + "default/" + name + ".yaml";
-
-            // set camera info
-            if (!_defaultManager) {
-                _defaultManager = 
-                    std::make_unique<camera_info_manager::CameraInfoManager>(
-                        this, name, uri);
-            }
-            else
-            {
-                _defaultManager->setCameraName(name);
-                _defaultManager->loadCameraInfo(uri);
-            }
-
-            const auto index = std::distance(_topic_name.cbegin(), it);
-            const auto cameraInfo = _defaultManager->getCameraInfo();
-            res->success = _camera_info_manager[index]->setCameraInfo(cameraInfo);
-
-            _defaultManager->setCameraName("_default");
-            _defaultManager->loadCameraInfo("");
+            res->success = (
+                _camera_info_manager[index]->setCameraName(name) &&
+                _camera_info_manager[index]->loadCameraInfo(uri));
         }
     );
     
@@ -87,9 +96,9 @@ void DepthAIBaseRos2::prepareStreamConfig()
         "auto_focus_ctrl", driver_qos,
         [&](const Float32Msg::UniquePtr msg)
         {
-        if (!_depthai_common->set_disparity(msg->data))
-            RCLCPP_WARN(this->get_logger(),
-                "Disparity confidence value:%f, is invalid", msg->data);
+            if (!_depthai_common->set_disparity(msg->data))
+                RCLCPP_WARN(this->get_logger(),
+                    "Disparity confidence value:%f, is invalid", msg->data);
         });
 
     _af_ctrl_sub = this->create_subscription<AutoFocusCtrlMsg>(
@@ -125,7 +134,7 @@ void DepthAIBaseRos2::prepareStreamConfig()
             this->create_publisher<type>(name + suffix, _queue_size);
     };
 
-    _depthai_common->create_stream(set_camera_info_pub, set_stream_pub);
+    _depthai_common->create_stream_publishers(set_camera_info_pub, set_stream_pub);
 }
 
 //==============================================================================
@@ -163,13 +172,13 @@ void DepthAIBaseRos2::publishImageMsg(
     }
 
     // check if to publish it out as Compressed or ImageMsg
-    if (type == Stream::JPEG_OUT || type == Stream::JPEG_OUT){
+    if (type == Stream::JPEG_OUT || type == Stream::VIDEO){
         const auto pubPtr = std::get<ComImagePubPtr>(_stream_publishers[type]);
         
         if (!pubPtr || pubPtr->get_subscription_count() == 0)
             return; // No subscribers;
     
-        const auto img = boost::make_shared<CompressedImageMsg>();
+        const auto img = std::make_shared<CompressedImageMsg>();
         img->header = std::move(header);
         img->format = "jpeg";
         img->data.assign(packet.data->cbegin(), packet.data->cend());

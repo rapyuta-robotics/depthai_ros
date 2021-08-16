@@ -1,6 +1,6 @@
 #pragma once
 
-#include <depthai_ros_driver/depthai_common.hpp> // should be here?
+#include <depthai_ros_driver/depthai_common.hpp>
 
 // self-message includes
 #include <depthai_ros_msgs/AutoFocusCtrl.h>
@@ -53,7 +53,6 @@ private:
     std::array<std::unique_ptr<ros::Publisher>, Stream::IMAGE_END> _camera_info_publishers;
 
     std::array<std::unique_ptr<camera_info_manager::CameraInfoManager>, Stream::IMAGE_END> _camera_info_manager;
-    std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;
     ros::ServiceServer _camera_info_default;
     ros::Subscriber _af_ctrl_sub;
     ros::Subscriber _disparity_conf_sub;

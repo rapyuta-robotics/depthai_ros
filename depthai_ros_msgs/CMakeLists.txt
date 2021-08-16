@@ -17,7 +17,7 @@ endif()
 ################################################
 find_package(catkin QUIET)
 if($ENV{ROS_VERSION} STREQUAL 1)
-  message(WARNING "Compile ${PROJECT_NAME} as a ROS1 package")
+  message("Compile ${PROJECT_NAME} as a ROS1 package")
   find_package (catkin REQUIRED COMPONENTS
     message_generation
     sensor_msgs
@@ -58,7 +58,7 @@ endif()
 # Compile in ROS 2
 ################################################
 if($ENV{ROS_VERSION} STREQUAL 2)
-  message(WARNING "Compile ${PROJECT_NAME} as a ROS2 package")
+  message("Compile ${PROJECT_NAME} as a ROS2 package")
   find_package(builtin_interfaces REQUIRED)
   find_package(rosidl_default_generators REQUIRED)
 
