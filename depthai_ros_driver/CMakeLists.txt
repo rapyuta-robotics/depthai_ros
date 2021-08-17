@@ -47,7 +47,7 @@ add_subdirectory (${DEPTHAI_CORE} depthai-core)
 catkin_package (
     INCLUDE_DIRS include
     LIBRARIES ${PROJECT_NAME}_nodelet
-    CATKIN_DEPENDS camera_info_manager cv_bridge image_transport nodelet roscpp sensor_msgs node_interface
+    CATKIN_DEPENDS ${PKG_DEPS}
     DEPENDS Boost
 )
 
@@ -101,7 +101,7 @@ install (DIRECTORY launch resources scripts urdf params
 install (FILES nodelet_plugins.xml DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 RETURN()
 else()
-  message("ROS version is $ENV{ROS_VERSION}, skipping ROS1 ${PROJECT_NAME}")
+  message(VERBOSE "ROS version is $ENV{ROS_VERSION}, skipping ROS1 ${PROJECT_NAME}")
 endif()
 
 ################################################
@@ -125,32 +125,43 @@ if($ENV{ROS_VERSION} STREQUAL 2)
 
     add_subdirectory (${DEPTHAI_CORE} depthai-core)
 
-    add_definitions(-DUSE_ROS2)   # <-------- Set to use ros2 macro
-    add_library (${PROJECT_NAME}_lib 
+    add_definitions(-DUSE_ROS2)   # <-------- Set to use ros2 macro, for #ifdef
+    add_library (${PROJECT_NAME}_lib SHARED
         src/depthai_common.cpp
-        src/depthai_base_ros2.cpp)
+        src/depthai_base_ros2.cpp
+    )
     target_link_libraries (${PROJECT_NAME}_lib PUBLIC
         ${OpenCV_LIBRARIES}
         ${Boost_LIBRARIES}
         depthai-core
     )
-    ament_target_dependencies(${PROJECT_NAME}_lib PUBLIC
-        depthai_ros_msgs
-        cv_bridge
-        camera_info_manager
-        rclcpp
-        rclcpp_components
-        OpenCV
+    ament_target_dependencies(${PROJECT_NAME}_lib 
+        PUBLIC ${PKG_DEPS}
     )
 
-    # TODO: complete and test ros2 component
-    # rclcpp_components_register_nodes(
-    #     depthai_component "depthai_ros_driver::DepthAIBaseRos2")
-
+    # Generate ros2 component
+    rclcpp_components_register_nodes(${PROJECT_NAME}_lib  "rr::DepthAIBaseRos2")
+    
     include_directories (include)
-
     add_executable (${PROJECT_NAME}_node src/depthai_node_ros2.cpp)
     target_link_libraries(${PROJECT_NAME}_node PUBLIC ${PROJECT_NAME}_lib)
+
+    ##########################
+    # Install ros2 component
+    ##########################
+    install(TARGETS
+        ${PROJECT_NAME}_lib
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin)
+
+    install(DIRECTORY
+        launch/
+        params
+        resources
+        urdf
+        DESTINATION share/${PROJECT_NAME}
+    )
 
     install(TARGETS
         ${PROJECT_NAME}_node
@@ -158,5 +169,5 @@ if($ENV{ROS_VERSION} STREQUAL 2)
 
     ament_package()
 else()
-    message("ROS version is $ENV{ROS_VERSION}, skipping this ROS2 ${PROJECT_NAME}")
+    message(VERBOSE "ROS version is $ENV{ROS_VERSION}, skipping this ROS2 ${PROJECT_NAME}")
 endif()

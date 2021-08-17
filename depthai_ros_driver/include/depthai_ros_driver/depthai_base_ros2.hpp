@@ -51,55 +51,54 @@ using CameraInfoMsg = sensor_msgs::msg::CameraInfo;
 namespace rr {
 
 //==============================================================================
-class DepthAIBaseRos2 : public rclcpp::Node {
+class DepthAIBaseRos2 : public rclcpp::Node
+{
 public:
-    COMPOSITION_PUBLIC
-    explicit DepthAIBaseRos2(const rclcpp::NodeOptions & options);
+  COMPOSITION_PUBLIC
+  explicit DepthAIBaseRos2(const rclcpp::NodeOptions& options);
 
 private:
 
-    void prepareStreamConfig();
+  void publishObjectInfoMsg(
+    const dai::Detections& detections, const rclcpp::Time& stamp);
 
-    void publishObjectInfoMsg(
-        const dai::Detections& detections, const rclcpp::Time& stamp);
+  void publishImageMsg(
+    const HostDataPacket& packet, Stream type, const rclcpp::Time& stamp);
 
-    void publishImageMsg(
-        const HostDataPacket& packet, Stream type, const rclcpp::Time& stamp);
+  const rclcpp::Time get_rostime(const double camera_ts);
 
-    const rclcpp::Time get_rostime(const double camera_ts);
+  rclcpp::TimerBase::SharedPtr _cameraReadTimer;
+  rclcpp::Subscription<Float32Msg>::SharedPtr _disparity_conf_sub;
+  rclcpp::Subscription<AutoFocusCtrlMsg>::SharedPtr _af_ctrl_sub;
+  rclcpp::Service<TriggerSrv>::SharedPtr _camera_info_default;
 
-    rclcpp::TimerBase::SharedPtr _cameraReadTimer;
-    rclcpp::Subscription<Float32Msg>::SharedPtr _disparity_conf_sub;
-    rclcpp::Subscription<AutoFocusCtrlMsg>::SharedPtr _af_ctrl_sub;
-    rclcpp::Service<TriggerSrv>::SharedPtr _camera_info_default;
+  using ObjectPubPtr = rclcpp::Publisher<ObjectMsg>::SharedPtr;
+  using ObjectsPubPtr = rclcpp::Publisher<ObjectsMsg>::SharedPtr;
+  using ImagePubPtr = rclcpp::Publisher<ImageMsg>::SharedPtr;
+  using ComImagePubPtr = rclcpp::Publisher<CompressedImageMsg>::SharedPtr;
+  using CameraInfoPubPtr =
+    rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr;
 
-    using ObjectPubPtr = rclcpp::Publisher<ObjectMsg>::SharedPtr;
-    using ObjectsPubPtr = rclcpp::Publisher<ObjectsMsg>::SharedPtr;
-    using ImagePubPtr = rclcpp::Publisher<ImageMsg>::SharedPtr;
-    using ComImagePubPtr = rclcpp::Publisher<CompressedImageMsg>::SharedPtr;
-    using CameraInfoPubPtr = rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr;
+  using StreamPubVariant = std::variant<ObjectsPubPtr, ObjectPubPtr,
+      ImagePubPtr, ComImagePubPtr>;
+  using CameraInfoManagerPtr =
+    std::unique_ptr<camera_info_manager::CameraInfoManager>;
 
-    using StreamPubVariant = std::variant<ObjectsPubPtr, ObjectPubPtr, ImagePubPtr, ComImagePubPtr>;
-    using CameraInfoManagerPtr = std::unique_ptr<camera_info_manager::CameraInfoManager>;
+  std::array<StreamPubVariant, Stream::END> _stream_publishers;
+  std::array<CameraInfoPubPtr, Stream::IMAGE_END> _camera_info_publishers;
+  std::array<CameraInfoManagerPtr, Stream::IMAGE_END> _camera_info_managers;
 
-    std::array<StreamPubVariant, Stream::END> _stream_publishers;
-    std::array<CameraInfoPubPtr, Stream::IMAGE_END> _camera_info_publishers;
-    std::array<CameraInfoManagerPtr, Stream::IMAGE_END> _camera_info_manager;
+  std::unique_ptr<DepthAICommon> _depthai_common;
+  std::array<std::string, Stream::END> _topic_names;
 
-    std::unique_ptr<DepthAICommon> _depthai_common;
+  // params
+  std::string _camera_name;
+  std::string _camera_param_uri;
+  int _queue_size = 10;
 
-    // params
-    std::string _camera_name;
-    std::string _camera_param_uri;
-    int _queue_size = 10;
+  rclcpp::Time _stamp;
+  double _depthai_ts_offset = -1;  // sadly, we don't have a way of measuring drift
 
-    rclcpp::Time _stamp;
-    double _depthai_ts_offset = -1;  // sadly, we don't have a way of measuring drift
-
-    std::array<std::string, Stream::END> _topic_name{
-        "left", "right", "rectified_left", "rectified_right", "disparity",
-        "disparity_color", "depth", "previewout", "jpeg", "mjpeg", "meta_d2h",
-        "object_info", "object_tracker"};
 };
 
 }  // namespace rr

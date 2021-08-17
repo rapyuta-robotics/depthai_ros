@@ -50,6 +50,27 @@ Sample models are available [here](https://github.com/luxonis/depthai/tree/main/
     $ rosparam list /depthai
     ```
 
+# (New) Usage with ROS2
+0. This is tested on `ros-foxy`. Now, install repo
+    ```bash
+    source $ROS2_distro/setup.bash
+    colcon build
+    ```
+1. Run the Nodelet
+    ```bash
+    ros2 run depthai_ros_driver depthai_ros_driver_node
+    ```
+Or
+
+2. Run: ROS2 `composition`. Similar concept of `nodelet`. To run it:
+    ```bash
+    # Terminal #1
+    ros2 component load /ComponentManager depthai_ros_driver rr::DepthAIBaseRos2
+
+    # New Terminal #2
+    ros2 run rclcpp_components component_container
+    ```
+
 # Trouble shooting
 If you see an error similar to this:
 ```

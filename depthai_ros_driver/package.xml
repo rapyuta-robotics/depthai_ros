@@ -25,6 +25,7 @@
   <depend>node_interface</depend>
   <depend>nodelet</depend>
   <depend>roscpp</depend>
+  <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>xacro</depend>
 

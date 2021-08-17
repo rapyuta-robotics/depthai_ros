@@ -37,50 +37,55 @@
 
 namespace rr {
 
-template <class Node>
-class DepthAIBase : public Node {
+//==============================================================================
+template<class Node>
+class DepthAIBase : public Node
+{
 public:
-    DepthAIBase() = default;
-    ~DepthAIBase() = default;
+  DepthAIBase() = default;
+  ~DepthAIBase() = default;
 
 private:
-    std::array<std::string, Stream::END> _stream_name{"left", "right", "rectified_left", "rectified_right", "disparity",
-            "disparity_color", "depth", "previewout", "jpegout", "video", "meta_d2h", "metaout", "object_tracker"};
-    std::array<std::string, Stream::END> _topic_name{"left", "right", "rectified_left", "rectified_right", "disparity",
-            "disparity_color", "depth", "previewout", "jpeg", "mjpeg", "meta_d2h", "object_info", "object_tracker"};
+  std::array<std::string, Stream::END> _topic_names;
 
-    std::array<std::unique_ptr<ros::Publisher>, Stream::END> _stream_publishers;
-    std::array<std::unique_ptr<ros::Publisher>, Stream::IMAGE_END> _camera_info_publishers;
+  std::array<std::unique_ptr<ros::Publisher>, Stream::END> _stream_publishers;
+  std::array<std::unique_ptr<ros::Publisher>,
+    Stream::IMAGE_END> _camera_info_publishers;
 
-    std::array<std::unique_ptr<camera_info_manager::CameraInfoManager>, Stream::IMAGE_END> _camera_info_manager;
-    ros::ServiceServer _camera_info_default;
-    ros::Subscriber _af_ctrl_sub;
-    ros::Subscriber _disparity_conf_sub;
+  std::array<std::unique_ptr<camera_info_manager::CameraInfoManager>,
+    Stream::IMAGE_END> _camera_info_managers;
+  ros::ServiceServer _camera_info_default;
+  ros::Subscriber _af_ctrl_sub;
+  ros::Subscriber _disparity_conf_sub;
 
-    ros::Timer _cameraReadTimer;   
+  ros::Timer _cameraReadTimer;
 
-    // Parameters
-    int _queue_size = 10;
-    std::string _camera_name = "";
-    std::string _camera_param_uri = "package://depthai_ros_driver/params/camera/";
+  // Parameters
+  int _queue_size = 10;
+  std::string _camera_name = "";
+  std::string _camera_param_uri = "package://depthai_ros_driver/params/camera/";
 
-    std::unique_ptr<DepthAICommon> _depthai_common;
+  std::unique_ptr<DepthAICommon> _depthai_common;
 
-    ros::Time _stamp;
-    double _depthai_ts_offset = -1;  // sadly, we don't have a way of measuring drift
-    const ros::Time get_rostime(const double camera_ts);
+  ros::Time _stamp;
+  double _depthai_ts_offset = -1;  // sadly, we don't have a way of measuring drift
+  const ros::Time get_rostime(const double camera_ts);
 
-    void prepareStreamConfig();
+  void prepareStreamConfig();
 
-    void publishImageMsg(const HostDataPacket& packet, Stream type, const ros::Time& stamp);
-    void publishObjectInfoMsg(const dai::Detections& detections, const ros::Time& stamp);
+  void publishImageMsg(const HostDataPacket& packet, Stream type,
+    const ros::Time& stamp);
+  void publishObjectInfoMsg(const dai::Detections& detections,
+    const ros::Time& stamp);
 
-    bool defaultCameraInfo(depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res);
+  bool defaultCameraInfo(depthai_ros_msgs::TriggerNamed::Request& req,
+    depthai_ros_msgs::TriggerNamed::Response& res);
 
-    void onInit() override;
+  void onInit() override;
 };
 }  // namespace rr
 
+//==============================================================================
 #include <node_interface/ros1_node_interface.hpp>
 #include <nodelet/nodelet.h>
 namespace rr {
