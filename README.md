@@ -29,7 +29,7 @@ $ git clone --recursive https://github.com/rapyuta-robotics/depthai_ros.git
 For older versions of git, one of the following processes might be needed:
 * Use `--recurse-submodules` instead of `--recursive`
 * Clone without any flags and then grab the submodules using `git submodule update --init --recursive`
-
+B
 ## Grab the Neural Network Model
 * Prepare MobileNetSSD compatible model (blob and json file). Once issue #5 is resolved, this will not be necessary for a default model. Due to limitations of Gen1 API used in the ROS driver, a model is required to run it.
 
@@ -61,15 +61,15 @@ Sample models are available [here](https://github.com/luxonis/depthai/tree/main/
     ros2 run depthai_ros_driver depthai_ros_driver_node
     ```
 Or
-
 2. Run: ROS2 `composition`. Similar concept of `nodelet`. To run it:
     ```bash
     # Terminal #1
-    ros2 component load /ComponentManager depthai_ros_driver rr::DepthAIBaseRos2
-
-    # New Terminal #2
     ros2 run rclcpp_components component_container
+    # New Terminal #2
+    ros2 component load /ComponentManager depthai_ros_driver rr::DepthAIBaseRos2
     ```
+Or
+3. ros2 launch: `ros2 launch depthai_ros_driver depthai_node.launch.xml`
 
 # Trouble shooting
 If you see an error similar to this:

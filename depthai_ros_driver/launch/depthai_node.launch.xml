@@ -1,15 +1,18 @@
 <?xml version="1.0"?>
+<!-- ROS2 launch for depthai_ros_driver -->
+
 <launch>
   <arg name="ns" default="depthai"/>
   <arg name="node_name" default="driver"/>
-
   <arg name="queue_size" default="1"/>
-
   <arg name="camera_name" default="bw1097"/>
+
+  <!-- These are not in used by the node in the original code, TODO: Clarify -->
   <arg name="camera_param_uri" default="package://depthai_ros_driver/params/camera/"
     description = "Location of parameters is {camera_param_uri}/{camera_name}/{stream}.yaml"/>
-
   <arg name="cmd_file" default="$(find-pkg-share depthai_ros_driver)/resources/depthai.cmd"/>
+  <!-- end -->
+
   <arg name="calibration_file" default="$(find-pkg-share depthai_ros_driver)/resources/calibration/$(var camera_name)/depthai.calib"/>
   <arg name="blob_file" default="$(find-pkg-share depthai_ros_driver)/resources/mobilenet_ssd.blob"/>
   <arg name="blob_file_config" default="$(find-pkg-share depthai_ros_driver)/resources/mobilenet-ssd.json"/>
@@ -29,8 +32,8 @@
 
   <arg name="use_gdb" default="false"/>
   
-  <!-- <arg name="launch_prefix" value="/usr/bin/gdb -/- args" if="$(var use_gdb)"/>
-  <arg name="launch_prefix" value="" unless="$(var use_gdb)"/> -->
+  <arg name="launch_prefix" default="/usr/bin/gdb -/- args" if="$(var use_gdb)"/>
+  <arg name="launch_prefix" default="" unless="$(var use_gdb)"/>
 
   <!--
   Possible streams:
@@ -49,16 +52,17 @@
 
   <arg name="stream_list" default="[left, right, metaout, previewout, disparity, disparity_color, depth, video]"/>
 
-  <group ns="$(var ns)">
-    <node pkg="depthai_ros_driver" exec="depthai_ros_driver_node" name="$(var node_name)" output="screen">
+  <group>
+    <node pkg="depthai_ros_driver" exec="depthai_ros_driver_node" name="$(var node_name)"
+      namespace="$(var ns)" output="screen" launch-prefix="$(var launch_prefix)">
       <param name="camera_name" value="$(var camera_name)"/>
 
       <param name="cmd_file" value="$(var cmd_file)"/>
       <param name="calibration_file" value="$(var calibration_file)"/>
       <param name="blob_file" value="$(var blob_file)"/>
       <param name="blob_file_config" value="$(var blob_file_config)"/>
-      <!-- <rosparam param="stream_list" subst_value="True">$(arg stream_list)</rosparam> -->
-
+      <param name="stream_list" value="$(var stream_list)"/>
+      
       <param name="sync_video_meta" value="$(var sync_video_meta)"/>
       <param name="compute_bbox_depth" value="$(var compute_bbox_depth)"/>
       <param name="full_fov_nn" value="$(var full_fov_nn)"/>
@@ -77,10 +81,10 @@
     </node>
   </group>
 
-  <!-- <param name="robot_description" command="$(find-pkg-share xacro)/xacro 
-        '$(find-pkg-share depthai_ros_driver)/urdf/$(var camera_name).urdf.xacro'"/>
   <node name="robot_state_publisher" pkg="robot_state_publisher" exec="robot_state_publisher">
     <param name="tf_prefix" value=""/>
-  </node> -->
-
+    <param name="robot_description"
+      value="$(command 'xacro 
+        $(find-pkg-share depthai_ros_driver)/urdf/$(var camera_name).urdf.xacro')"/>
+  </node>
 </launch>
