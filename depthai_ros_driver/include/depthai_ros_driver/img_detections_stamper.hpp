@@ -17,10 +17,9 @@ public:
 
 private:
     void onInit() override;
-    void __img_callback__(const sensor_msgs::ImageConstPtr& img_msg);
-    void __nn_callback__(const depthai_datatype_msgs::RawImgDetectionsConstPtr& nn_msg_ptr);
-    bool is_header_received_ = false;
-    std_msgs::Header last_recv_header_;
+    void img_callback(const sensor_msgs::ImageConstPtr& img_msg);
+    void nn_callback(const depthai_datatype_msgs::RawImgDetectionsConstPtr& nn_msg_ptr);
+    sensor_msgs::ImageConstPtr last_recv_msg_;
     depthai_datatype_msgs::ImgDetectionsStamped msg_stamped_; // have it as property so we don't need to allocate
 
     ros::Publisher pub_stamped_;
