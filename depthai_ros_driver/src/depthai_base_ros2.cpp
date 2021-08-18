@@ -112,36 +112,35 @@ DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
         RCLCPP_WARN(this->get_logger(), "Invalid Auto Focus mode requested");
     });
 
-  // lambda function to construct camera info publishers
-  auto set_camera_info_pub = [&](const Stream& id)
-    {
-      const auto& name = _topic_names[id];
-      const auto uri = _camera_param_uri + _camera_name + "/" + name + ".yaml";
-      _camera_info_managers[id] =
-        std::make_unique<camera_info_manager::CameraInfoManager>(
-        this, name, uri);
-      _camera_info_publishers[id] = this->create_publisher<CameraInfoMsg>(
-        name + "/camera_info", _queue_size);
-    };
-
   // lambda function to construct stream msg publishers
   auto set_stream_pub = [&](const Stream& id, auto message_type)
     {
       const auto& name = _topic_names[id];
-      using type = decltype(message_type);
       std::string suffix;
+
+      // if is image stream
       if (id < Stream::IMAGE_END)
       {
+        // set camera info publisher
+        const auto uri = _camera_param_uri + _camera_name + "/" + name +
+          ".yaml";
+        _camera_info_managers[id] =
+          std::make_unique<camera_info_manager::CameraInfoManager>(
+          this, name, uri);
+        _camera_info_publishers[id] = this->create_publisher<CameraInfoMsg>(
+          name + "/camera_info", _queue_size);
+
+        // set stream topic name
         suffix =
           (id < Stream::UNCOMPRESSED_IMG_END) ? "/image_raw" : "/compressed";
       }
 
+      using type = decltype(message_type);
       _stream_publishers[id] =
         this->create_publisher<type>(name + suffix, _queue_size);
     };
 
-  _depthai_common->create_stream_publishers(set_camera_info_pub,
-    set_stream_pub);
+  _depthai_common->create_stream_publishers(set_stream_pub);
 }
 
 //==============================================================================

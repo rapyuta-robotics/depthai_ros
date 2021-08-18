@@ -29,7 +29,7 @@ $ git clone --recursive https://github.com/rapyuta-robotics/depthai_ros.git
 For older versions of git, one of the following processes might be needed:
 * Use `--recurse-submodules` instead of `--recursive`
 * Clone without any flags and then grab the submodules using `git submodule update --init --recursive`
-B
+
 ## Grab the Neural Network Model
 * Prepare MobileNetSSD compatible model (blob and json file). Once issue #5 is resolved, this will not be necessary for a default model. Due to limitations of Gen1 API used in the ROS driver, a model is required to run it.
 

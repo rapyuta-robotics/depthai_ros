@@ -19,30 +19,20 @@
 #define DEPTHAI_ROS_DRIVER__DEPTHAI_BASE_ROS2_HPP
 
 #include <chrono>
-#include <functional>
-#include <memory>
-#include <string>
 #include <variant>
 
 #include <rclcpp/node.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/string.hpp>
-#include <std_msgs/msg/float32.hpp>
 
 #include <depthai_ros_driver/depthai_common.hpp>
-
-#include <sensor_msgs/msg/image.hpp>
-#include <depthai_ros_msgs/msg/objects.hpp>
-#include <depthai_ros_msgs/msg/auto_focus_ctrl.hpp>
-#include <depthai_ros_msgs/srv/trigger_named.hpp>
 
 #include <image_transport/camera_publisher.hpp>
 #include <camera_info_manager/camera_info_manager.hpp>
 
 #include <depthai_ros_driver/visibility_control.h>
-#include <boost/make_shared.hpp>
 
 using namespace std::chrono_literals;
+
 using TriggerSrv = depthai_ros_msgs::srv::TriggerNamed;
 using AutoFocusCtrlMsg = depthai_ros_msgs::msg::AutoFocusCtrl;
 using Float32Msg = std_msgs::msg::Float32;

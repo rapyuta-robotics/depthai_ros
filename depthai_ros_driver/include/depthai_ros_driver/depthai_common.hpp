@@ -18,7 +18,6 @@
 #ifndef DEPTHAI_ROS_DRIVER__DEPTHAI_COMMON_HPP
 #define DEPTHAI_ROS_DRIVER__DEPTHAI_COMMON_HPP
 
-#include <regex>
 
 // Common ros and ros2 api
 #include <cv_bridge/cv_bridge.h>
@@ -29,11 +28,6 @@
 #include <depthai/nnet/nnet_packet.hpp>
 #include <depthai/pipeline/cnn_host_pipeline.hpp>
 
-// general 3rd party includes
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <opencv2/opencv.hpp>
-
 // std includes
 #include <algorithm>
 #include <array>
@@ -41,10 +35,11 @@
 #include <string>
 
 #if defined(USE_ROS2)
+  #include <std_msgs/msg/float32.hpp>
+  #include <sensor_msgs/msg/image.hpp>
   #include <depthai_ros_msgs/srv/trigger_named.hpp>
   #include <depthai_ros_msgs/msg/objects.hpp>
   #include <depthai_ros_msgs/msg/auto_focus_ctrl.hpp>
-  #include <sensor_msgs/msg/image.hpp>
 
 using ImageMsg = sensor_msgs::msg::Image;
 using CompressedImageMsg = sensor_msgs::msg::CompressedImage;
@@ -52,8 +47,9 @@ using ObjectsMsg = depthai_ros_msgs::msg::Objects;
 using ObjectMsg = depthai_ros_msgs::msg::Object;
 
 #else
+  #include <std_msgs/Float32.h>
+  #include <sensor_msgs/Image.h>
   #include <depthai_ros_msgs/AutoFocusCtrl.h>
-  #include <depthai_ros_msgs/Object.h>
   #include <depthai_ros_msgs/Objects.h>
   #include <depthai_ros_msgs/TriggerNamed.h>
 
@@ -112,15 +108,10 @@ public:
 
   /// Create camera stream publisher
   ///
-  /// \param set_camera_info_pub_method
-  ///    lambda to set camera info for each stream
-  ///
   /// \param set_stream_pub_method
   ///    lambda to set a single stream publisher
   template<typename T>
-  void create_stream_publishers(
-    std::function<void(const Stream&)> set_camera_info_pub_method,
-    T set_stream_pub_method);
+  void create_stream_publishers(T set_stream_pub_method);
 
   using PublishImageFn =
     std::function<void(const HostDataPacket&, Stream type, double ts)>;
@@ -187,6 +178,13 @@ private:
   std::shared_ptr<CNNHostPipeline> _pipeline;
 
   // TODO, bettwer way?
+  // struct StreamInfo
+  // {
+  //   Stream idx;
+  //   std::string stream_name;
+  //   std::string topic_name;
+  // }
+
   std::array<std::string, Stream::END> _stream_name{
     "left", "right", "rectified_left", "rectified_right", "disparity",
     "disparity_color", "depth", "previewout", "jpegout", "video",
@@ -205,9 +203,7 @@ private:
 //==============================================================================
 // TODO Move these to impl hpp
 template<typename T>
-void DepthAICommon::create_stream_publishers(
-  std::function<void(const Stream&)> set_camera_info_pub_method,
-  T set_stream_pub_method)
+void DepthAICommon::create_stream_publishers(T set_stream_pub_method)
 {
   for (const auto& stream : _cfg.stream_list)
   {
@@ -218,7 +214,6 @@ void DepthAICommon::create_stream_publishers(
 
     if (index < Stream::IMAGE_END)
     {
-      set_camera_info_pub_method(index);
       if (index < Stream::UNCOMPRESSED_IMG_END)
         set_stream_pub_method(index, ImageMsg{});
       else

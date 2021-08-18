@@ -2,38 +2,11 @@
 
 #include <depthai_ros_driver/depthai_common.hpp>
 
-// self-message includes
-#include <depthai_ros_msgs/AutoFocusCtrl.h>
-#include <depthai_ros_msgs/Object.h>
-#include <depthai_ros_msgs/Objects.h>
-#include <depthai_ros_msgs/TriggerNamed.h>
-
 // core ROS dependency includes
 #include <camera_info_manager/camera_info_manager.h>
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/camera_publisher.h>
 #include <ros/ros.h>
-
-// ROS1 messages
-#include <sensor_msgs/Image.h>
-#include <std_msgs/Float32.h>
-
-// relevant 3rd party includes
-#include <depthai/device.hpp>
-#include <depthai/host_data_packet.hpp>
-#include <depthai/nnet/nnet_packet.hpp>
-#include <depthai/pipeline/cnn_host_pipeline.hpp>
-
-// general 3rd party includes
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <opencv2/opencv.hpp>
-
-// std includes
-#include <algorithm>
-#include <array>
-#include <memory>
-#include <string>
 
 namespace rr {
 

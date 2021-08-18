@@ -20,7 +20,6 @@
   <depend>cv_bridge</depend>
   <depend>depthai_ros_msgs</depend>
   <depend>image_transport</depend>
-  <depend>message_generation</depend>
   <depend>message_runtime</depend>
   <depend>node_interface</depend>
   <depend>nodelet</depend>

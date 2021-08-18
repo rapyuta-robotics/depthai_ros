@@ -15,6 +15,13 @@
  *
 */
 
+#include <regex>
+
+// general 3rd party includes
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <opencv2/opencv.hpp>
+
 #include <depthai_ros_driver/depthai_common.hpp>
 
 namespace rr {

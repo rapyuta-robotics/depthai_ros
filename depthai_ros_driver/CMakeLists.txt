@@ -20,29 +20,32 @@ project (depthai_ros_driver VERSION 0.1.0 LANGUAGES CXX)
 find_package (OpenCV REQUIRED)
 find_package (Boost REQUIRED COMPONENTS system)
 
-################################################
-# Compile in ROS
-################################################
+# Add depthai-core dependency
+add_subdirectory (${DEPTHAI_CORE} depthai-core)
 
-if($ENV{ROS_VERSION} STREQUAL 1)
-
-set (PKG_DEPS
+set (PKG_DEPS_COMMON
     camera_info_manager
     cv_bridge
     depthai_ros_msgs
     image_transport
-    message_generation
-    nodelet
-    roscpp
     sensor_msgs
     std_msgs
+)
+
+#==============================================================================
+# Compile in ROS1
+#==============================================================================
+
+if($ENV{ROS_VERSION} STREQUAL 1)
+
+set (PKG_DEPS
+    ${PKG_DEPS_COMMON}
+    nodelet
+    roscpp
     node_interface
 )
 
 find_package (catkin REQUIRED COMPONENTS ${PKG_DEPS})
-
-# Add depthai-core dependency
-add_subdirectory (${DEPTHAI_CORE} depthai-core)
 
 catkin_package (
     INCLUDE_DIRS include
@@ -71,7 +74,9 @@ target_link_libraries (${PROJECT_NAME}_lib
     ${Boost_LIBRARIES}
     depthai-core
 )
-add_dependencies (${PROJECT_NAME}_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies (${PROJECT_NAME}_lib
+    ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
+)
 
 add_library (${PROJECT_NAME}_nodelet src/depthai_nodelet.cpp)
 target_link_libraries (${PROJECT_NAME}_nodelet
@@ -104,26 +109,21 @@ else()
   message(VERBOSE "ROS version is $ENV{ROS_VERSION}, skipping ROS1 ${PROJECT_NAME}")
 endif()
 
-################################################
-# Compile in ROS 2
-################################################
+
+#==============================================================================
+# Compile in ROS1
+#==============================================================================
+
 if($ENV{ROS_VERSION} STREQUAL 2)
     find_package(ament_cmake REQUIRED)
     set (PKG_DEPS
-        camera_info_manager
-        cv_bridge
-        depthai_ros_msgs
-        image_transport
+        ${PKG_DEPS_COMMON}
         rclcpp
-        sensor_msgs
-        std_msgs
         rclcpp_components
     )
     foreach(pkg ${PKG_DEPS})
         find_package(${pkg} REQUIRED)
     endforeach()
-
-    add_subdirectory (${DEPTHAI_CORE} depthai-core)
 
     add_definitions(-DUSE_ROS2)   # <-------- Set to use ros2 macro, for #ifdef
     add_library (${PROJECT_NAME}_lib SHARED
@@ -146,9 +146,7 @@ if($ENV{ROS_VERSION} STREQUAL 2)
     add_executable (${PROJECT_NAME}_node src/depthai_node_ros2.cpp)
     target_link_libraries(${PROJECT_NAME}_node PUBLIC ${PROJECT_NAME}_lib)
 
-    ##########################
     # Install ros2 component
-    ##########################
     install(TARGETS
         ${PROJECT_NAME}_lib
         ARCHIVE DESTINATION lib
@@ -156,10 +154,7 @@ if($ENV{ROS_VERSION} STREQUAL 2)
         RUNTIME DESTINATION bin)
 
     install(DIRECTORY
-        launch/
-        params
-        resources
-        urdf
+        launch/ params resources urdf
         DESTINATION share/${PROJECT_NAME}
     )
 

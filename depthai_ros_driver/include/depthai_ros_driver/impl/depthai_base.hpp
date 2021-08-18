@@ -1,5 +1,3 @@
-#include <regex>
-
 #include <ros/ros.h>
 #include <depthai_ros_driver/depthai_base.hpp>
 
@@ -156,35 +154,36 @@ template<class Node>
 void DepthAIBase<Node>::prepareStreamConfig()
 {
   auto& nh = this->getNodeHandle();
-
-  auto set_camera_info_pub = [&](const Stream& id)
-    {
-      const auto& name = _topic_names[id];
-      const auto uri = _camera_param_uri + _camera_name + "/" + name + ".yaml";
-      _camera_info_managers[id] =
-        std::make_unique<camera_info_manager::CameraInfoManager>(
-        ros::NodeHandle{nh, name}, name, uri);
-      _camera_info_publishers[id] = std::make_unique<ros::Publisher>(
-        nh.template advertise<sensor_msgs::CameraInfo>(name + "/camera_info",
-        _queue_size));
-    };
   auto set_stream_pub = [&](const Stream& id, auto message_type)
     {
-      using type = decltype(message_type);
+      const auto& name = _topic_names[id];
       std::string suffix;
+
+      // if is image stream
       if (id < Stream::IMAGE_END)
       {
+        // set camera info publisher
+        const auto uri = _camera_param_uri + _camera_name + "/" + name +
+          ".yaml";
+        _camera_info_managers[id] =
+          std::make_unique<camera_info_manager::CameraInfoManager>(
+          ros::NodeHandle{nh, name}, name, uri);
+        _camera_info_publishers[id] = std::make_unique<ros::Publisher>(
+          nh.template advertise<sensor_msgs::CameraInfo>(name + "/camera_info",
+          _queue_size));
+
+        // set stream topic name
         suffix =
           (id < Stream::UNCOMPRESSED_IMG_END) ? "/image_raw" : "/compressed";
       }
-      const auto& name = _topic_names[id];
+
+      using type = decltype(message_type);
       _stream_publishers[id] =
         std::make_unique<ros::Publisher>(nh.template advertise<type>(name +
           suffix, _queue_size));
     };
 
-  _depthai_common->create_stream_publishers(set_camera_info_pub,
-    set_stream_pub);
+  _depthai_common->create_stream_publishers(set_stream_pub);
 
   _camera_info_default = nh.advertiseService("reset_camera_info",
       &DepthAIBase::defaultCameraInfo,
