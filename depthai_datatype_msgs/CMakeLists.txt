@@ -5,6 +5,7 @@ project (depthai_datatype_msgs VERSION 1.0.0)
 find_package (catkin REQUIRED COMPONENTS
   message_generation
   depthai_common_msgs
+  std_msgs
 )
 
 get_filename_component (MSGPACK "${CMAKE_CURRENT_LIST_DIR}/../external/msgpack-c" REALPATH)
@@ -17,6 +18,7 @@ add_message_files (
   FILES
   ImgDetection.msg
   RawImgDetections.msg
+  ImgDetectionsStamped.msg
 
   # TrackingStatus.msg
   Tracklet.msg
@@ -58,6 +60,7 @@ add_message_files (
 generate_messages (
   DEPENDENCIES
   depthai_common_msgs
+  std_msgs
 )
 
 ###################################
