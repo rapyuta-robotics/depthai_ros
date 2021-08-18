@@ -77,9 +77,9 @@ enum Stream : std::size_t
   JPEG_OUT,
   VIDEO,
   // non-image streams
-  META_D2H,
+  META_D2H, // TODO: Clarify! this should be img stream?
   META_OUT,
-  OBJECT_TRACKER,
+  OBJECT_TRACKER,  // TODO: Clarify! this is not in used?
   // utility enums
   END,
   IMAGE_END = META_D2H,
@@ -177,14 +177,7 @@ private:
   std::unique_ptr<Device> _depthai;
   std::shared_ptr<CNNHostPipeline> _pipeline;
 
-  // TODO, bettwer way?
-  // struct StreamInfo
-  // {
-  //   Stream idx;
-  //   std::string stream_name;
-  //   std::string topic_name;
-  // }
-
+ 
   std::array<std::string, Stream::END> _stream_name{
     "left", "right", "rectified_left", "rectified_right", "disparity",
     "disparity_color", "depth", "previewout", "jpegout", "video",

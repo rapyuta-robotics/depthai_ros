@@ -6,6 +6,11 @@ endif ()
 
 project (node_interface VERSION 0.1.0 LANGUAGES CXX)
 
+#==============================================================================
+# Only compile in ROS1
+#==============================================================================
+if($ENV{ROS_VERSION} STREQUAL 1)
+
 ## Find catkin macros and libraries
 find_package (catkin REQUIRED
   image_transport
@@ -57,3 +62,7 @@ install (TARGETS ${PROJECT_NAME}
 install (DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
+
+else()
+    message(VERBOSE "Skipping ${PROJECT_NAME} for ROS2 build")
+endif()

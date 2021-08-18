@@ -41,7 +41,7 @@ private:
   std::unique_ptr<DepthAICommon> _depthai_common;
 
   ros::Time _stamp;
-  double _depthai_ts_offset = -1;  // sadly, we don't have a way of measuring drift
+  double _depthai_init_ts = -1;  // sadly, we don't have a way of measuring drift
   const ros::Time get_rostime(const double camera_ts);
 
   void prepareStreamConfig();

@@ -217,17 +217,13 @@ template<class Node>
 const ros::Time DepthAIBase<Node>::get_rostime(const double camera_ts)
 {
   // only during init
-  if (_depthai_ts_offset == -1)
+  if (_depthai_init_ts == -1)
   {
     ros::Time stamp = ros::Time::now();
-    _depthai_ts_offset = camera_ts;
+    _depthai_init_ts = camera_ts;
     _stamp = stamp;
   }
-
-  if (camera_ts < 0)
-    return ros::Time::now();
-
-  return _stamp + ros::Duration(camera_ts - _depthai_ts_offset);
+  return _stamp + ros::Duration(camera_ts - _depthai_init_ts);
 }
 
 }  // namespace rr

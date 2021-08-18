@@ -7,21 +7,21 @@
   <maintainer email="kunal.tyagi@rapyuta-robotics.com">Kunal Tyagi</maintainer>
   <license>MPLv2</license>
   <author>Kunal Tyagi</author>
-
-  <!-- classic ros1 compilation -->
-  <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>message_generation</build_depend>
+  
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
-  <exec_depend>message_runtime</exec_depend>
+
+  <!-- classic ros1 compilation -->
+  <buildtool_depend condition="$ROS_VERSION == 1">catkin</buildtool_depend>
+  <depend condition="$ROS_VERSION == 1">message_generation</depend>
+  <exec_depend condition="$ROS_VERSION == 1">message_runtime</exec_depend>
 
   <!-- ros2 compilation: TODO to make sure it works with rosdep -->
-  <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend >rosidl_default_generators</buildtool_depend>
-  <build_depend>builtin_interfaces</build_depend>
-  <exec_depend>rosidl_default_runtime</exec_depend>
+  <depend condition="$ROS_VERSION == 2">ament_cmake</depend>
+  <depend condition="$ROS_VERSION == 2">rosidl_default_generators</depend>
+  <depend condition="$ROS_VERSION == 2">builtin_interfaces</depend>
+  <exec_depend condition="$ROS_VERSION == 2">rosidl_default_runtime</exec_depend>
 
-  <test_depend>ament_lint_common</test_depend>
   <member_of_group>rosidl_interface_packages</member_of_group>
   <export >
     <build_type condition="$ROS_VERSION == 2">ament_cmake</build_type>

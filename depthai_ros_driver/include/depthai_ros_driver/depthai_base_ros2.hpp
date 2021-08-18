@@ -87,7 +87,7 @@ private:
   int _queue_size = 10;
 
   rclcpp::Time _stamp;
-  double _depthai_ts_offset = -1;  // sadly, we don't have a way of measuring drift
+  double _depthai_init_ts = -1;  // sadly, we don't have a way of measuring drift
 
 };
 

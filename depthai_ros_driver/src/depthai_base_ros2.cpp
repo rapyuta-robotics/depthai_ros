@@ -37,9 +37,7 @@ DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
   get_param("camera_param_uri", _camera_param_uri);
 
   if (_camera_param_uri.back() != '/')
-  {
     _camera_param_uri += "/";
-  }
 
   _depthai_common = std::make_unique<DepthAICommon>(get_param);
 
@@ -215,17 +213,13 @@ void DepthAIBaseRos2::publishImageMsg(
 const rclcpp::Time DepthAIBaseRos2::get_rostime(const double camera_ts)
 {
   // only during init
-  if (_depthai_ts_offset == -1)
+  if (_depthai_init_ts == -1)
   {
     rclcpp::Time stamp = this->now();
-    _depthai_ts_offset = camera_ts;
+    _depthai_init_ts = camera_ts;
     _stamp = stamp;
   }
-
-  if (camera_ts < 0)
-    return this->now();
-
-  return _stamp + rclcpp::Duration(camera_ts - _depthai_ts_offset);
+  return _stamp + rclcpp::Duration(camera_ts - _depthai_init_ts);
 }
 
 }  // namespace rr

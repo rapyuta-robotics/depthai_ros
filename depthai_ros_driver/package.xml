@@ -11,19 +11,20 @@
 
   <license>MPLv2</license>
 
-  <buildtool_depend>ament_cmake</buildtool_depend>
-  <depend>rclcpp</depend>
+  <buildtool_depend condition="$ROS_VERSION == 1">catkin</buildtool_depend>
+  <buildtool_depend condition="$ROS_VERSION == 2">ament_cmake</buildtool_depend>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <depend condition="$ROS_VERSION == 1">roscpp</depend>
+  <depend condition="$ROS_VERSION == 1">nodelet</depend>
+  <depend condition="$ROS_VERSION == 2">rclcpp</depend>
+
+  <depend>depthai_ros_msgs</depend>
+  <depend condition="$ROS_VERSION == 1">node_interface</depend>
+
   <depend>boost</depend>
   <depend>camera_info_manager</depend>
   <depend>cv_bridge</depend>
-  <depend>depthai_ros_msgs</depend>
   <depend>image_transport</depend>
-  <depend>message_runtime</depend>
-  <depend>node_interface</depend>
-  <depend>nodelet</depend>
-  <depend>roscpp</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>xacro</depend>
