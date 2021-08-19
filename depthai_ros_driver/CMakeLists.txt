@@ -20,9 +20,6 @@ project (depthai_ros_driver VERSION 0.1.0 LANGUAGES CXX)
 find_package (OpenCV REQUIRED)
 find_package (Boost REQUIRED COMPONENTS system)
 
-# Add depthai-core dependency
-add_subdirectory (${DEPTHAI_CORE} depthai-core)
-
 set (PKG_DEPS_COMMON
     camera_info_manager
     cv_bridge
@@ -46,6 +43,9 @@ set (PKG_DEPS
 )
 
 find_package (catkin REQUIRED COMPONENTS ${PKG_DEPS})
+
+# Add depthai-core dependency
+add_subdirectory (${DEPTHAI_CORE} depthai-core)
 
 catkin_package (
     INCLUDE_DIRS include
@@ -124,6 +124,9 @@ if($ENV{ROS_VERSION} STREQUAL 2)
     foreach(pkg ${PKG_DEPS})
         find_package(${pkg} REQUIRED)
     endforeach()
+
+    # Add depthai-core dependency
+    add_subdirectory (${DEPTHAI_CORE} depthai-core)
 
     add_definitions(-DUSE_ROS2)   # <-------- Set to use ros2 macro, for #ifdef
     add_library (${PROJECT_NAME}_lib SHARED

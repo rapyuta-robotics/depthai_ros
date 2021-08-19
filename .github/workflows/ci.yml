@@ -1,12 +1,6 @@
 name: Build CI
 
-on:
-  push:
-    branches:
-    - master
-  pull_request:
-    types: [opened, synchronize, reopened]
-
+on: [push, pull_request] # TODO update
 jobs:
   clone:
     # separate clone + artifact job because the action wants git 2.18
@@ -15,11 +9,11 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
-        path: catkin_ws/src/${{ github.repository }}
+        path: ros_ws/src/${{ github.repository }}
     - uses: actions/upload-artifact@v2
       with:
         name: workspace
-        path: catkin_ws
+        path: ros_ws
         if-no-files-found: error
   build:
     needs: clone
@@ -28,18 +22,22 @@ jobs:
       image: ${{ matrix.images }}
     strategy:
       matrix:
-        images: ['ros:noetic-perception', 'ros:melodic-perception']
+        # TODO: ci with melodic
+        images: ['ros:noetic-perception', 'ros:foxy-ros-base']
         # compiler: ["/usr/bin/g++", "/usr/bin/clang++"]
     steps:
     - name: 'Install dependencies'
       shell: bash
       run: |
         apt update
-        apt install -y libusb-1.0-0{,-dev}
+        apt install -y \
+          libusb-1.0-0{,-dev} \
+          python3-colcon-common-extensions \
+          python3-rosdep
     - uses: actions/download-artifact@v2
       with:
         name: workspace
-        path: catkin_ws
+        path: ros_ws
     - name: 'Cache hunter files'
       id: cache-hunter
       uses: actions/cache@v2
@@ -50,23 +48,26 @@ jobs:
       run: |
         pwd
         ls -al .
-        ls -al catkin_ws/src/${{ github.repository }}
-    - name: 'Setup catkin'
+        ls -al ros_ws/src/${{ github.repository }}
+    - name: 'Setup ros workspace'
       shell: bash
       run: |
         source /opt/ros/*/setup.bash
-        cd catkin_ws/src
-        catkin_init_workspace
+        cd ros_ws
+        rosdep update
+        rosdep install --from-paths src --ignore-src -yr
+        # catkin_init_workspace
     - name: 'Build and install'
       shell: bash
       run: |
         export PYTHONIOENCODING=utf8  # from github.com/docker/compose/issues/2576
         source /opt/ros/*/setup.bash
-        cd catkin_ws
-        catkin_make_isolated --install
-    - name: 'Source and confirm'
-      shell: bash
-      run: |
-        source catkin_ws/install_isolated/setup.bash
-        roscd
-        pwd  # TODO: put an assert on it
+        cd ros_ws
+        colcon build
+        # catkin_make_isolated --install
+    # - name: 'Source and confirm'
+    #   shell: bash
+    #   run: |
+    #     source catkin_ws/install_isolated/setup.bash
+    #     roscd
+    #     pwd  # TODO: put an assert on it
