@@ -84,6 +84,30 @@ cv::Mat planar2interleaved(const cv::Mat& mat);
 
 cv::Mat interleaved2planar(const cv::Mat& mat);
 
+/**
+ * @brief Compute the difference between ros::Time::now() and ros::SteadyTime::now()
+ * 
+ * @return ros::Duration 
+ */
+ros::Duration delta_ros_time_to_steady_time(){
+    auto ros_time = ros::Time::now();
+    auto steady_time = ros::SteadyTime::now();
+    auto steady_time_as_ros_time = ros::Time(steady_time.sec, steady_time.nsec);
+
+    return ros_time - steady_time_as_ros_time;
+}
+/**
+ * @brief Convert dai timestamp to ros::Time
+ * 
+ * @param ts dai timestamp 
+ * @return ros::Time 
+ */
+ros::Time timestamp_dai2ros(const depthai_common_msgs::Timestamp& ts) {
+    static ros::Duration delta = delta_ros_time_to_steady_time();
+    // dai uses steady_clock, so add delta to convert it to ros time
+    return ros::Time(ts.sec, ts.nsec) + delta;
+}
+
 // template specialization for converting depthai_datatype_msgs::RawImgFrame to sensor_msgs::Image
 template <>
 struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
@@ -93,8 +117,7 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
     static void publish(const ImagePublishers& pub, InputType& input, const std::string& frame_id) {
         cv_bridge::CvImage bridge;
         bridge.header.frame_id = frame_id + "_optical_frame";
-        bridge.header.stamp.sec = input.ts.sec;
-        bridge.header.stamp.nsec = input.ts.nsec;
+        bridge.header.stamp = timestamp_dai2ros(input.ts);
 
         if (static_cast<dai::RawImgFrame::Type>(input.fb.type) == dai::RawImgFrame::Type::BITSTREAM) {
             auto msg = boost::make_shared<sensor_msgs::CompressedImage>();
