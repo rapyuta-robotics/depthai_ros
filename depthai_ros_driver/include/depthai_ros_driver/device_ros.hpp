@@ -160,10 +160,11 @@ protected:
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             // convert msg to data
+            const auto& data_ref = adapt_ros2dai<MsgType>::convert(*msg);
             msgpack::pack(sbuf, *msg);
             PacketWriter writer(*stream);
-            writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<std::uint8_t*>(sbuf.data()), sbuf.size(),
-                    static_cast<std::uint32_t>(DataType), writer_buf);
+            writer.write(data_ref.data.data(), data_ref.data.size(), reinterpret_cast<std::uint8_t*>(sbuf.data()),
+                    sbuf.size(), static_cast<std::uint32_t>(DataType), writer_buf);
 
             sbuf.clear();  // Else the sbuf data is accumulated
 

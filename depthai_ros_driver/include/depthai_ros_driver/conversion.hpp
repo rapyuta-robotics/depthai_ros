@@ -12,6 +12,7 @@
 #include <opencv2/core.hpp>
 
 // message headers
+#include <depthai_datatype_msgs/RawCameraControl.h>
 #include <depthai_datatype_msgs/RawImgFrame.h>
 #include <sensor_msgs/Image.h>
 
@@ -141,6 +142,32 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
         pubs.info_manager_ptr =
                 std::make_shared<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, name}, name, uri);
         return pubs;
+    }
+};
+
+template <class T>
+struct adapt_ros2dai {
+    using InputType = remove_cvref_t<T>;
+    using OutputType = remove_cvref_t<T>;
+
+    // by default, return stuff as it is
+    static const OutputType& convert(const InputType& input) { return input; }
+};
+
+#define RR_MOVE(r, d, name) output.name = std::move(reinterpret_cast<decltype(output.name)&>(input.name));
+#define RR_MOVE_ALL(...) BOOST_PP_SEQ_FOR_EACH(RR_MOVE, _, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
+
+template <>
+struct adapt_ros2dai<depthai_datatype_msgs::RawCameraControl> {
+    using InputType = depthai_datatype_msgs::RawCameraControl;
+    using OutputType = dai::RawCameraControl;
+
+    static OutputType convert(InputType& input) {
+        OutputType output;
+        RR_MOVE_ALL(cmdMask, autoFocusMode, lensPosition, expManual, aeRegion, afRegion, awbMode, sceneMode,
+                antiBandingMode, effectMode, aeLockMode, awbLockMode, expCompensation, brightness, contrast, saturation,
+                sharpness, lumaDenoise, chromaDenoise, data);
+        return output;
     }
 };
 }  // namespace rr
