@@ -27,8 +27,6 @@
 #include <depthai_ros_driver/depthai_common.hpp>
 
 #include <image_transport/camera_publisher.hpp>
-#include <camera_info_manager/camera_info_manager.hpp>
-
 #include <depthai_ros_driver/visibility_control.h>
 
 using namespace std::chrono_literals;
@@ -36,7 +34,6 @@ using namespace std::chrono_literals;
 using TriggerSrv = depthai_ros_msgs::srv::TriggerNamed;
 using AutoFocusCtrlMsg = depthai_ros_msgs::msg::AutoFocusCtrl;
 using Float32Msg = std_msgs::msg::Float32;
-using CameraInfoMsg = sensor_msgs::msg::CameraInfo;
 
 namespace rr {
 
@@ -71,19 +68,14 @@ private:
 
   using StreamPubVariant = std::variant<ObjectsPubPtr, ObjectPubPtr,
       ImagePubPtr, ComImagePubPtr>;
-  using CameraInfoManagerPtr =
-    std::unique_ptr<camera_info_manager::CameraInfoManager>;
 
   std::array<StreamPubVariant, Stream::END> _stream_publishers;
   std::array<CameraInfoPubPtr, Stream::IMAGE_END> _camera_info_publishers;
-  std::array<CameraInfoManagerPtr, Stream::IMAGE_END> _camera_info_managers;
 
   std::unique_ptr<DepthAICommon> _depthai_common;
-  std::array<std::string, Stream::END> _topic_names;
 
   // params
   std::string _camera_name;
-  std::string _camera_param_uri;
   int _queue_size = 10;
 
   rclcpp::Time _stamp;

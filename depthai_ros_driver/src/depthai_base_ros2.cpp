@@ -34,10 +34,6 @@ DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
 
   get_param("queue_size", _queue_size);
   get_param("camera_name", _camera_name);
-  get_param("camera_param_uri", _camera_param_uri);
-
-  if (_camera_param_uri.back() != '/')
-    _camera_param_uri += "/";
 
   _depthai_common = std::make_unique<DepthAICommon>(get_param);
 
@@ -52,12 +48,16 @@ DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
     }
   );
 
-  _topic_names = _depthai_common->get_topic_names();
+  _cameraReadTimer = this->create_wall_timer(0.5s,
+      [&]()
+      {
+        _depthai_common->process_and_publish_packets();
+      });
 
   /// ros2 dds qos profile
   const auto driver_qos = rclcpp::ServicesQoS().best_effort();
 
-  // create service
+  // create Trigger default camera param service
   _camera_info_default = this->create_service<TriggerSrv>(
     "reset_camera_info",
     [this](
@@ -65,28 +65,21 @@ DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
       std::shared_ptr<TriggerSrv::Response> res)
     {
       const auto& name = req->name;
+      const auto& topic_names = _depthai_common->get_topic_names();
       const auto it = std::find(
-        _topic_names.cbegin(), _topic_names.cend(), name);
-      const auto index = std::distance(_topic_names.cbegin(), it);
+        topic_names.cbegin(), topic_names.cend(), name);
+      const auto index = std::distance(topic_names.cbegin(), it);
 
-      if (it == _topic_names.cend())
+      if (it == topic_names.cend())
       {
         res->success = false;
         res->message = "No such camera known";
         return;
       }
 
-      if (!_camera_info_managers[index])   // check if nullopt
-      {
-        res->success = false;
-        res->message = "stream index is not valid";
-        return;
-      }
-
-      const auto uri = _camera_param_uri + "default/" + name + ".yaml";
-      res->success = (
-        _camera_info_managers[index]->setCameraName(name) &&
-        _camera_info_managers[index]->loadCameraInfo(uri));
+      res->success = _depthai_common->set_camera_info_manager(
+        static_cast<Stream>(index), name, "default/",
+        this->create_sub_node(name).get());
     }
   );
 
@@ -110,35 +103,31 @@ DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
         RCLCPP_WARN(this->get_logger(), "Invalid Auto Focus mode requested");
     });
 
-  // lambda function to construct stream msg publishers
-  auto set_stream_pub = [&](const Stream& id, auto message_type)
+  // provide lambda function to construct stream msg publishers
+  _depthai_common->create_stream_publishers(
+    [&](const Stream& id, const std::string& topic_name, auto message_type)
     {
-      const auto& name = _topic_names[id];
       std::string suffix;
-
       // if is image stream
       if (id < Stream::IMAGE_END)
       {
         // set camera info publisher
-        const auto uri = _camera_param_uri + _camera_name + "/" + name +
-          ".yaml";
-        _camera_info_managers[id] =
-          std::make_unique<camera_info_manager::CameraInfoManager>(
-          this, name, uri);
+        _depthai_common->set_camera_info_manager(
+          id, topic_name, _camera_name + "/",
+          this->create_sub_node(topic_name).get());
+
         _camera_info_publishers[id] = this->create_publisher<CameraInfoMsg>(
-          name + "/camera_info", _queue_size);
+          topic_name + "/camera_info", _queue_size);
 
         // set stream topic name
         suffix =
-          (id < Stream::UNCOMPRESSED_IMG_END) ? "/image_raw" : "/compressed";
+        (id < Stream::UNCOMPRESSED_IMG_END) ? "/image_raw" : "/compressed";
       }
 
       using type = decltype(message_type);
       _stream_publishers[id] =
-        this->create_publisher<type>(name + suffix, _queue_size);
-    };
-
-  _depthai_common->create_stream_publishers(set_stream_pub);
+      this->create_publisher<type>(topic_name + suffix, _queue_size);
+    });
 }
 
 //==============================================================================
@@ -171,7 +160,7 @@ void DepthAIBaseRos2::publishImageMsg(
   // publish camera info
   if (camInfoPubPtr->get_subscription_count() > 0)
   {
-    auto msg = _camera_info_managers[type]->getCameraInfo();
+    auto msg = _depthai_common->get_camera_info_msg(type);
     msg.header = header;
     camInfoPubPtr->publish(msg);
   }
@@ -215,9 +204,8 @@ const rclcpp::Time DepthAIBaseRos2::get_rostime(const double camera_ts)
   // only during init
   if (_depthai_init_ts == -1)
   {
-    rclcpp::Time stamp = this->now();
     _depthai_init_ts = camera_ts;
-    _stamp = stamp;
+    _stamp = this->now();
   }
   return _stamp + rclcpp::Duration(camera_ts - _depthai_init_ts);
 }

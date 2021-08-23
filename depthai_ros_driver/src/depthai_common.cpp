@@ -305,4 +305,34 @@ ObjectsMsg DepthAICommon::convert(const dai::Detections& detections)
   return msg;
 }
 
+//==============================================================================
+const bool DepthAICommon::set_camera_info_manager(
+  const Stream& id,
+  const std::string& name,
+  const std::string& prefix,
+  const ROSNodeHandle node_handle)
+{
+  std::cout << " setting camera info manager: " << name << std::endl;
+  const auto uri = _cfg.camera_param_uri + prefix + name + ".yaml";
+  if (_camera_info_managers[id])
+  {
+    return
+      _camera_info_managers[id]->setCameraName(name) &&
+      _camera_info_managers[id]->loadCameraInfo(uri);
+  }
+  else
+  {
+    _camera_info_managers[id] =
+      std::make_shared<camera_info_manager::CameraInfoManager>(
+      node_handle, name, uri);
+    return true;
+  }
+}
+
+//==============================================================================
+CameraInfoMsg DepthAICommon::get_camera_info_msg(const Stream& id)
+{
+  return _camera_info_managers[id]->getCameraInfo();
+}
+
 }  // namespace rr

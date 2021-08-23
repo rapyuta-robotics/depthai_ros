@@ -40,24 +40,33 @@
   #include <depthai_ros_msgs/srv/trigger_named.hpp>
   #include <depthai_ros_msgs/msg/objects.hpp>
   #include <depthai_ros_msgs/msg/auto_focus_ctrl.hpp>
+  #include <camera_info_manager/camera_info_manager.hpp>
+  #include <rclcpp/node.hpp>
 
 using ImageMsg = sensor_msgs::msg::Image;
 using CompressedImageMsg = sensor_msgs::msg::CompressedImage;
 using ObjectsMsg = depthai_ros_msgs::msg::Objects;
 using ObjectMsg = depthai_ros_msgs::msg::Object;
-
+using CameraInfoMsg = sensor_msgs::msg::CameraInfo;
+using ROSNodeHandle = rclcpp::Node*;
 #else
   #include <std_msgs/Float32.h>
   #include <sensor_msgs/Image.h>
   #include <depthai_ros_msgs/AutoFocusCtrl.h>
   #include <depthai_ros_msgs/Objects.h>
   #include <depthai_ros_msgs/TriggerNamed.h>
+  #include <camera_info_manager/camera_info_manager.h>
 
 using ImageMsg = sensor_msgs::Image;
 using CompressedImageMsg = sensor_msgs::CompressedImage;
 using ObjectsMsg = depthai_ros_msgs::Objects;
 using ObjectMsg = depthai_ros_msgs::Object;
+using CameraInfoMsg = sensor_msgs::CameraInfo;
+using ROSNodeHandle = ros::NodeHandle;
 #endif
+
+using CameraInfoManagerPtr =
+  std::shared_ptr<camera_info_manager::CameraInfoManager>;
 
 namespace rr {
 
@@ -146,6 +155,16 @@ public:
   /// Get topic names
   const std::array<std::string, Stream::END>& get_topic_names();
 
+  /// set camera info manager
+  const bool set_camera_info_manager(
+    const Stream& id,
+    const std::string& name,
+    const std::string& prefix,
+    const ROSNodeHandle node_handle);
+
+  /// get camera info msg
+  CameraInfoMsg get_camera_info_msg(const Stream& id);
+
 private:
 
   // internal
@@ -170,6 +189,8 @@ private:
     int rgb_fps = 30;
     int depth_height = 720;
     int depth_fps = 30;
+    std::string camera_param_uri =
+      "package://depthai_ros_driver/params/camera/";
     std::vector<std::string> stream_list = {"video", "left", "depth"};
   };
 
@@ -177,7 +198,6 @@ private:
   std::unique_ptr<Device> _depthai;
   std::shared_ptr<CNNHostPipeline> _pipeline;
 
- 
   std::array<std::string, Stream::END> _stream_name{
     "left", "right", "rectified_left", "rectified_right", "disparity",
     "disparity_color", "depth", "previewout", "jpegout", "video",
@@ -190,6 +210,7 @@ private:
 
   PublishImageFn _publish_img_fn;
   PublishObjectsFn _publish_objs_fn;
+  std::array<CameraInfoManagerPtr, Stream::IMAGE_END> _camera_info_managers;
 };
 
 //==============================================================================
@@ -204,26 +225,27 @@ void DepthAICommon::create_stream_publishers(T set_stream_pub_method)
       std::find(_stream_name.cbegin(), _stream_name.cend(), stream);
     const auto index =
       static_cast<Stream>(std::distance(_stream_name.cbegin(), it));
+    const auto& topic_name = _topic_names[index];
 
     if (index < Stream::IMAGE_END)
     {
       if (index < Stream::UNCOMPRESSED_IMG_END)
-        set_stream_pub_method(index, ImageMsg{});
+        set_stream_pub_method(index, topic_name, ImageMsg{});
       else
-        set_stream_pub_method(index, CompressedImageMsg{});
+        set_stream_pub_method(index, topic_name, CompressedImageMsg{});
     }
     else
     {
       switch (index)
       {
         case Stream::META_OUT:
-          set_stream_pub_method(index, ObjectsMsg{});
+          set_stream_pub_method(index, topic_name, ObjectsMsg{});
           break;
         case Stream::OBJECT_TRACKER:
-          set_stream_pub_method(index, ObjectMsg{});
+          set_stream_pub_method(index, topic_name, ObjectMsg{});
           break;
         case Stream::META_D2H:
-          set_stream_pub_method(index, ImageMsg{});
+          set_stream_pub_method(index, topic_name, ImageMsg{});
           break;
         default:
           // TODO: roslog?
@@ -254,6 +276,10 @@ DepthAICommon::DepthAICommon(T get_param_method)
   get_param_method("shaves", _cfg.shaves);
   get_param_method("cmx_slices", _cfg.cmx_slices);
   get_param_method("nn_engines", _cfg.nn_engines);
+  get_param_method("camera_param_uri", _cfg.camera_param_uri);
+
+  if (_cfg.camera_param_uri.back() != '/')
+    _cfg.camera_param_uri += "/";
 
   _depthai = std::make_unique<Device>("", _cfg.force_usb2);
   _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
