@@ -19,8 +19,6 @@
 #define DEPTHAI_ROS_DRIVER__DEPTHAI_BASE_ROS2_HPP
 
 #include <chrono>
-#include <variant>
-
 #include <rclcpp/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -45,42 +43,11 @@ public:
   explicit DepthAIBaseRos2(const rclcpp::NodeOptions& options);
 
 private:
-
-  void publishObjectInfoMsg(
-    const dai::Detections& detections, const rclcpp::Time& stamp);
-
-  void publishImageMsg(
-    const HostDataPacket& packet, Stream type, const rclcpp::Time& stamp);
-
-  const rclcpp::Time get_rostime(const double camera_ts);
-
   rclcpp::TimerBase::SharedPtr _cameraReadTimer;
   rclcpp::Subscription<Float32Msg>::SharedPtr _disparity_conf_sub;
   rclcpp::Subscription<AutoFocusCtrlMsg>::SharedPtr _af_ctrl_sub;
   rclcpp::Service<TriggerSrv>::SharedPtr _camera_info_default;
-
-  using ObjectPubPtr = rclcpp::Publisher<ObjectMsg>::SharedPtr;
-  using ObjectsPubPtr = rclcpp::Publisher<ObjectsMsg>::SharedPtr;
-  using ImagePubPtr = rclcpp::Publisher<ImageMsg>::SharedPtr;
-  using ComImagePubPtr = rclcpp::Publisher<CompressedImageMsg>::SharedPtr;
-  using CameraInfoPubPtr =
-    rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr;
-
-  using StreamPubVariant = std::variant<ObjectsPubPtr, ObjectPubPtr,
-      ImagePubPtr, ComImagePubPtr>;
-
-  std::array<StreamPubVariant, Stream::END> _stream_publishers;
-  std::array<CameraInfoPubPtr, Stream::IMAGE_END> _camera_info_publishers;
-
   std::unique_ptr<DepthAICommon> _depthai_common;
-
-  // params
-  std::string _camera_name;
-  int _queue_size = 10;
-
-  rclcpp::Time _stamp;
-  double _depthai_init_ts = -1;  // sadly, we don't have a way of measuring drift
-
 };
 
 }  // namespace rr

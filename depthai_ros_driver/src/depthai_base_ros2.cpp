@@ -23,32 +23,11 @@ namespace rr {
 DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
 : Node("depthai_node", options)
 {
-  auto get_param = [this](const std::string& name, auto& variable)
-    {
-      using var_type = std::remove_reference_t<decltype(variable)>;
-      if (this->has_parameter(name))
-        this->get_parameter(name, variable);
-      else
-        this->declare_parameter<var_type>(name, variable);
-    };
+  // TODO use shared pointer
+  const auto node = this->create_sub_node("").get();
+  _depthai_common = std::make_unique<DepthAICommon>(node, node);
 
-  get_param("queue_size", _queue_size);
-  get_param("camera_name", _camera_name);
-
-  _depthai_common = std::make_unique<DepthAICommon>(get_param);
-
-  _depthai_common->register_callbacks(
-    [this](const HostDataPacket& packet, Stream type, double ts)
-    {
-      this->publishImageMsg(packet, type, this->get_rostime(ts));
-    },
-    [this](const dai::Detections& detections, double ts)
-    {
-      this->publishObjectInfoMsg(detections, this->get_rostime(ts));
-    }
-  );
-
-  _cameraReadTimer = this->create_wall_timer(0.5s,
+  _cameraReadTimer = this->create_wall_timer(0.2s,
       [&]()
       {
         _depthai_common->process_and_publish_packets();
@@ -59,33 +38,19 @@ DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
 
   // create Trigger default camera param service
   _camera_info_default = this->create_service<TriggerSrv>(
-    "reset_camera_info",
+    ResetCameraServiceName,
     [this](
       const std::shared_ptr<TriggerSrv::Request> req,
       std::shared_ptr<TriggerSrv::Response> res)
     {
       const auto& name = req->name;
-      const auto& topic_names = _depthai_common->get_topic_names();
-      const auto it = std::find(
-        topic_names.cbegin(), topic_names.cend(), name);
-      const auto index = std::distance(topic_names.cbegin(), it);
-
-      if (it == topic_names.cend())
-      {
-        res->success = false;
-        res->message = "No such camera known";
-        return;
-      }
-
-      res->success = _depthai_common->set_camera_info_manager(
-        static_cast<Stream>(index), name, "default/",
-        this->create_sub_node(name).get());
+      res->success = _depthai_common->set_camera_info_manager(name, "default/");
     }
   );
 
   // disparity_confidence 'service' subscriber
   _disparity_conf_sub = this->create_subscription<Float32Msg>(
-    "disparity_confidence", driver_qos,
+    SetDisparityTopicName, driver_qos,
     [&](const Float32Msg::UniquePtr msg)
     {
       if (!_depthai_common->set_disparity(msg->data))
@@ -95,121 +60,14 @@ DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
 
   // autofocus 'service' subscriber
   _af_ctrl_sub = this->create_subscription<AutoFocusCtrlMsg>(
-    "auto_focus_ctrl", driver_qos,
+    SetAutoFocusTopicName, driver_qos,
     [&](const AutoFocusCtrlMsg::UniquePtr msg)
     {
       if (!_depthai_common->set_autofocus(
         msg->trigger_auto_focus, msg->auto_focus_mode))
         RCLCPP_WARN(this->get_logger(), "Invalid Auto Focus mode requested");
     });
-
-  // provide lambda function to construct stream msg publishers
-  _depthai_common->create_stream_publishers(
-    [&](const Stream& id, const std::string& topic_name, auto message_type)
-    {
-      std::string suffix;
-      // if is image stream
-      if (id < Stream::IMAGE_END)
-      {
-        // set camera info publisher
-        _depthai_common->set_camera_info_manager(
-          id, topic_name, _camera_name + "/",
-          this->create_sub_node(topic_name).get());
-
-        _camera_info_publishers[id] = this->create_publisher<CameraInfoMsg>(
-          topic_name + "/camera_info", _queue_size);
-
-        // set stream topic name
-        suffix =
-        (id < Stream::UNCOMPRESSED_IMG_END) ? "/image_raw" : "/compressed";
-      }
-
-      using type = decltype(message_type);
-      _stream_publishers[id] =
-      this->create_publisher<type>(topic_name + suffix, _queue_size);
-    });
 }
-
-//==============================================================================
-void DepthAIBaseRos2::publishObjectInfoMsg(
-  const dai::Detections& detections, const rclcpp::Time& stamp)
-{
-  const auto pubPtr =
-    std::get<ObjectsPubPtr>(_stream_publishers[Stream::META_OUT]);
-
-  // check subsribers num, TODO check performance
-  if (!pubPtr || pubPtr->get_subscription_count() == 0)
-    return;// No subscribers
-
-  // Note: Duplicatied Method as ROS1
-  auto msg = _depthai_common->convert(detections);
-  msg.header.stamp = stamp;
-  pubPtr->publish(msg);
-}
-
-//==============================================================================
-void DepthAIBaseRos2::publishImageMsg(
-  const HostDataPacket& packet, Stream type, const rclcpp::Time& stamp)
-{
-  std_msgs::msg::Header header;
-  header.stamp = stamp;
-  header.frame_id = packet.stream_name;
-
-  const auto camInfoPubPtr = _camera_info_publishers[type];
-
-  // publish camera info
-  if (camInfoPubPtr->get_subscription_count() > 0)
-  {
-    auto msg = _depthai_common->get_camera_info_msg(type);
-    msg.header = header;
-    camInfoPubPtr->publish(msg);
-  }
-
-  // check if to publish it out as Compressed or ImageMsg
-  if (type == Stream::JPEG_OUT || type == Stream::VIDEO)
-  {
-    const auto pubPtr = std::get<ComImagePubPtr>(_stream_publishers[type]);
-
-    if (!pubPtr || pubPtr->get_subscription_count() == 0)
-      return;// No subscribers;
-
-    const auto img = std::make_shared<CompressedImageMsg>();
-    img->header = std::move(header);
-    img->format = "jpeg";
-    img->data.assign(packet.data->cbegin(), packet.data->cend());
-    pubPtr->publish(*img);
-    return;
-  }
-  else
-  {
-    const auto pubPtr = std::get<ImagePubPtr>(_stream_publishers[type]);
-
-    if (!pubPtr || pubPtr->get_subscription_count() == 0)
-      return;// No subscribers;
-
-    const auto img_data = get_image_data(packet, type);
-    if (img_data.first.empty())
-      return;
-
-    const auto msg = img_data.second.toImageMsg();
-    msg->encoding = img_data.first;
-    msg->header = std::move(header);
-    pubPtr->publish(*msg);
-  }
-}
-
-//==============================================================================
-const rclcpp::Time DepthAIBaseRos2::get_rostime(const double camera_ts)
-{
-  // only during init
-  if (_depthai_init_ts == -1)
-  {
-    _depthai_init_ts = camera_ts;
-    _stamp = this->now();
-  }
-  return _stamp + rclcpp::Duration(camera_ts - _depthai_init_ts);
-}
-
 }  // namespace rr
 
 #include <rclcpp_components/register_node_macro.hpp>

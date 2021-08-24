@@ -175,6 +175,138 @@ const std::string DepthAICommon::create_pipeline_config()
 }
 
 //==============================================================================
+DepthAICommon::DepthAICommon(
+  const ROSNodeHandle nh, const ROSNodeHandle private_nh)
+{
+  _node_handle = nh;
+
+  ///    lambda std::function<void(string, auto)>, in which the auto should
+  ///    support static types of: bool, string, int, vector<string>
+  auto get_param = [&](const std::string& name, auto& variable)
+  {
+    using var_type = std::remove_reference_t<decltype(variable)>;
+    
+    // Get param method
+    #if defined(USE_ROS2)
+      if (private_nh->has_parameter(name)) /// TODO
+        private_nh->get_parameter(name, variable);
+      else
+        private_nh->declare_parameter<var_type>(name, variable);
+    #else
+      if (private_nh.hasParam(name))
+        private_nh.getParam(name, variable);
+      else
+        private_nh.setParam(name, variable);
+    #endif
+  };
+
+  get_param("calibration_file", _cfg.calib_file);
+  get_param("blob_file", _cfg.blob_file);
+  get_param("blob_file_config", _cfg.blob_file_config);
+  get_param("stream_list", _cfg.stream_list);
+  get_param("depthai_block_read", _cfg.depthai_block_read);
+  get_param("enable_sync", _cfg.sync_video_meta);
+  get_param("full_fov_nn", _cfg.full_fov_nn);
+  get_param("disable_depth", _cfg.compute_bbox_depth);
+  get_param("force_usb2", _cfg.force_usb2);
+  get_param("rgb_height", _cfg.rgb_height);
+  get_param("rgb_fps", _cfg.rgb_fps);
+  get_param("depth_height", _cfg.depth_height);
+  get_param("depth_fps", _cfg.depth_fps);
+  get_param("shaves", _cfg.shaves);
+  get_param("cmx_slices", _cfg.cmx_slices);
+  get_param("nn_engines", _cfg.nn_engines);
+  get_param("camera_param_uri", _cfg.camera_param_uri);
+  get_param("camera_name", _cfg.camera_name);
+  get_param("queue_size", _cfg.queue_size);
+
+  if (_cfg.camera_param_uri.back() != '/')
+    _cfg.camera_param_uri += "/";
+
+  _depthai = std::make_unique<Device>("", _cfg.force_usb2);
+  _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(4));
+
+  const auto _pipeline_config_json = create_pipeline_config();
+  _pipeline = _depthai->create_pipeline(_pipeline_config_json);
+  this->create_stream_publishers();
+}
+
+//==============================================================================
+void DepthAICommon::create_stream_publishers()
+{
+  // Lambda function to create stream publishers
+  auto set_stream_pub_method = [&](
+    const Stream& id, const std::string& topic_name, auto msg_type)
+    {
+      std::string suffix;
+      if (id < Stream::IMAGE_END)
+      {
+        // set camera info publisher
+        _camera_info_publishers[id] =
+      #if defined(USE_ROS2)
+          _node_handle->create_publisher<CameraInfoMsg>(
+          topic_name + "/camera_info", _cfg.queue_size);
+      #else
+          std::make_unique<ros::Publisher>(_node_handle.advertise<CameraInfoMsg>(
+              topic_name + "/camera_info",
+              _cfg.queue_size));
+      #endif
+        set_camera_info_manager(topic_name, _cfg.camera_name + "/");
+        // set stream topic name
+        suffix =
+          (id < Stream::UNCOMPRESSED_IMG_END) ? "/image_raw" : "/compressed";
+      }
+
+      using type = decltype(msg_type);
+      _stream_publishers[id] =
+    #if defined(USE_ROS2)
+        _node_handle->create_publisher<type>(
+        topic_name + suffix, _cfg.queue_size);
+    #else
+        std::make_unique<ros::Publisher>(_node_handle.advertise<type>(
+            topic_name + suffix, _cfg.queue_size));
+    #endif
+    };
+
+  // loop through selected stream list and create stream
+  for (const auto& stream : _cfg.stream_list)
+  {
+    const auto it =
+      std::find(_stream_name.cbegin(), _stream_name.cend(), stream);
+    const auto index =
+      static_cast<Stream>(std::distance(_stream_name.cbegin(), it));
+    const auto& topic_name = _topic_names[index];
+
+    if (index < Stream::IMAGE_END)
+    {
+      if (index < Stream::UNCOMPRESSED_IMG_END)
+        set_stream_pub_method(index, topic_name, ImageMsg{});
+      else
+        set_stream_pub_method(index, topic_name, CompressedImageMsg{});
+    }
+    else
+    {
+      switch (index)
+      {
+        case Stream::META_OUT:
+          set_stream_pub_method(index, topic_name, ObjectsMsg{});
+          break;
+        case Stream::OBJECT_TRACKER:
+          set_stream_pub_method(index, topic_name, ObjectMsg{});
+          break;
+        case Stream::META_D2H:
+          set_stream_pub_method(index, topic_name, ImageMsg{});
+          break;
+        default:
+          // TODO: roslog?
+          std::cout << "Unknown stream requested: "
+                    << stream << std::endl;
+      }
+    }
+  }
+}
+
+//==============================================================================
 void DepthAICommon::process_and_publish_packets()
 {
   std::list<std::shared_ptr<NNetPacket>> nnet_packet;
@@ -199,8 +331,7 @@ void DepthAICommon::process_and_publish_packets()
       auto meta_data = packet->getMetadata();
       const auto seq_num = meta_data->getSequenceNum();
       const auto ts = meta_data->getTimestamp();
-      if (_publish_objs_fn)
-        _publish_objs_fn(*detections.get(), ts);
+      publishObjectInfoMsg(*detections.get(), get_rostime(ts));
     }
   }
   if (data_packet.size() != 0)
@@ -225,32 +356,108 @@ void DepthAICommon::process_and_publish_packets()
       {
         // workaround for the bug in DepthAI-Core library
         // use -1 to represent use rostime
-        if (_publish_img_fn)
-          _publish_img_fn(*(packet.get()), static_cast<Stream>(index), -1);
+        publishImageMsg(
+          *(packet.get()), static_cast<Stream>(index), get_rostime(-1));
         continue;
       }
 
       auto meta_data = packet->getMetadata();
       const auto seq_num = meta_data->getSequenceNum();
       const auto ts = meta_data->getTimestamp();
-      if (_publish_img_fn)
-        _publish_img_fn(*(packet.get()), static_cast<Stream>(index), ts);
+      publishImageMsg(
+        *(packet.get()), static_cast<Stream>(index), get_rostime(ts));
     }
   }
 }
 
 //==============================================================================
-const std::array<std::string, Stream::END>& DepthAICommon::get_topic_names()
+void DepthAICommon::publishObjectInfoMsg(
+  const dai::Detections& detections, const RosTime& stamp)
 {
-  return _topic_names;
+  const auto pubPtr =
+  #if defined(USE_ROS2)
+    std::get<ObjectsPubPtr>(_stream_publishers[Stream::META_OUT]);
+  if (!pubPtr || pubPtr->get_subscription_count() == 0)
+    return;
+  #else
+    _stream_publishers[Stream::META_OUT].get();
+  if (!pubPtr || pubPtr->getNumSubscribers() <= 0)
+    return;// No subscribers
+  #endif
+
+  auto msg = convert(detections);
+  msg.header.stamp = stamp;
+  pubPtr->publish(msg);
 }
 
 //==============================================================================
-void DepthAICommon::register_callbacks(
-  PublishImageFn img_fn, PublishObjectsFn objs_fn)
+void DepthAICommon::publishImageMsg(
+  const HostDataPacket& packet, Stream type, const RosTime& stamp)
 {
-  _publish_img_fn = std::move(img_fn);
-  _publish_objs_fn = std::move(objs_fn);
+  HeaderMsg header;
+  header.stamp = stamp;
+  header.frame_id = packet.stream_name;
+
+  #if defined(USE_ROS2)
+  const auto camInfoPubPtr = _camera_info_publishers[type];
+  bool cam_info_valid =
+    (camInfoPubPtr && camInfoPubPtr->get_subscription_count() > 0);
+  #else
+  const auto camInfoPubPtr = _camera_info_publishers[type].get();
+  bool cam_info_valid =
+    (camInfoPubPtr && camInfoPubPtr->getNumSubscribers() > 0);
+  #endif
+
+  // publish camera info
+  if (cam_info_valid)
+  {
+    auto msg = get_camera_info_msg(type);
+    msg.header = header;
+    camInfoPubPtr->publish(msg);
+  }
+
+  // check if to publish it out as Compressed or ImageMsg
+  if (type == Stream::JPEG_OUT || type == Stream::VIDEO)
+  {
+
+    #if defined(USE_ROS2)
+    const auto pubPtr = std::get<ComImagePubPtr>(_stream_publishers[type]);
+    if (!pubPtr || pubPtr->get_subscription_count() == 0)
+      return;// No subscribers;
+    #else
+    const auto pubPtr = _stream_publishers[type].get();
+    if (!pubPtr || pubPtr->getNumSubscribers() <= 0)
+      return;// No subscribers
+    #endif
+
+    const auto img = std::make_shared<CompressedImageMsg>();
+    img->header = std::move(header);
+    img->format = "jpeg";
+    img->data.assign(packet.data->cbegin(), packet.data->cend());
+    pubPtr->publish(*img);
+    return;
+  }
+  else
+  {
+    #if defined(USE_ROS2)
+    const auto pubPtr = std::get<ImagePubPtr>(_stream_publishers[type]);
+    if (!pubPtr || pubPtr->get_subscription_count() == 0)
+      return;// No subscribers;
+    #else
+    const auto pubPtr = _stream_publishers[type].get();
+    if (!pubPtr || pubPtr->getNumSubscribers() <= 0)
+      return;// No subscribers
+    #endif
+
+    const auto img_data = get_image_data(packet, type);
+    if (img_data.first.empty())
+      return;
+
+    const auto msg = img_data.second.toImageMsg();
+    msg->encoding = img_data.first;
+    msg->header = std::move(header);
+    pubPtr->publish(*msg);
+  }
 }
 
 //==============================================================================
@@ -307,24 +514,31 @@ ObjectsMsg DepthAICommon::convert(const dai::Detections& detections)
 
 //==============================================================================
 const bool DepthAICommon::set_camera_info_manager(
-  const Stream& id,
   const std::string& name,
-  const std::string& prefix,
-  const ROSNodeHandle node_handle)
+  const std::string& prefix)
 {
   std::cout << " setting camera info manager: " << name << std::endl;
   const auto uri = _cfg.camera_param_uri + prefix + name + ".yaml";
-  if (_camera_info_managers[id])
+
+  const auto it = std::find(_topic_names.cbegin(), _topic_names.cend(), name);
+  if (it == _topic_names.cend())
+    return false;
+
+  const auto idx = std::distance(_topic_names.cbegin(), it);
+  if (_camera_info_managers[idx])
   {
-    return
-      _camera_info_managers[id]->setCameraName(name) &&
-      _camera_info_managers[id]->loadCameraInfo(uri);
+    return _camera_info_managers[idx]->setCameraName(name) &&
+      _camera_info_managers[idx]->loadCameraInfo(uri);
   }
   else
   {
-    _camera_info_managers[id] =
-      std::make_shared<camera_info_manager::CameraInfoManager>(
-      node_handle, name, uri);
+    #if defined(USE_ROS2)
+    auto lnh = _node_handle->create_sub_node(name).get();
+    #else
+    auto lnh = ROSNodeHandle{_node_handle, name};
+    #endif
+    _camera_info_managers[idx] =
+      std::make_shared<camera_info_manager::CameraInfoManager>(lnh, name, uri);
     return true;
   }
 }
@@ -333,6 +547,28 @@ const bool DepthAICommon::set_camera_info_manager(
 CameraInfoMsg DepthAICommon::get_camera_info_msg(const Stream& id)
 {
   return _camera_info_managers[id]->getCameraInfo();
+}
+
+//==============================================================================
+const DepthAICommonConfig& DepthAICommon::get_config()
+{
+  return _cfg;
+}
+
+//==============================================================================
+const RosTime DepthAICommon::get_rostime(const double camera_ts)
+{
+  // only during init
+  if (_depthai_init_ts == -1)
+  {
+    _depthai_init_ts = camera_ts;
+    #if defined(USE_ROS2)
+    _stamp = _node_handle->now();
+    #else
+    _stamp = RosTime::now();
+    #endif
+  }
+  return _stamp + RosDuration(camera_ts - _depthai_init_ts);
 }
 
 }  // namespace rr
