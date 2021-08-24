@@ -226,6 +226,17 @@ private:
   /// get camera info msg
   CameraInfoMsg get_camera_info_msg(const Stream& id);
 
+  // check if publisher is valid
+  template <typename T>
+  bool is_pub_valid(T pub)
+  {
+    #if defined(USE_ROS2)
+    return (pub && pub->get_subscription_count() == 0);
+    #else
+    return (pub && pub->getNumSubscribers() == 0);
+    #endif
+  }
+
   DepthAICommonConfig _cfg;
   std::unique_ptr<Device> _depthai;
   std::shared_ptr<CNNHostPipeline> _pipeline;

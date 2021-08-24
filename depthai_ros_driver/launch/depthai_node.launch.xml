@@ -3,7 +3,7 @@
 
 <launch>
   <arg name="ns" default="depthai"/>
-  <arg name="node_name" default="driver"/>
+  <arg name="node_name" default="depthai_node"/>
   <arg name="queue_size" default="1"/>
   <arg name="camera_name" default="bw1097"/>
 
@@ -54,7 +54,7 @@
 
   <group>
     <node pkg="depthai_ros_driver" exec="depthai_ros_driver_node" name="$(var node_name)"
-      namespace="$(var ns)" output="screen" launch-prefix="$(var launch_prefix)">
+      output="screen" launch-prefix="$(var launch_prefix)">
       <param name="camera_name" value="$(var camera_name)"/>
 
       <param name="cmd_file" value="$(var cmd_file)"/>

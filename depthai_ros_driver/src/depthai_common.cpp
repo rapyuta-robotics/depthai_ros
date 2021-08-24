@@ -184,20 +184,18 @@ DepthAICommon::DepthAICommon(
   ///    support static types of: bool, string, int, vector<string>
   auto get_param = [&](const std::string& name, auto& variable)
   {
-    using var_type = std::remove_reference_t<decltype(variable)>;
-    
+    using var_type = std::remove_reference_t<decltype(variable)>;   
     // Get param method
     #if defined(USE_ROS2)
-      if (private_nh->has_parameter(name)) /// TODO
-        private_nh->get_parameter(name, variable);
-      else
         private_nh->declare_parameter<var_type>(name, variable);
+        private_nh->get_parameter(name, variable);
     #else
       if (private_nh.hasParam(name))
         private_nh.getParam(name, variable);
       else
         private_nh.setParam(name, variable);
     #endif
+    // std::cout <<" | param: " << name << " : " << variable << std::endl;
   };
 
   get_param("calibration_file", _cfg.calib_file);
@@ -377,13 +375,12 @@ void DepthAICommon::publishObjectInfoMsg(
   const auto pubPtr =
   #if defined(USE_ROS2)
     std::get<ObjectsPubPtr>(_stream_publishers[Stream::META_OUT]);
-  if (!pubPtr || pubPtr->get_subscription_count() == 0)
-    return;
   #else
     _stream_publishers[Stream::META_OUT].get();
-  if (!pubPtr || pubPtr->getNumSubscribers() <= 0)
-    return;// No subscribers
   #endif
+
+  if (!is_pub_valid(pubPtr))
+    return;// No subscribers
 
   auto msg = convert(detections);
   msg.header.stamp = stamp;
@@ -400,16 +397,12 @@ void DepthAICommon::publishImageMsg(
 
   #if defined(USE_ROS2)
   const auto camInfoPubPtr = _camera_info_publishers[type];
-  bool cam_info_valid =
-    (camInfoPubPtr && camInfoPubPtr->get_subscription_count() > 0);
   #else
   const auto camInfoPubPtr = _camera_info_publishers[type].get();
-  bool cam_info_valid =
-    (camInfoPubPtr && camInfoPubPtr->getNumSubscribers() > 0);
   #endif
 
   // publish camera info
-  if (cam_info_valid)
+  if (is_pub_valid(camInfoPubPtr))
   {
     auto msg = get_camera_info_msg(type);
     msg.header = header;
@@ -422,13 +415,12 @@ void DepthAICommon::publishImageMsg(
 
     #if defined(USE_ROS2)
     const auto pubPtr = std::get<ComImagePubPtr>(_stream_publishers[type]);
-    if (!pubPtr || pubPtr->get_subscription_count() == 0)
-      return;// No subscribers;
     #else
     const auto pubPtr = _stream_publishers[type].get();
-    if (!pubPtr || pubPtr->getNumSubscribers() <= 0)
-      return;// No subscribers
     #endif
+
+    if (!is_pub_valid(pubPtr))
+      return;// No subscribers
 
     const auto img = std::make_shared<CompressedImageMsg>();
     img->header = std::move(header);
@@ -441,13 +433,12 @@ void DepthAICommon::publishImageMsg(
   {
     #if defined(USE_ROS2)
     const auto pubPtr = std::get<ImagePubPtr>(_stream_publishers[type]);
-    if (!pubPtr || pubPtr->get_subscription_count() == 0)
-      return;// No subscribers;
     #else
     const auto pubPtr = _stream_publishers[type].get();
-    if (!pubPtr || pubPtr->getNumSubscribers() <= 0)
-      return;// No subscribers
     #endif
+
+    if (!is_pub_valid(pubPtr))
+      return;// No subscribers
 
     const auto img_data = get_image_data(packet, type);
     if (img_data.first.empty())

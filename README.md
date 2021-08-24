@@ -56,20 +56,19 @@ Sample models are available [here](https://github.com/luxonis/depthai/tree/main/
     source $ROS2_distro/setup.bash
     colcon build
     ```
+    Note: `colcon build` will also work with ROS1
 1. Run the Nodelet
     ```bash
     ros2 run depthai_ros_driver depthai_ros_driver_node
     ```
-Or
-2. Run: ROS2 `composition`. Similar concept of `nodelet`. To run it:
+2. Or, Run: ROS2 `composition`. Similar concept of `nodelet`. To run it:
     ```bash
     # Terminal #1
     ros2 run rclcpp_components component_container
     # New Terminal #2
     ros2 component load /ComponentManager depthai_ros_driver rr::DepthAIBaseRos2
     ```
-Or
-3. ros2 launch: `ros2 launch depthai_ros_driver depthai_node.launch.xml`
+3. Or, ros2 launch: `ros2 launch depthai_ros_driver depthai_node.launch.xml`
 
 # Trouble shooting
 If you see an error similar to this:
