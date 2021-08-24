@@ -16,4 +16,9 @@
         Pipeline for Mobilenet SSD streams
         </description>
     </class>
+    <class name="depthai_ros_driver/StereoWithDetectionPipeline" type="depthai_ros_driver::StereoWithDetectionPipeline" base_class_type="rr::Pipeline">
+        <description>
+        Pipeline for Stereo and Mobilenet SSD streams
+        </description>
+    </class>
 </library>
