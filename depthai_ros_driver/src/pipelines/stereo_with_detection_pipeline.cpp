@@ -10,12 +10,11 @@
 #include <depthai/pipeline/node/StereoDepth.hpp>
 #include <depthai/pipeline/node/XLinkOut.hpp>
 
-namespace depthai_ros_driver
-{
+namespace depthai_ros_driver {
 class StereoWithDetectionPipeline : public rr::Pipeline {
     using OpenvVINOVersion = dai::OpenVINO::Version;
-public:
 
+public:
 protected:
     /**
      * @brief Configuring stereo with detection pipeline
@@ -24,9 +23,9 @@ protected:
         std::string blob_file = "./mobilenet-ssd.blob";
         int openvino_version = static_cast<int>(_pipeline.getOpenVINOVersion());
         bool with_depth = true;
-        bool stereo_lrcheck  = false;
+        bool stereo_lrcheck = true;
         bool stereo_extended = false;
-        bool stereo_subpixel = false;
+        bool stereo_subpixel = true;
         int stereo_confidence_threshold = 200;
         rr::sync_ros_param<bool>(nh, "with_depth", with_depth);
         rr::sync_ros_param<bool>(nh, "stereo_lrcheck", stereo_lrcheck);
@@ -38,19 +37,19 @@ protected:
 
         auto camRgb = _pipeline.create<dai::node::ColorCamera>();
         auto nn = _pipeline.create<dai::node::MobileNetDetectionNetwork>();
-        auto monoLeft  = _pipeline.create<dai::node::MonoCamera>();
+        auto monoLeft = _pipeline.create<dai::node::MonoCamera>();
         auto monoRight = _pipeline.create<dai::node::MonoCamera>();
         auto xoutRgb = _pipeline.create<dai::node::XLinkOut>();
         auto xoutPreview = _pipeline.create<dai::node::XLinkOut>();
         auto nnOut = _pipeline.create<dai::node::XLinkOut>();
-        auto xoutLeft  = _pipeline.create<dai::node::XLinkOut>();
+        auto xoutLeft = _pipeline.create<dai::node::XLinkOut>();
         auto xoutRight = _pipeline.create<dai::node::XLinkOut>();
-        auto stereo    = with_depth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
+        auto stereo = with_depth ? _pipeline.create<dai::node::StereoDepth>() : nullptr;
         auto xoutDepth = _pipeline.create<dai::node::XLinkOut>();
         auto xoutRectifL = _pipeline.create<dai::node::XLinkOut>();
         auto xoutRectifR = _pipeline.create<dai::node::XLinkOut>();
 
-        _pipeline.setOpenVINOVersion(static_cast<OpenvVINOVersion>(openvino_version));
+        _pipeline.setOpenVINOVersion(static_cast<dai::OpenVINO::Version>(openvino_version));
 
         // XLinkOut
         xoutRgb->setStreamName("rgb");
@@ -80,20 +79,21 @@ protected:
         monoLeft->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
         // monoLeft->setResolution(dai::MonoCameraProperties::SensorResolution::THE_400_P);
         monoLeft->setBoardSocket(dai::CameraBoardSocket::LEFT);
-        //monoLeft->setFps(5.0);
+        // monoLeft->setFps(5.0);
         // monoRight->setResolution(dai::MonoCameraProperties::SensorResolution::THE_400_P);
         monoRight->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
         monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
-        //monoRight->setFps(5.0);
-
+        // monoRight->setFps(5.0);
 
         camRgb->preview.link(xoutPreview->input);
         camRgb->preview.link(nn->input);
         camRgb->video.link(xoutRgb->input);
         nn->out.link(nnOut->input);
         int maxDisp = 96;
-        if (stereo_extended) maxDisp *= 2;
-        if (stereo_subpixel) maxDisp *= 32; // 5 bits fractional disparity
+        if (stereo_extended)
+            maxDisp *= 2;
+        if (stereo_subpixel)
+            maxDisp *= 32;  // 5 bits fractional disparity
         if (with_depth) {
             // StereoDepth
             stereo->initialConfig.setConfidenceThreshold(stereo_confidence_threshold);
@@ -131,4 +131,4 @@ protected:
 
 PLUGINLIB_EXPORT_CLASS(depthai_ros_driver::StereoWithDetectionPipeline, rr::Pipeline)
 
-} // namespace depthai_ros_driver
+}  // namespace depthai_ros_driver
