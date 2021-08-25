@@ -65,4 +65,3 @@ jobs:
         cd ros_ws
         colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
         # catkin_make_isolated --install
-        source ros_ws/install/setup.bash

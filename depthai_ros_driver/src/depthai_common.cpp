@@ -178,7 +178,7 @@ const std::string DepthAICommon::create_pipeline_config()
 DepthAICommon::DepthAICommon(
   const ROSNodeHandle nh, const ROSNodeHandle private_nh)
 {
-  _node_handle = nh;
+  _node_handle = std::move(nh);
 
   ///    lambda std::function<void(string, auto)>, in which the auto should
   ///    support static types of: bool, string, int, vector<string>
@@ -190,10 +190,10 @@ DepthAICommon::DepthAICommon(
       private_nh->declare_parameter<var_type>(name, variable);
       private_nh->get_parameter(name, variable);
     #else
-      if (private_nh.hasParam(name))
-        private_nh.getParam(name, variable);
+      if (private_nh->hasParam(name))
+        private_nh->getParam(name, variable);
       else
-        private_nh.setParam(name, variable);
+        private_nh->setParam(name, variable);
     #endif
       // std::cout <<" | param: " << name << " : " << variable << std::endl;
     };
@@ -245,7 +245,7 @@ void DepthAICommon::create_stream_publishers()
           _node_handle->create_publisher<CameraInfoMsg>(
           topic_name + "/camera_info", _cfg.queue_size);
       #else
-          std::make_unique<ros::Publisher>(_node_handle.advertise<CameraInfoMsg>(
+          std::make_unique<ros::Publisher>(_node_handle->advertise<CameraInfoMsg>(
               topic_name + "/camera_info",
               _cfg.queue_size));
       #endif
@@ -261,7 +261,7 @@ void DepthAICommon::create_stream_publishers()
         _node_handle->create_publisher<type>(
         topic_name + suffix, _cfg.queue_size);
     #else
-        std::make_unique<ros::Publisher>(_node_handle.advertise<type>(
+        std::make_unique<ros::Publisher>(_node_handle->advertise<type>(
             topic_name + suffix, _cfg.queue_size));
     #endif
     };
@@ -526,7 +526,7 @@ const bool DepthAICommon::set_camera_info_manager(
     #if defined(USE_ROS2)
     auto lnh = _node_handle->create_sub_node(name).get();
     #else
-    auto lnh = ROSNodeHandle{_node_handle, name};
+    auto lnh = ros::NodeHandle{*_node_handle, name};
     #endif
     _camera_info_managers[idx] =
       std::make_shared<camera_info_manager::CameraInfoManager>(lnh, name, uri);

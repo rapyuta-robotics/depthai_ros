@@ -81,7 +81,7 @@ using ObjectMsg = depthai_ros_msgs::Object;
 using CameraInfoMsg = sensor_msgs::CameraInfo;
 using HeaderMsg = std_msgs::Header;
 
-using ROSNodeHandle = ros::NodeHandle;
+using ROSNodeHandle = std::shared_ptr<ros::NodeHandle>;
 using StreamPub = std::unique_ptr<ros::Publisher>;
 using CameraInfoPub = std::unique_ptr<ros::Publisher>;
 using RosTime = ros::Time;

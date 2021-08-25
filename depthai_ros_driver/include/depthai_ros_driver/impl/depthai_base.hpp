@@ -7,12 +7,12 @@ namespace rr {
 template<class Node>
 void DepthAIBase<Node>::onInit()
 {
-  auto& p_nh = this->getPrivateNodeHandle();
-  auto& nh = this->getNodeHandle();
+  auto p_nh = std::make_shared<ros::NodeHandle>(this->getPrivateNodeHandle());
+  auto nh = std::make_shared<ros::NodeHandle>(this->getNodeHandle());
 
   _depthai_common = std::make_unique<DepthAICommon>(nh, p_nh);
 
-  _cameraReadTimer = p_nh.createTimer(ros::Duration(1. / 500),
+  _cameraReadTimer = p_nh->createTimer(ros::Duration(1. / 500),
       [&](const ros::TimerEvent&)
       {
         _depthai_common->process_and_publish_packets();
@@ -22,7 +22,7 @@ void DepthAIBase<Node>::onInit()
 
   // create Trigger default camera param service
   using TriggerSrv = depthai_ros_msgs::TriggerNamed;
-  _camera_info_default = nh.template
+  _camera_info_default = nh->template
     advertiseService<TriggerSrv::Request, TriggerSrv::Response>(
     ResetCameraServiceName,
     [&](TriggerSrv::Request& req, TriggerSrv::Response& res)
@@ -33,7 +33,7 @@ void DepthAIBase<Node>::onInit()
     });
 
   // autofocus 'service' subscriber
-  _af_ctrl_sub = nh.template subscribe<depthai_ros_msgs::AutoFocusCtrl>(
+  _af_ctrl_sub = nh->template subscribe<depthai_ros_msgs::AutoFocusCtrl>(
     SetAutoFocusTopicName, queue_size,
     [&](const depthai_ros_msgs::AutoFocusCtrlConstPtr& msg)
     {
@@ -42,7 +42,7 @@ void DepthAIBase<Node>::onInit()
     });
 
   // disparity_confidence 'service' subscriber
-  _disparity_conf_sub = nh.template subscribe<std_msgs::Float32>(
+  _disparity_conf_sub = nh->template subscribe<std_msgs::Float32>(
     SetDisparityTopicName, queue_size,
     [&](const std_msgs::Float32::ConstPtr& msg)
     {
