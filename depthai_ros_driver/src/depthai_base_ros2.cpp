@@ -15,6 +15,7 @@
  *
 */
 
+#include <chrono>
 #include <depthai_ros_driver/depthai_base_ros2.hpp>
 
 namespace rr {
@@ -24,7 +25,7 @@ DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
 : Node("depthai_node", options)
 {
   // TODO use shared pointer
-  const auto node = this->create_sub_node("").get();
+  const auto node = this->create_sub_node("");
   _depthai_common = std::make_unique<DepthAICommon>(node, node);
 
   _cameraReadTimer = this->create_wall_timer(0.002s,
@@ -53,9 +54,7 @@ DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
     SetDisparityTopicName, qos,
     [&](const Float32Msg::UniquePtr msg)
     {
-      if (!_depthai_common->set_disparity(msg->data))
-        RCLCPP_WARN(this->get_logger(),
-        "Disparity confidence value:%f, is invalid", msg->data);
+      _depthai_common->set_disparity(msg->data);
     });
 
   // autofocus 'service' subscriber
@@ -63,9 +62,8 @@ DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
     SetAutoFocusTopicName, qos,
     [&](const AutoFocusCtrlMsg::UniquePtr msg)
     {
-      if (!_depthai_common->set_autofocus(
-        msg->trigger_auto_focus, msg->auto_focus_mode))
-        RCLCPP_WARN(this->get_logger(), "Invalid Auto Focus mode requested");
+      _depthai_common->set_autofocus(
+        msg->trigger_auto_focus, msg->auto_focus_mode);
     });
 }
 }  // namespace rr

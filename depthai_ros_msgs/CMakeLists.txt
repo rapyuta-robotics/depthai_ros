@@ -60,6 +60,8 @@ endif()
 if($ENV{ROS_VERSION} STREQUAL 2)
   message("Compile ${PROJECT_NAME} as a ROS2 package")
   find_package(builtin_interfaces REQUIRED)
+  find_package(std_msgs REQUIRED)
+  find_package(sensor_msgs REQUIRED)
   find_package(rosidl_default_generators REQUIRED)
 
   set(msg_files
@@ -78,7 +80,7 @@ if($ENV{ROS_VERSION} STREQUAL 2)
     ${srv_files}
     ${msg_files}
     DEPENDENCIES
-      builtin_interfaces
+      builtin_interfaces std_msgs sensor_msgs
     ADD_LINTER_TESTS
   )
 

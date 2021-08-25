@@ -21,6 +21,7 @@ void DepthAIBase<Node>::onInit()
   const auto queue_size = _depthai_common->get_config().queue_size;
 
   // create Trigger default camera param service
+  using TriggerSrv = depthai_ros_msgs::TriggerNamed;
   _camera_info_default = nh.template
     advertiseService<TriggerSrv::Request, TriggerSrv::Response>(
     ResetCameraServiceName,
@@ -36,11 +37,8 @@ void DepthAIBase<Node>::onInit()
     SetAutoFocusTopicName, queue_size,
     [&](const depthai_ros_msgs::AutoFocusCtrlConstPtr& msg)
     {
-      if (!_depthai_common->set_autofocus(
-        msg->trigger_auto_focus, msg->auto_focus_mode))
-      {
-        ROS_ERROR_NAMED(this->getName(), "Invalid Auto Focus mode requested");
-      }
+      _depthai_common->set_autofocus(
+        msg->trigger_auto_focus, msg->auto_focus_mode);
     });
 
   // disparity_confidence 'service' subscriber
@@ -48,11 +46,7 @@ void DepthAIBase<Node>::onInit()
     SetDisparityTopicName, queue_size,
     [&](const std_msgs::Float32::ConstPtr& msg)
     {
-      if (!_depthai_common->set_disparity(msg->data))
-      {
-        ROS_ERROR_NAMED(this->getName(),
-        "Disparity confidence value:%f, is invalid", msg->data);
-      }
+      _depthai_common->set_disparity(msg->data);
     });
 }
 }  // namespace rr

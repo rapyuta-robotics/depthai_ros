@@ -44,13 +44,15 @@
   #include <camera_info_manager/camera_info_manager.hpp>
   #include <rclcpp/node.hpp>
 
+  #define ROS_LOGGER(...) RCUTILS_LOG_WARN_NAMED("depthai_common", __VA_ARGS__)
+
 using ImageMsg = sensor_msgs::msg::Image;
 using CompressedImageMsg = sensor_msgs::msg::CompressedImage;
 using ObjectsMsg = depthai_ros_msgs::msg::Objects;
 using ObjectMsg = depthai_ros_msgs::msg::Object;
 using CameraInfoMsg = sensor_msgs::msg::CameraInfo;
 using HeaderMsg = std_msgs::msg::Header;
-using ROSNodeHandle = rclcpp::Node*;
+using ROSNodeHandle = std::shared_ptr<rclcpp::Node>;
 
 using ObjectPubPtr = rclcpp::Publisher<ObjectMsg>::SharedPtr;
 using ObjectsPubPtr = rclcpp::Publisher<ObjectsMsg>::SharedPtr;
@@ -58,9 +60,7 @@ using ImagePubPtr = rclcpp::Publisher<ImageMsg>::SharedPtr;
 using ComImagePubPtr = rclcpp::Publisher<CompressedImageMsg>::SharedPtr;
 using StreamPub = std::variant<ObjectsPubPtr, ObjectPubPtr,
     ImagePubPtr, ComImagePubPtr>;
-using CameraInfoPub =
-  rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr;
-
+using CameraInfoPub = rclcpp::Publisher<CameraInfoMsg>::SharedPtr;
 using RosTime = rclcpp::Time;
 using RosDuration = rclcpp::Duration;
 
@@ -72,6 +72,8 @@ using RosDuration = rclcpp::Duration;
   #include <depthai_ros_msgs/TriggerNamed.h>
   #include <camera_info_manager/camera_info_manager.h>
 
+  #define ROS_LOGGER(...) ROS_WARN_NAMED("depthai_common", __VA_ARGS__)
+
 using ImageMsg = sensor_msgs::Image;
 using CompressedImageMsg = sensor_msgs::CompressedImage;
 using ObjectsMsg = depthai_ros_msgs::Objects;
@@ -82,10 +84,8 @@ using HeaderMsg = std_msgs::Header;
 using ROSNodeHandle = ros::NodeHandle;
 using StreamPub = std::unique_ptr<ros::Publisher>;
 using CameraInfoPub = std::unique_ptr<ros::Publisher>;
-
 using RosTime = ros::Time;
 using RosDuration = ros::Duration;
-
 #endif
 
 using CameraInfoManagerPtr =
@@ -226,15 +226,18 @@ private:
   /// get camera info msg
   CameraInfoMsg get_camera_info_msg(const Stream& id);
 
-  // check if publisher is valid
-  template <typename T>
-  bool is_pub_valid(T pub)
+  // check if publisher is valid (ros1 api)
+  template<typename T>
+  auto is_pub_valid(T pub) -> decltype(pub->getNumSubscribers(), bool())
   {
-    #if defined(USE_ROS2)
-    return (pub && pub->get_subscription_count() == 0);
-    #else
-    return (pub && pub->getNumSubscribers() == 0);
-    #endif
+    return pub && pub->getNumSubscribers() > 0;
+  }
+
+  // check if publisher is valid (ros2 api)
+  template<typename T>
+  auto is_pub_valid(T pub) -> decltype(pub->get_subscription_count(), bool())
+  {
+    return pub && pub->get_subscription_count() > 0;
   }
 
   DepthAICommonConfig _cfg;

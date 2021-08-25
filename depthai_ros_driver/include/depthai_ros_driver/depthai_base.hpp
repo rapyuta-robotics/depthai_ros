@@ -1,13 +1,7 @@
 #pragma once
 
-#include <depthai_ros_driver/depthai_common.hpp>
-
-// core ROS dependency includes
-#include <cv_bridge/cv_bridge.h>
-#include <image_transport/camera_publisher.h>
 #include <ros/ros.h>
-
-using TriggerSrv = depthai_ros_msgs::TriggerNamed;
+#include <depthai_ros_driver/depthai_common.hpp>
 
 namespace rr {
 

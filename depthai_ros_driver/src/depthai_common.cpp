@@ -183,20 +183,20 @@ DepthAICommon::DepthAICommon(
   ///    lambda std::function<void(string, auto)>, in which the auto should
   ///    support static types of: bool, string, int, vector<string>
   auto get_param = [&](const std::string& name, auto& variable)
-  {
-    using var_type = std::remove_reference_t<decltype(variable)>;   
-    // Get param method
+    {
+      using var_type = std::remove_reference_t<decltype(variable)>;
+      // Get param method
     #if defined(USE_ROS2)
-        private_nh->declare_parameter<var_type>(name, variable);
-        private_nh->get_parameter(name, variable);
+      private_nh->declare_parameter<var_type>(name, variable);
+      private_nh->get_parameter(name, variable);
     #else
       if (private_nh.hasParam(name))
         private_nh.getParam(name, variable);
       else
         private_nh.setParam(name, variable);
     #endif
-    // std::cout <<" | param: " << name << " : " << variable << std::endl;
-  };
+      // std::cout <<" | param: " << name << " : " << variable << std::endl;
+    };
 
   get_param("calibration_file", _cfg.calib_file);
   get_param("blob_file", _cfg.blob_file);
@@ -296,9 +296,7 @@ void DepthAICommon::create_stream_publishers()
           set_stream_pub_method(index, topic_name, ImageMsg{});
           break;
         default:
-          // TODO: roslog?
-          std::cout << "Unknown stream requested: "
-                    << stream << std::endl;
+          ROS_LOGGER("Unknown stream requested: %s", stream.c_str());
       }
     }
   }
@@ -459,6 +457,7 @@ bool DepthAICommon::set_disparity(const float val)
     _depthai->send_disparity_confidence_threshold(val);
     return true;
   }
+  ROS_LOGGER("Disparity confidence value:%f, is invalid", val);
   return false;
 }
 
@@ -473,6 +472,7 @@ bool DepthAICommon::set_autofocus(const bool trigger, const uint8_t mode)
     _depthai->request_af_mode(static_cast<CaptureMetadata::AutofocusMode>(mode));
     return true;
   }
+  ROS_LOGGER("Invalid Auto Focus mode requested");
   return false;
 }
 
@@ -508,7 +508,7 @@ const bool DepthAICommon::set_camera_info_manager(
   const std::string& name,
   const std::string& prefix)
 {
-  std::cout << " setting camera info manager: " << name << std::endl;
+  ROS_LOGGER(" setting camera info manager: %s", name.c_str());
   const auto uri = _cfg.camera_param_uri + prefix + name + ".yaml";
 
   const auto it = std::find(_topic_names.cbegin(), _topic_names.cend(), name);

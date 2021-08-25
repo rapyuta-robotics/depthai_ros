@@ -63,11 +63,6 @@ jobs:
         export PYTHONIOENCODING=utf8  # from github.com/docker/compose/issues/2576
         source /opt/ros/*/setup.bash
         cd ros_ws
-        colcon build
+        colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
         # catkin_make_isolated --install
-    # - name: 'Source and confirm'
-    #   shell: bash
-    #   run: |
-    #     source catkin_ws/install_isolated/setup.bash
-    #     roscd
-    #     pwd  # TODO: put an assert on it
+        source ros_ws/install/setup.bash
