@@ -65,11 +65,12 @@ protected:
 
         // RGB camera
         camRgb->setPreviewSize(300, 300);  // NN input
+        camRgb->setPreviewKeepAspectRatio(false);
         camRgb->setInterleaved(false);
         camRgb->setFps(30);
 
         // Define a neural network that will make predictions based on the source frames
-        nn->setConfidenceThreshold(0.5);
+        nn->setConfidenceThreshold(0.01);
         ROS_INFO_STREAM("BLOB FILE: " << blob_file);
         nn->setBlobPath(blob_file);
         nn->setNumInferenceThreads(2);
