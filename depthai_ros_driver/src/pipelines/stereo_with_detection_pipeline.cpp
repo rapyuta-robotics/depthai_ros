@@ -90,6 +90,10 @@ protected:
         camRgb->preview.link(nn->input);
         camRgb->video.link(xoutRgb->input);
         nn->out.link(nnOut->input);
+
+        // camRgb->initialControl.setManualFocus(100);
+        camRgb->setIspScale(2, 3);
+
         int maxDisp = 96;
         if (stereo_extended)
             maxDisp *= 2;
@@ -101,7 +105,10 @@ protected:
             stereo->setRectifyEdgeFillColor(0);
             stereo->setInputResolution(1280, 720);
             // stereo->setInputResolution(640, 400);
-            stereo->setLeftRightCheck(stereo_lrcheck);
+            // LR-check is required for depth alignment
+            stereo->setLeftRightCheck(true);
+            stereo->setDepthAlign(dai::CameraBoardSocket::RGB);
+
             stereo->setExtendedDisparity(stereo_extended);
             stereo->setSubpixel(stereo_subpixel);
 
