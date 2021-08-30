@@ -162,7 +162,7 @@ struct adapt_ros2dai<depthai_datatype_msgs::RawCameraControl> {
     using InputType = depthai_datatype_msgs::RawCameraControl;
     using OutputType = dai::RawCameraControl;
 
-    static OutputType convert(InputType& input) {
+    static OutputType convert(InputType input) {
         OutputType output;
         RR_MOVE_ALL(cmdMask, autoFocusMode, lensPosition, expManual, aeRegion, afRegion, awbMode, sceneMode,
                 antiBandingMode, effectMode, aeLockMode, awbLockMode, expCompensation, brightness, contrast, saturation,
