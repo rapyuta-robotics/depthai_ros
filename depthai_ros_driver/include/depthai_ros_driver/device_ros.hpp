@@ -150,23 +150,23 @@ public:
 
 protected:
     // create stream based on name at the time of subscription
-    template <class MsgType, dai::DatatypeEnum DataType>
+    template <class MsgType>
     auto generate_cb_lambda(const std::string& name) -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
                 std::unique_ptr<dai::XLinkStream>& stream = _streams[name];
-                msgpack::sbuffer& sbuf = _serial_bufs[name];
+                std::vector<std::uint8_t>& serial_buf = _serial_bufs[name];
                 std::vector<std::uint8_t>& writer_buf = _writer_bufs[name];
 
-        const auto core_sub_lambda = [&stream, &sbuf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
+        const auto core_sub_lambda = [&stream, &serial_buf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             // convert msg to data
-            const auto& data_ref = adapt_ros2dai<MsgType>::convert(*msg);
-            msgpack::pack(sbuf, *msg);
-            PacketWriter writer(*stream);
-            writer.write(data_ref.data.data(), data_ref.data.size(), reinterpret_cast<std::uint8_t*>(sbuf.data()),
-                    sbuf.size(), static_cast<std::uint32_t>(DataType), writer_buf);
+            dai::DatatypeEnum datatype;
+            auto data_ref = adapt_ros2dai<MsgType>::convert(*msg);
+            data_ref.serialize(serial_buf, datatype);
 
-            sbuf.clear();  // Else the sbuf data is accumulated
+            PacketWriter writer(*stream);
+            writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<std::uint8_t*>(serial_buf.data()),
+                    serial_buf.size(), static_cast<std::uint32_t>(datatype), writer_buf);
 
             guard.disable();
         };
@@ -297,13 +297,11 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    // @TODO: make writer to xLinkIn to work
-                    _serial_bufs[name] = msgpack::sbuffer();
+                    _serial_bufs[name] = std::vector<std::uint8_t>();
                     _writer_bufs[name] = std::vector<std::uint8_t>();
                     _streams[name] =
                         std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
-                    _sub[name] = _sub_nh.subscribe(name, 1000,
-                            generate_cb_lambda<depthai_datatype_msgs::RawCameraControl, dai::DatatypeEnum::CameraControl>(name));
+                    _sub[name] = _sub_nh.subscribe(name, 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>(name));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;
@@ -364,7 +362,7 @@ protected:
     Map<std::shared_ptr<camera_info_manager::CameraInfoManager>> _camera_info_manager;
     Map<std::unique_ptr<dai::XLinkStream>> _streams;
 
-    Map<msgpack::sbuffer> _serial_bufs;           // buffer for deserializing subscribed messages
+    Map<std::vector<std::uint8_t>> _serial_bufs;  // buffer for deserializing subscribed messages
     Map<std::vector<std::uint8_t>> _writer_bufs;  // buffer for writing to xLinkIn
 
     std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;

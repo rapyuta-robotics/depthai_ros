@@ -166,7 +166,7 @@ struct adapt_ros2dai<depthai_datatype_msgs::RawCameraControl> {
         OutputType output;
         RR_MOVE_ALL(cmdMask, autoFocusMode, lensPosition, expManual, aeRegion, afRegion, awbMode, sceneMode,
                 antiBandingMode, effectMode, aeLockMode, awbLockMode, expCompensation, brightness, contrast, saturation,
-                sharpness, lumaDenoise, chromaDenoise, data);
+                sharpness, lumaDenoise, chromaDenoise);
         return output;
     }
 };
