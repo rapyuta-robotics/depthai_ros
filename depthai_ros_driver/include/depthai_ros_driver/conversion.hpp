@@ -170,4 +170,8 @@ struct adapt_ros2dai<depthai_datatype_msgs::RawCameraControl> {
         return output;
     }
 };
+
+#undef RR_MOVE
+#undef RR_MOVE_ALL
+
 }  // namespace rr

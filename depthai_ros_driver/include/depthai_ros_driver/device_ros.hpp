@@ -152,9 +152,9 @@ protected:
     // create stream based on name at the time of subscription
     template <class MsgType>
     auto generate_cb_lambda(const std::string& name) -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
-                std::unique_ptr<dai::XLinkStream>& stream = _streams[name];
-                std::vector<std::uint8_t>& serial_buf = _serial_bufs[name];
-                std::vector<std::uint8_t>& writer_buf = _writer_bufs[name];
+        auto& stream = _streams[name];
+        auto& serial_buf = _serial_bufs[name];
+        auto& writer_buf = _writer_bufs[name];
 
         const auto core_sub_lambda = [&stream, &serial_buf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
