@@ -1,5 +1,3 @@
-#include <ros/console.h>
-
 #include <pluginlib/class_list_macros.h>
 #include <depthai_ros_driver/pipeline.hpp>
 
