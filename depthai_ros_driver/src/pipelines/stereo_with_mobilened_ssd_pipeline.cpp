@@ -11,7 +11,7 @@
 #include <depthai/pipeline/node/XLinkOut.hpp>
 
 namespace depthai_ros_driver {
-class StereoWithDetectionPipeline : public rr::Pipeline {
+class StereoWithMobilenetSSDPipeline : public rr::Pipeline {
     using OpenvVINOVersion = dai::OpenVINO::Version;
 
 public:
@@ -27,6 +27,8 @@ protected:
         bool stereo_extended = false;
         bool stereo_subpixel = true;
         int stereo_confidence_threshold = 200;
+        bool preview_keep_aspect_ratio = false;
+
         rr::sync_ros_param<bool>(nh, "with_depth", with_depth);
         rr::sync_ros_param<bool>(nh, "stereo_lrcheck", stereo_lrcheck);
         rr::sync_ros_param<bool>(nh, "stereo_extended", stereo_extended);
@@ -34,6 +36,7 @@ protected:
         rr::sync_ros_param<int>(nh, "stereo_confidence_threshold", stereo_confidence_threshold);
         rr::sync_ros_param<std::string>(nh, "blob_file", blob_file);
         rr::sync_ros_param<int>(nh, "mobilenetssd_openvino_version", openvino_version);
+        rr::sync_ros_param<bool>(nh, "preview_keep_aspect_ratio", preview_keep_aspect_ratio);
 
         auto camRgb = _pipeline.create<dai::node::ColorCamera>();
         auto nn = _pipeline.create<dai::node::MobileNetDetectionNetwork>();
@@ -65,7 +68,7 @@ protected:
 
         // RGB camera
         camRgb->setPreviewSize(300, 300);  // NN input
-        camRgb->setPreviewKeepAspectRatio(false);
+        camRgb->setPreviewKeepAspectRatio(preview_keep_aspect_ratio);
         camRgb->setInterleaved(false);
         camRgb->setFps(30);
 
@@ -78,13 +81,9 @@ protected:
 
         // MonoCamera
         monoLeft->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
-        // monoLeft->setResolution(dai::MonoCameraProperties::SensorResolution::THE_400_P);
         monoLeft->setBoardSocket(dai::CameraBoardSocket::LEFT);
-        // monoLeft->setFps(5.0);
-        // monoRight->setResolution(dai::MonoCameraProperties::SensorResolution::THE_400_P);
         monoRight->setResolution(dai::MonoCameraProperties::SensorResolution::THE_720_P);
         monoRight->setBoardSocket(dai::CameraBoardSocket::RIGHT);
-        // monoRight->setFps(5.0);
 
         camRgb->preview.link(xoutPreview->input);
         camRgb->preview.link(nn->input);
@@ -100,7 +99,6 @@ protected:
             stereo->initialConfig.setConfidenceThreshold(stereo_confidence_threshold);
             stereo->setRectifyEdgeFillColor(0);
             stereo->setInputResolution(1280, 720);
-            // stereo->setInputResolution(640, 400);
             stereo->setLeftRightCheck(stereo_lrcheck);
             stereo->setExtendedDisparity(stereo_extended);
             stereo->setSubpixel(stereo_subpixel);
@@ -121,7 +119,7 @@ protected:
             monoRight->out.link(xoutRight->input);
         }
 
-        ROS_INFO("StereoWithDetectionPipeline is initialized.");
+        ROS_INFO("StereoWithMobilenetSSDPipeline is initialized.");
     }
 
     /**
@@ -130,6 +128,6 @@ protected:
     void onGetPipeline() const {};
 };
 
-PLUGINLIB_EXPORT_CLASS(depthai_ros_driver::StereoWithDetectionPipeline, rr::Pipeline)
+PLUGINLIB_EXPORT_CLASS(depthai_ros_driver::StereoWithMobilenetSSDPipeline, rr::Pipeline)
 
 }  // namespace depthai_ros_driver
