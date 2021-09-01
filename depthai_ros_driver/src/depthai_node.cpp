@@ -2,13 +2,14 @@
 
 #include <depthai_ros_driver/depthai_base.hpp>
 
-int main(int argc, char** argv) {
-    ros::init(argc, argv, "depthai_node");
+int main(int argc, char** argv)
+{
+  ros::init(argc, argv, "depthai_node");
 
-    rr::DepthAINode depthai;
-    depthai.init();
+  rr::DepthAINode depthai;
+  depthai.init();
 
-    ros::spin();
+  ros::spin();
 
-    return 0;
+  return 0;
 }

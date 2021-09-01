@@ -1,6 +1,6 @@
 # DepthAI ROS
 
-This package facilitates the integration of DepthAI and compatible hardware with ROS. List of compatible hardwares can be found [here](https://docs.luxonis.com/en/latest/). This package is based on the Gen 1 API for DepthAI and provides an interface for ROS (not ROS2).
+This package facilitates the integration of DepthAI and compatible hardware with ROS. List of compatible hardwares can be found [here](https://docs.luxonis.com/en/latest/). This package is based on the Gen 1 API for DepthAI and provides an interface for ROS (and ROS2).
 
 This meta-package contains the following packages:
 * depthai_ros_driver
@@ -14,11 +14,13 @@ Though this metapackage might work on other systems, it has only been tested on:
 * Ubuntu 20.04 LTS
 
 A list of pre-requisites:
-* C++ compiler (recommended: `g++` or `clang` with at least C++17 support)
+* C++ compiler (recommended: `g++` or `clang` with at least C++20 support)
 * CMake (3.10.2 or higher)
 * Boost (1.65.1 or higher)
 * OpenCV (3.2 or higher)
-* ROS (melodic or higher)
+* ROS
+  * ROS1 (melodic or higher), or
+  * ROS2 (foxy or higher)
 * ROS Packages (see `rospack deps depthai_ros_driver`)
 
 ## Grab the source code
@@ -49,6 +51,26 @@ Sample models are available [here](https://github.com/luxonis/depthai/tree/main/
     $ rosservice list /depthai
     $ rosparam list /depthai
     ```
+
+# (New) Usage with ROS2
+0. This is tested on `ros-foxy`. Now, install repo
+    ```bash
+    source $ROS2_distro/setup.bash
+    colcon build
+    ```
+    Note: `colcon build` will also work with ROS1
+1. Run the Nodelet
+    ```bash
+    ros2 run depthai_ros_driver depthai_ros_driver_node
+    ```
+2. Or, Run: ROS2 `composition`. Similar concept of `nodelet`. To run it:
+    ```bash
+    # Terminal #1
+    ros2 run rclcpp_components component_container
+    # New Terminal #2
+    ros2 component load /ComponentManager depthai_ros_driver rr::DepthAIBaseRos2
+    ```
+3. Or, ros2 launch: `ros2 launch depthai_ros_driver depthai_node.launch.xml`
 
 # Trouble shooting
 If you see an error similar to this:

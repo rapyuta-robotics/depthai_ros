@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.10.2)  # CMake version in Ubuntu 18.04 LTS
 
-set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD 17)
 
 get_filename_component (DEPTHAI_CORE "${CMAKE_CURRENT_LIST_DIR}/../external/depthai-core" REALPATH)
 
@@ -17,23 +17,32 @@ HunterGate (
 
 project (depthai_ros_driver VERSION 0.1.0 LANGUAGES CXX)
 
-set (PKG_DEPS
+find_package (OpenCV REQUIRED)
+find_package (Boost REQUIRED COMPONENTS system)
+
+set (PKG_DEPS_COMMON
     camera_info_manager
     cv_bridge
     depthai_ros_msgs
     image_transport
-    message_generation
-    nodelet
-    roscpp
     sensor_msgs
     std_msgs
+)
+
+#==============================================================================
+# Compile in ROS1
+#==============================================================================
+
+if($ENV{ROS_VERSION} STREQUAL 1)
+
+set (PKG_DEPS
+    ${PKG_DEPS_COMMON}
+    nodelet
+    roscpp
     node_interface
 )
 
 find_package (catkin REQUIRED COMPONENTS ${PKG_DEPS})
-
-find_package (OpenCV REQUIRED)
-find_package (Boost REQUIRED COMPONENTS system)
 
 # Add depthai-core dependency
 add_subdirectory (${DEPTHAI_CORE} depthai-core)
@@ -41,7 +50,7 @@ add_subdirectory (${DEPTHAI_CORE} depthai-core)
 catkin_package (
     INCLUDE_DIRS include
     LIBRARIES ${PROJECT_NAME}_nodelet
-    CATKIN_DEPENDS camera_info_manager cv_bridge image_transport nodelet roscpp sensor_msgs node_interface
+    CATKIN_DEPENDS ${PKG_DEPS}
     DEPENDS Boost
 )
 
@@ -58,14 +67,16 @@ include_directories (SYSTEM
 )
 
 # internal library, not to be exported
-add_library (${PROJECT_NAME}_lib src/depthai_base.cpp)
+add_library (${PROJECT_NAME}_lib src/depthai_base.cpp src/depthai_common.cpp)
 target_link_libraries (${PROJECT_NAME}_lib
     ${catkin_LIBRARIES}
     ${OpenCV_LIBRARIES}
     ${Boost_LIBRARIES}
     depthai-core
 )
-add_dependencies (${PROJECT_NAME}_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies (${PROJECT_NAME}_lib
+    ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}
+)
 
 add_library (${PROJECT_NAME}_nodelet src/depthai_nodelet.cpp)
 target_link_libraries (${PROJECT_NAME}_nodelet
@@ -93,3 +104,68 @@ install (DIRECTORY launch resources scripts urdf params
 )
 
 install (FILES nodelet_plugins.xml DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+RETURN()
+else()
+  message(VERBOSE "ROS version is $ENV{ROS_VERSION}, skipping ROS1 ${PROJECT_NAME}")
+endif()
+
+
+#==============================================================================
+# Compile in ROS1
+#==============================================================================
+
+if($ENV{ROS_VERSION} STREQUAL 2)
+    find_package(ament_cmake REQUIRED)
+    set (PKG_DEPS
+        ${PKG_DEPS_COMMON}
+        rclcpp
+        rclcpp_components
+    )
+    foreach(pkg ${PKG_DEPS})
+        find_package(${pkg} REQUIRED)
+    endforeach()
+
+    # Add depthai-core dependency
+    add_subdirectory (${DEPTHAI_CORE} depthai-core)
+
+    add_definitions(-DUSE_ROS2)   # <-------- Set to use ros2 macro, for #ifdef
+    add_library (${PROJECT_NAME}_lib SHARED
+        src/depthai_common.cpp
+        src/depthai_base_ros2.cpp
+    )
+    target_link_libraries (${PROJECT_NAME}_lib PUBLIC
+        ${OpenCV_LIBRARIES}
+        ${Boost_LIBRARIES}
+        depthai-core
+    )
+    ament_target_dependencies(${PROJECT_NAME}_lib 
+        PUBLIC ${PKG_DEPS}
+    )
+
+    # Generate ros2 component
+    rclcpp_components_register_nodes(${PROJECT_NAME}_lib  "rr::DepthAIBaseRos2")
+    
+    include_directories (include)
+    add_executable (${PROJECT_NAME}_node src/depthai_node_ros2.cpp)
+    target_link_libraries(${PROJECT_NAME}_node PUBLIC ${PROJECT_NAME}_lib)
+
+    # Install ros2 component
+    install(TARGETS
+        ${PROJECT_NAME}_lib
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin)
+
+    install(DIRECTORY
+        launch/ params resources urdf
+        DESTINATION share/${PROJECT_NAME}
+    )
+
+    install(TARGETS
+        ${PROJECT_NAME}_node
+        DESTINATION lib/${PROJECT_NAME})
+
+    ament_package()
+else()
+    message(VERBOSE "ROS version is $ENV{ROS_VERSION}, skipping this ROS2 ${PROJECT_NAME}")
+endif()
