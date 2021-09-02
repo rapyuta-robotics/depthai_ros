@@ -16,6 +16,10 @@
         Pipeline for Mobilenet SSD streams
         </description>
     </class>
+    <class name="depthai_ros_driver/StereoWithMobilenetSSDPipeline" type="depthai_ros_driver::StereoWithMobilenetSSDPipeline" base_class_type="rr::Pipeline">
+        <description>
+        Pipeline for Stereo and Mobilenet SSD streams
+        </description>
     <class name="depthai_ros_driver/MonoCameraControlPipeline" type="depthai_ros_driver::MonoCameraControlPipeline" base_class_type="rr::Pipeline">
         <description>
         Pipeline for mono camera control

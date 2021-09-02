@@ -75,6 +75,7 @@ add_library (${PROJECT_NAME}_pipelines
     src/pipelines/preview_pipeline.cpp
     src/pipelines/stereo_pipeline.cpp
     src/pipelines/mobilenet_ssd_pipeline.cpp
+    src/pipelines/stereo_with_mobilened_ssd_pipeline.cpp
     src/pipelines/mono_camera_control_pipeline.cpp
 )
 target_link_libraries (${PROJECT_NAME}_pipelines PRIVATE
@@ -94,7 +95,6 @@ target_link_libraries (${PROJECT_NAME}_pipelines PRIVATE
 add_library(depthai INTERFACE)
 target_link_libraries(depthai INTERFACE depthai-core ${libudev_LIBRARIES})
 target_include_directories(depthai SYSTEM INTERFACE
-    ${DEPTHAI_SHARED}/include
     ${libudev_INCLUDE_DIRS}
 )
 
@@ -109,6 +109,15 @@ target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai range-v3)
 
 add_executable(gen2_ros_driver src/depthai_loader.cpp)
 target_link_libraries(gen2_ros_driver gen2_ros_queue gen2_ros_pipeline_loader gen2_ros_conversion)
+
+add_library(img_detections_stamper src/img_detections_stamper.cpp)
+target_link_libraries(img_detections_stamper ${catkin_LIBRARIES})
+
+add_library(img_detections_stamper_nodelet src/img_detections_stamper_nodelet.cpp)
+target_link_libraries(img_detections_stamper_nodelet img_detections_stamper)
+
+add_executable(img_detections_stamper_node src/img_detections_stamper_node.cpp)
+target_link_libraries(img_detections_stamper_node img_detections_stamper)
 
 catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
 catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
@@ -130,16 +139,19 @@ endif()
 ## Install ##
 #############
 
-# install (TARGETS ${PROJECT_NAME}_lib ${PROJECT_NAME}_nodelet ${PROJECT_NAME}
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+install (TARGETS gen2_ros_conversion gen2_ros_pipeline_loader gen2_ros_queue 
+  gen2_ros_driver img_detections_stamper img_detections_stamper_nodelet 
+  img_detections_stamper_node ${PROJECT_NAME}_pipelines
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
-# # Not installing the headers because this is not a library package
-# install (DIRECTORY launch resources scripts urdf params
-#     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-#     USE_SOURCE_PERMISSIONS
-# )
-
-# install (FILES nodelet_plugins.xml DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+# Not installing the headers because this is not a library package
+install (DIRECTORY launch resources scripts urdf params
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  USE_SOURCE_PERMISSIONS
+)
+install (FILES
+  nodelet_plugins.xml pipeline_plugins.xml
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
