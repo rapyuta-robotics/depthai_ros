@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
     ros::NodeHandle private_nh("~");
 
-    std::string pipeline_name = "depthai_ros_driver/MobilenetSSDPipeline";
+    std::string pipeline_name = "depthai_ros_driver/StereoWithMobilenetSSDPipeline";
     if (!private_nh.getParam("pipeline", pipeline_name)) {
         private_nh.setParam("pipeline", pipeline_name);
     }

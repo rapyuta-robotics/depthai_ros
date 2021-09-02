@@ -6,21 +6,22 @@
   <arg name="manager_name" default="$(arg ns)_manager"/>
 
   <arg name="camera_name" default="bw1097"/>
-  <arg name="camera_param_uri" default="package://depthai_ros_driver/params/camera/"
-    doc="Location of parameters is {camera_param_uri}/{camera_name}/{stream}.yaml"/>
+  <arg name="camera_param_uri" default="package://depthai_ros_driver/params/camera/" doc="Location of parameters is {camera_param_uri}/{camera_name}/{stream}.yaml"/>
 
   <!-- pipeline name -->
-  <arg name="pipeline" default="depthai_ros_driver/MobilenetSSDPipeline"/>
+  <arg name="pipeline" default="depthai_ros_driver/StereoWithMobilenetSSDPipeline"/>
 
   <!-- for StereoPipeline -->
   <arg name="with_depth" default="true"/>
   <arg name="stereo_lrcheck" default="true"/>
   <arg name="stereo_extended" default="false"/>
   <arg name="stereo_subpixel" default="true"/>
+  <arg name="stereo_confidence_threshold" default="200" />
 
   <!-- for MobilenetSSDPipeline -->
   <arg name="blob_file" default="$(find depthai_ros_driver)/resources/mobilenet_ssd.blob"/>
   <arg name="mobilenetssd_openvino_version" default="2" doc="integer corresponding to dai::OpenVINO::Version"/>
+  <arg name="preview_keep_aspect_ratio" default="false" />
 
   <!-- launching parameters -->
   <arg name="use_gdb" default="false"/>
@@ -47,7 +48,7 @@
       <param name="mobilenetssd_openvino_version" value="$(arg mobilenetssd_openvino_version)"/>
     </node>
     <node if="$(arg manager)" pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager">
-      <param name="num_worker_threads" value="10"/>
+      <param name="num_worker_threads" value="2"/>
     </node>
     <node pkg="nodelet" type="nodelet" name="img_detections_stamper" args="load depthai_ros_driver/ImgDetectionsStamper $(arg manager_name)">
       <remap from="nn" to="/depthai/nn" />

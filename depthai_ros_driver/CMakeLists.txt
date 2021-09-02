@@ -75,6 +75,7 @@ add_library (${PROJECT_NAME}_pipelines
     src/pipelines/preview_pipeline.cpp
     src/pipelines/stereo_pipeline.cpp
     src/pipelines/mobilenet_ssd_pipeline.cpp
+    src/pipelines/stereo_with_mobilened_ssd_pipeline.cpp
 )
 target_link_libraries (${PROJECT_NAME}_pipelines PRIVATE
     ${catkin_LIBRARIES}
@@ -137,16 +138,19 @@ endif()
 ## Install ##
 #############
 
-# install (TARGETS ${PROJECT_NAME}_lib ${PROJECT_NAME}_nodelet ${PROJECT_NAME}
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+install (TARGETS gen2_ros_conversion gen2_ros_pipeline_loader gen2_ros_queue 
+  gen2_ros_driver img_detections_stamper img_detections_stamper_nodelet 
+  img_detections_stamper_node ${PROJECT_NAME}_pipelines
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
-# # Not installing the headers because this is not a library package
-# install (DIRECTORY launch resources scripts urdf params
-#     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-#     USE_SOURCE_PERMISSIONS
-# )
-
-# install (FILES nodelet_plugins.xml DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+# Not installing the headers because this is not a library package
+install (DIRECTORY launch resources scripts urdf params
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  USE_SOURCE_PERMISSIONS
+)
+install (FILES
+  nodelet_plugins.xml pipeline_plugins.xml
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
