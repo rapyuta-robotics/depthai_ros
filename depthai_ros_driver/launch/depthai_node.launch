@@ -7,6 +7,9 @@
   <arg name="camera_param_uri" default="package://depthai_ros_driver/params/camera/"
     doc="Location of parameters is {camera_param_uri}/{camera_name}/{stream}.yaml"/>
 
+  <arg name="pub_queue_size" default="10"/>
+  <arg name="sub_queue_size" default="10"/>
+
   <!-- pipeline name -->
   <arg name="pipeline" default="depthai_ros_driver/MobilenetSSDPipeline"/>
 
@@ -30,6 +33,9 @@
     <node pkg="depthai_ros_driver" type="gen2_ros_driver" name="$(arg node_name)" output="screen" launch-prefix="$(arg launch_prefix)">
       <param name="camera_name" value="$(arg camera_name)"/>
       <param name="camera_param_uri" value="$(arg camera_param_uri)"/>
+
+      <param name="pub_queue_size" value="$(arg pub_queue_size)"/>
+      <param name="sub_queue_size" value="$(arg sub_queue_size)"/>
 
       <!-- pipeline name -->
       <param name="pipeline" value="$(arg pipeline)"/>

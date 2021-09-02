@@ -141,6 +141,10 @@ public:
             , _pub_nh(nh)
             , _sub_nh(nh) {
         _camera_info_default = nh.advertiseService("reset_camera_info", &DeviceROS::defaultCameraInfo, this);
+
+        ros::NodeHandle private_nh("~");
+        private_nh.param<int>("pub_queue_size", _pub_queue_size, 10);
+        private_nh.param<int>("sub_queue_size", _sub_queue_size, 10);
     }
 
     void closeImpl() override {
@@ -239,8 +243,6 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawCameraControl>(_pub_nh,
-                    // name, 10)};
                     break;
                 case dai::DatatypeEnum::IMUData:
                     // @TODO: support IMU
@@ -251,15 +253,15 @@ protected:
                     break;
                 case dai::DatatypeEnum::ImgDetections:
                     _pub_t[name] = std::thread{
-                            generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, name, 10)};
+                            generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, name, _pub_queue_size)};
                     break;
                 case dai::DatatypeEnum::ImgFrame:
                     _pub_t[name] =
-                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, name, 10)};
+                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, name, _pub_queue_size)};
                     break;
                 case dai::DatatypeEnum::NNData:
                     _pub_t[name] =
-                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, 10)};
+                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, _pub_queue_size)};
                     break;
                 case dai::DatatypeEnum::SpatialImgDetections:
                     break;
@@ -271,7 +273,7 @@ protected:
                     break;
                 case dai::DatatypeEnum::Tracklets:
                     _pub_t[name] =
-                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, 10)};
+                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, _pub_queue_size)};
                     break;
                 default:
                     break;
@@ -296,7 +298,7 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    _sub[name] = _sub_nh.subscribe(name, 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>(name));
+                    _sub[name] = _sub_nh.subscribe(name, _sub_queue_size, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>(name));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;
@@ -365,6 +367,7 @@ protected:
 
     ros::CallbackQueue _pub_q, _sub_q;
     ros::NodeHandle _pub_nh, _sub_nh;
+    int _pub_queue_size, _sub_queue_size;
 
     std::atomic<bool> _running = true;
 };

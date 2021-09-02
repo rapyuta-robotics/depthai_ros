@@ -12,6 +12,7 @@
 int main(int argc, char** argv) {
     ros::init(argc, argv, "temp");
 
+    ros::NodeHandle nh;
     ros::NodeHandle private_nh("~");
 
     std::string pipeline_name = "depthai_ros_driver/MobilenetSSDPipeline";
@@ -24,7 +25,7 @@ int main(int argc, char** argv) {
     plugin->configure(private_nh);
     dai::Pipeline p = plugin->getPipeline();
 
-    rr::DeviceROS driver(p.getOpenVINOVersion());
+    rr::DeviceROS driver(nh, p.getOpenVINOVersion());
     driver.startPipeline(p);
 
     ros::spin();
