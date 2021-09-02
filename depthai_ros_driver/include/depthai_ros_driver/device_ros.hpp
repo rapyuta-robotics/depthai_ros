@@ -155,10 +155,8 @@ protected:
         auto conn = this->getConnection();
         _streams[name] = std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
 
-        auto& serial_buf = _serial_bufs[name];
-        auto& writer_buf = _writer_bufs[name];
-
-        const auto core_sub_lambda = [&stream = _streams[name], &serial_buf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
+        const auto core_sub_lambda = [&stream = _streams[name], serial_buf = std::vector<std::uint8_t>(), writer_buf = std::vector<std::uint8_t>()]
+                (const boost::shared_ptr<MsgType const>& msg) mutable {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             // convert msg to data
@@ -298,8 +296,6 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    _serial_bufs[name] = std::vector<std::uint8_t>();
-                    _writer_bufs[name] = std::vector<std::uint8_t>();
                     _sub[name] = _sub_nh.subscribe(name, 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>(name));
                     break;
                 case dai::DatatypeEnum::IMUData:
@@ -360,9 +356,6 @@ protected:
     Map<ros::Subscriber> _sub;
     Map<std::shared_ptr<camera_info_manager::CameraInfoManager>> _camera_info_manager;
     Map<std::unique_ptr<dai::XLinkStream>> _streams;
-
-    Map<std::vector<std::uint8_t>> _serial_bufs;  // buffer for deserializing subscribed messages
-    Map<std::vector<std::uint8_t>> _writer_bufs;  // buffer for writing to xLinkIn
 
     std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;
     ros::ServiceServer _camera_info_default;
