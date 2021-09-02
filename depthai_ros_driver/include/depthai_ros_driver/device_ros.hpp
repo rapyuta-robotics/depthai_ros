@@ -152,11 +152,13 @@ protected:
     // create stream based on name at the time of subscription
     template <class MsgType>
     auto generate_cb_lambda(const std::string& name) -> boost::function<void(const boost::shared_ptr<MsgType const>&)> {
-        auto& stream = _streams[name];
+        auto conn = this->getConnection();
+        _streams[name] = std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
+
         auto& serial_buf = _serial_bufs[name];
         auto& writer_buf = _writer_bufs[name];
 
-        const auto core_sub_lambda = [&stream, &serial_buf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
+        const auto core_sub_lambda = [&stream = _streams[name], &serial_buf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             // convert msg to data
@@ -290,7 +292,6 @@ protected:
 
             auto common_type = getCommonType(node_links.in_to);
             ROS_INFO_STREAM(name << " (sub): " << static_cast<int>(common_type));
-            auto conn = this->getConnection();
 
             // create appropriate subscriber using the common_type
             switch (common_type) {
@@ -299,8 +300,6 @@ protected:
                 case dai::DatatypeEnum::CameraControl:
                     _serial_bufs[name] = std::vector<std::uint8_t>();
                     _writer_bufs[name] = std::vector<std::uint8_t>();
-                    _streams[name] =
-                        std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
                     _sub[name] = _sub_nh.subscribe(name, 1000, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>(name));
                     break;
                 case dai::DatatypeEnum::IMUData:
