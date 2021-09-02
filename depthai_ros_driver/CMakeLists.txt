@@ -146,7 +146,7 @@ install (TARGETS gen2_ros_conversion gen2_ros_pipeline_loader gen2_ros_queue
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-# # Not installing the headers because this is not a library package
+# Not installing the headers because this is not a library package
 install (DIRECTORY launch resources scripts urdf params
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
   USE_SOURCE_PERMISSIONS

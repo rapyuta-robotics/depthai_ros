@@ -90,10 +90,12 @@ protected:
         camRgb->video.link(xoutRgb->input);
         nn->out.link(nnOut->input);
         int maxDisp = 96;
-        if (stereo_extended)
+        if (stereo_extended) {
             maxDisp *= 2;
-        if (stereo_subpixel)
+        }
+        if (stereo_subpixel) {
             maxDisp *= 32;  // 5 bits fractional disparity
+        }
         if (with_depth) {
             // StereoDepth
             stereo->initialConfig.setConfidenceThreshold(stereo_confidence_threshold);
