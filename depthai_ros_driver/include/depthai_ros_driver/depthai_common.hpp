@@ -52,15 +52,11 @@ using ObjectsMsg = depthai_ros_msgs::msg::Objects;
 using ObjectMsg = depthai_ros_msgs::msg::Object;
 using CameraInfoMsg = sensor_msgs::msg::CameraInfo;
 using HeaderMsg = std_msgs::msg::Header;
-using ROSNodeHandle = std::shared_ptr<rclcpp::Node>;
+using AutoFocusCtrlMsg = depthai_ros_msgs::msg::AutoFocusCtrl;
+using Float32Msg = std_msgs::msg::Float32;
+using TriggerSrv = depthai_ros_msgs::srv::TriggerNamed;
 
-using ObjectPubPtr = rclcpp::Publisher<ObjectMsg>::SharedPtr;
-using ObjectsPubPtr = rclcpp::Publisher<ObjectsMsg>::SharedPtr;
-using ImagePubPtr = rclcpp::Publisher<ImageMsg>::SharedPtr;
-using ComImagePubPtr = rclcpp::Publisher<CompressedImageMsg>::SharedPtr;
-using StreamPub = std::variant<ObjectsPubPtr, ObjectPubPtr,
-    ImagePubPtr, ComImagePubPtr>;
-using CameraInfoPub = rclcpp::Publisher<CameraInfoMsg>::SharedPtr;
+using ROSNodeHandle = std::shared_ptr<rclcpp::Node>;
 using RosTime = rclcpp::Time;
 using RosDuration = rclcpp::Duration;
 
@@ -80,10 +76,11 @@ using ObjectsMsg = depthai_ros_msgs::Objects;
 using ObjectMsg = depthai_ros_msgs::Object;
 using CameraInfoMsg = sensor_msgs::CameraInfo;
 using HeaderMsg = std_msgs::Header;
+using AutoFocusCtrlMsg = depthai_ros_msgs::AutoFocusCtrl;
+using Float32Msg = std_msgs::Float32;
+using TriggerSrv = depthai_ros_msgs::TriggerNamed;
 
 using ROSNodeHandle = std::shared_ptr<ros::NodeHandle>;
-using StreamPub = std::unique_ptr<ros::Publisher>;
-using CameraInfoPub = std::unique_ptr<ros::Publisher>;
 using RosTime = ros::Time;
 using RosDuration = ros::Duration;
 #endif
@@ -92,6 +89,115 @@ using CameraInfoManagerPtr =
   std::shared_ptr<camera_info_manager::CameraInfoManager>;
 
 namespace rr {
+
+namespace ros_agnostic
+{
+//==============================================================================
+class Publisher
+{
+public:
+  /// Create ros publisher
+  template <class Msg>
+  void create_publisher(
+    ROSNodeHandle node_handle,
+    const std::string& topic_name,
+    const uint32_t queue_size)
+  {
+    #if defined(USE_ROS2)
+    // using qos: KeepLast(QueueSize)
+    _ptr = node_handle->create_publisher<Msg>(topic_name, queue_size);
+    #else
+    _pub = node_handle->advertise<Msg>(topic_name, queue_size);
+    #endif
+  }
+
+  /// Publish ros msg
+  template <typename Msg>
+  void publish(Msg& msg) 
+  {
+    #if defined(USE_ROS2)
+    // move the ptr and subscriber check here
+    auto pub = std::static_pointer_cast<rclcpp::Publisher<Msg>>(_ptr);
+    if( pub && pub->get_subscription_count() > 0)
+      pub->publish(msg);
+    #else
+    if (_pub.getNumSubscribers() > 0);
+    _pub.publish(msg);
+    #endif
+  }
+private:
+  #if defined(USE_ROS2)
+  std::shared_ptr<void> _ptr;
+  #else
+  ros::Publisher _pub;
+  #endif
+};
+
+//==============================================================================
+class Subscription
+{
+public:
+  template <class Msg, typename Callback>
+  void create_subscription(
+    ROSNodeHandle node_handle,
+    const std::string& topic_name, 
+    const uint32_t queue_size,
+    const Callback& callback )
+  {
+    #if defined(USE_ROS2)
+    // using qos: KeepLast(QueueSize)
+    _ptr = node_handle->create_subscription<Msg>(topic_name, queue_size, callback);
+    #else
+    _sub = node_handle->subscribe<Msg>(topic_name, queue_size, callback);
+    #endif
+  }
+private:
+  #if defined(USE_ROS2)
+  std::shared_ptr<void> _ptr;
+  #else
+  ros::Subscriber _sub;
+  #endif
+};
+
+//==============================================================================
+class Service
+{
+public:
+  template <class Msg, typename Callback>
+  void create_service(
+    ROSNodeHandle node_handle,
+    const std::string& srv_name,
+    const Callback& callback )
+  {
+    #if defined(USE_ROS2)
+    _ptr = node_handle->create_service<Msg>(srv_name, callback);
+    #else
+    using RequestMsg = typename Msg::Request;
+    using ResponseMsg = typename Msg::Response;
+    _srv = node_handle->advertiseService<RequestMsg, ResponseMsg>(
+      srv_name, // TODO understand this shit
+      [callback=std::move(callback)](const RequestMsg& req, ResponseMsg& res)
+      {
+        // internally convert ref to ptr
+        auto res_ptr = std::make_shared<ResponseMsg>();
+        callback(std::make_shared<RequestMsg>(req), res_ptr);
+        res = *res_ptr;
+        return true;
+      });
+    #endif
+  }
+private:
+  #if defined(USE_ROS2)
+  std::shared_ptr<void> _ptr;
+  #else
+  ros::ServiceServer _srv;
+  #endif
+};
+
+}  // namespace ros_agnostic
+
+using CameraInfoPub = std::shared_ptr<ros_agnostic::Publisher>;
+using StreamPub = std::shared_ptr<ros_agnostic::Publisher>;
 
 //==============================================================================
 const std::string ResetCameraServiceName = "reset_camera_info";
@@ -226,20 +332,6 @@ private:
   /// get camera info msg
   CameraInfoMsg get_camera_info_msg(const Stream& id);
 
-  // check if publisher is valid (ros1 api)
-  template<typename T>
-  auto is_pub_valid(T pub) -> decltype(pub->getNumSubscribers(), bool())
-  {
-    return pub && pub->getNumSubscribers() > 0;
-  }
-
-  // check if publisher is valid (ros2 api)
-  template<typename T>
-  auto is_pub_valid(T pub) -> decltype(pub->get_subscription_count(), bool())
-  {
-    return pub && pub->get_subscription_count() > 0;
-  }
-
   DepthAICommonConfig _cfg;
   std::unique_ptr<Device> _depthai;
   std::shared_ptr<CNNHostPipeline> _pipeline;
@@ -262,6 +354,11 @@ private:
   std::array<StreamPub, Stream::END> _stream_publishers;
   std::array<CameraInfoPub, Stream::IMAGE_END> _camera_info_publishers;
   std::array<CameraInfoManagerPtr, Stream::IMAGE_END> _camera_info_managers;
+
+  // service and subscriptions
+  ros_agnostic::Service _camera_info_default;
+  ros_agnostic::Subscription _af_ctrl_sub;
+  ros_agnostic::Subscription _disparity_conf_sub;
 };
 
 //==============================================================================

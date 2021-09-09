@@ -227,6 +227,35 @@ DepthAICommon::DepthAICommon(
   const auto _pipeline_config_json = create_pipeline_config();
   _pipeline = _depthai->create_pipeline(_pipeline_config_json);
   this->create_stream_publishers();
+
+  // autofocus 'service' subscriber
+  _af_ctrl_sub.create_subscription<AutoFocusCtrlMsg>(
+    _node_handle, SetAutoFocusTopicName, _cfg.queue_size,
+    [&](const AutoFocusCtrlMsg::ConstPtr msg)
+    {
+      this->set_autofocus(msg->trigger_auto_focus, msg->auto_focus_mode);
+    });
+
+  // disparity_confidence 'service' subscriber
+  _disparity_conf_sub.create_subscription<Float32Msg>(
+    _node_handle, SetDisparityTopicName, _cfg.queue_size,
+    [&](const Float32Msg::ConstPtr msg)
+    {
+      this->set_disparity(msg->data);
+    });
+
+  // Service to Trigger default camera param
+  _camera_info_default.create_service<TriggerSrv>(
+    _node_handle, ResetCameraServiceName,
+    [this](
+      const std::shared_ptr<TriggerSrv::Request> req,
+      std::shared_ptr<TriggerSrv::Response> res)
+    {
+      const auto& name = req->name;
+      // std::cout << "find jibaiing::  " << jibai << std::endl;
+      res->success = this->set_camera_info_manager(name, "default/");
+      res->message = "booya";
+    });
 }
 
 //==============================================================================
@@ -240,15 +269,9 @@ void DepthAICommon::create_stream_publishers()
       if (id < Stream::IMAGE_END)
       {
         // set camera info publisher
-        _camera_info_publishers[id] =
-      #if defined(USE_ROS2)
-          _node_handle->create_publisher<CameraInfoMsg>(
-          topic_name + "/camera_info", _cfg.queue_size);
-      #else
-          std::make_unique<ros::Publisher>(_node_handle->advertise<CameraInfoMsg>(
-              topic_name + "/camera_info",
-              _cfg.queue_size));
-      #endif
+        _camera_info_publishers[id] = std::make_shared<ros_agnostic::Publisher>();
+        _camera_info_publishers[id]->create_publisher<CameraInfoMsg>(
+          _node_handle, topic_name + "/camera_info", _cfg.queue_size);
         set_camera_info_manager(topic_name, _cfg.camera_name + "/");
         // set stream topic name
         suffix =
@@ -256,14 +279,9 @@ void DepthAICommon::create_stream_publishers()
       }
 
       using type = decltype(msg_type);
-      _stream_publishers[id] =
-    #if defined(USE_ROS2)
-        _node_handle->create_publisher<type>(
-        topic_name + suffix, _cfg.queue_size);
-    #else
-        std::make_unique<ros::Publisher>(_node_handle->advertise<type>(
-            topic_name + suffix, _cfg.queue_size));
-    #endif
+      _stream_publishers[id] = std::make_shared<ros_agnostic::Publisher>();
+      _stream_publishers[id]->create_publisher<type>(
+          _node_handle, topic_name + suffix, _cfg.queue_size);
     };
 
   // loop through selected stream list and create stream
@@ -371,14 +389,10 @@ void DepthAICommon::publishObjectInfoMsg(
   const dai::Detections& detections, const RosTime& stamp)
 {
   const auto pubPtr =
-  #if defined(USE_ROS2)
-    std::get<ObjectsPubPtr>(_stream_publishers[Stream::META_OUT]);
-  #else
-    _stream_publishers[Stream::META_OUT].get();
-  #endif
+    _stream_publishers[Stream::META_OUT]; // TODO .get()?
 
-  if (!is_pub_valid(pubPtr))
-    return;// No subscribers
+  if (!pubPtr)
+    return;// Not avail
 
   auto msg = convert(detections);
   msg.header.stamp = stamp;
@@ -393,14 +407,8 @@ void DepthAICommon::publishImageMsg(
   header.stamp = stamp;
   header.frame_id = packet.stream_name;
 
-  #if defined(USE_ROS2)
   const auto camInfoPubPtr = _camera_info_publishers[type];
-  #else
-  const auto camInfoPubPtr = _camera_info_publishers[type].get();
-  #endif
-
-  // publish camera info
-  if (is_pub_valid(camInfoPubPtr))
+  if (camInfoPubPtr)
   {
     auto msg = get_camera_info_msg(type);
     msg.header = header;
@@ -410,15 +418,10 @@ void DepthAICommon::publishImageMsg(
   // check if to publish it out as Compressed or ImageMsg
   if (type == Stream::JPEG_OUT || type == Stream::VIDEO)
   {
+    const auto pubPtr = _stream_publishers[type];
 
-    #if defined(USE_ROS2)
-    const auto pubPtr = std::get<ComImagePubPtr>(_stream_publishers[type]);
-    #else
-    const auto pubPtr = _stream_publishers[type].get();
-    #endif
-
-    if (!is_pub_valid(pubPtr))
-      return;// No subscribers
+    if (!pubPtr)
+      return;// Not avail
 
     const auto img = std::make_shared<CompressedImageMsg>();
     img->header = std::move(header);
@@ -429,14 +432,10 @@ void DepthAICommon::publishImageMsg(
   }
   else
   {
-    #if defined(USE_ROS2)
-    const auto pubPtr = std::get<ImagePubPtr>(_stream_publishers[type]);
-    #else
-    const auto pubPtr = _stream_publishers[type].get();
-    #endif
+    const auto pubPtr = _stream_publishers[type];
 
-    if (!is_pub_valid(pubPtr))
-      return;// No subscribers
+    if (!pubPtr)
+      return;// Not avail
 
     const auto img_data = get_image_data(packet, type);
     if (img_data.first.empty())

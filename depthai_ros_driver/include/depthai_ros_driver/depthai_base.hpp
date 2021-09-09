@@ -14,15 +14,9 @@ public:
   ~DepthAIBase() = default;
 
 private:
-  ros::ServiceServer _camera_info_default;
-  ros::Subscriber _af_ctrl_sub;
-  ros::Subscriber _disparity_conf_sub;
   ros::Timer _cameraReadTimer;
-
   std::unique_ptr<DepthAICommon> _depthai_common;
-
   void onInit() override;
-
 };
 }  // namespace rr
 
