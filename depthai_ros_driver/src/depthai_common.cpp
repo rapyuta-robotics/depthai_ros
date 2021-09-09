@@ -269,7 +269,8 @@ void DepthAICommon::create_stream_publishers()
       if (id < Stream::IMAGE_END)
       {
         // set camera info publisher
-        _camera_info_publishers[id] = std::make_shared<ros_agnostic::Publisher>();
+        _camera_info_publishers[id] =
+          std::make_shared<ros_agnostic::Publisher>();
         _camera_info_publishers[id]->create_publisher<CameraInfoMsg>(
           _node_handle, topic_name + "/camera_info", _cfg.queue_size);
         set_camera_info_manager(topic_name, _cfg.camera_name + "/");
@@ -281,7 +282,7 @@ void DepthAICommon::create_stream_publishers()
       using type = decltype(msg_type);
       _stream_publishers[id] = std::make_shared<ros_agnostic::Publisher>();
       _stream_publishers[id]->create_publisher<type>(
-          _node_handle, topic_name + suffix, _cfg.queue_size);
+        _node_handle, topic_name + suffix, _cfg.queue_size);
     };
 
   // loop through selected stream list and create stream
