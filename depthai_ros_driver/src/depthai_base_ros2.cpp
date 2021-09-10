@@ -26,12 +26,6 @@ DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
 {
   const auto node = this->create_sub_node(""); // private?
   _depthai_common = std::make_unique<DepthAICommon>(node, node);
-
-  _cameraReadTimer = this->create_wall_timer(0.002s,
-      [&]()
-      {
-        _depthai_common->process_and_publish_packets();
-      });
 }
 }  // namespace rr
 

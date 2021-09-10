@@ -112,8 +112,8 @@ private:
 class Service
 {
 public:
-  template<class Msg, typename Callback>
   /// @brief Create ros service
+  template<class Msg, typename Callback>
   void create_service(
     ROSNodeHandle node_handle,
     const std::string& srv_name,
@@ -125,7 +125,7 @@ public:
     using RequestMsg = typename Msg::Request;
     using ResponseMsg = typename Msg::Response;
     _srv = node_handle->advertiseService<RequestMsg, ResponseMsg>(
-      srv_name, // TODO understand this shit
+      srv_name,
       [callback = std::move(callback)](const RequestMsg& req, ResponseMsg& res)
       {
         // internally convert ref to ptr
@@ -143,6 +143,55 @@ private:
   ros::ServiceServer _srv;
   #endif
 };
+
+//==============================================================================
+class Timer
+{
+public:
+  /// @brief Create ros timer
+  template<typename Callback>
+  void create_timer(
+    ROSNodeHandle node_handle,
+    const double period_sec,
+    const Callback& callback)
+  {
+    #if defined(USE_ROS2)
+    const auto period = std::chrono::duration<double>(period_sec);
+    _timer = node_handle->create_wall_timer(period, callback);
+    #else
+    _timer = node_handle->createTimer(ros::Duration(period_sec),
+        [callback = std::move(callback)](const ros::TimerEvent&)
+        {
+          callback();
+        });
+    #endif
+  }
+private:
+  #if defined(USE_ROS2)
+  rclcpp::TimerBase::SharedPtr _timer;
+  #else
+  ros::Timer _timer;
+  #endif
+};
+
+//==============================================================================
+
+/// @brief Get ROS param
+template<typename Param>
+void get_param(
+  ROSNodeHandle node_handle, const std::string& name, Param& variable)
+{
+#if defined(USE_ROS2)
+  using var_type = std::remove_reference_t<decltype(variable)>;
+  node_handle->declare_parameter<var_type>(name, variable);
+  node_handle->get_parameter(name, variable);
+#else
+  if (node_handle->hasParam(name))
+    node_handle->getParam(name, variable);
+  else
+    node_handle->setParam(name, variable);
+#endif
+}
 
 }  // namespace ros_agnostic
 }  // namespace rr

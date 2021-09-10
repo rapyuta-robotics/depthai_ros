@@ -14,7 +14,6 @@ public:
   ~DepthAIBase() = default;
 
 private:
-  ros::Timer _cameraReadTimer;
   std::unique_ptr<DepthAICommon> _depthai_common;
   void onInit() override;
 };

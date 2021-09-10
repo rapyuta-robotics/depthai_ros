@@ -28,12 +28,6 @@ void DepthAIBase<Node>::onInit()
   auto nh = std::make_shared<ros::NodeHandle>(this->getNodeHandle());
 
   _depthai_common = std::make_unique<DepthAICommon>(nh, p_nh);
-
-  _cameraReadTimer = p_nh->createTimer(ros::Duration(1. / 500),
-      [&](const ros::TimerEvent&)
-      {
-        _depthai_common->process_and_publish_packets();
-      });
 }
 
 //==============================================================================

@@ -176,47 +176,30 @@ const std::string DepthAICommon::create_pipeline_config()
 
 //==============================================================================
 DepthAICommon::DepthAICommon(
-  const ROSNodeHandle nh, const ROSNodeHandle private_nh)
+  const ROSNodeHandle nh, const ROSNodeHandle p_nh)
 {
   _node_handle = std::move(nh);
 
-  ///    lambda std::function<void(string, auto)>, in which the auto should
-  ///    support static types of: bool, string, int, vector<string>
-  auto get_param = [&](const std::string& name, auto& variable)
-    {
-      using var_type = std::remove_reference_t<decltype(variable)>;
-      // Get param method
-    #if defined(USE_ROS2)
-      private_nh->declare_parameter<var_type>(name, variable);
-      private_nh->get_parameter(name, variable);
-    #else
-      if (private_nh->hasParam(name))
-        private_nh->getParam(name, variable);
-      else
-        private_nh->setParam(name, variable);
-    #endif
-      // std::cout <<" | param: " << name << " : " << variable << std::endl;
-    };
-
-  get_param("calibration_file", _cfg.calib_file);
-  get_param("blob_file", _cfg.blob_file);
-  get_param("blob_file_config", _cfg.blob_file_config);
-  get_param("stream_list", _cfg.stream_list);
-  get_param("depthai_block_read", _cfg.depthai_block_read);
-  get_param("enable_sync", _cfg.sync_video_meta);
-  get_param("full_fov_nn", _cfg.full_fov_nn);
-  get_param("disable_depth", _cfg.compute_bbox_depth);
-  get_param("force_usb2", _cfg.force_usb2);
-  get_param("rgb_height", _cfg.rgb_height);
-  get_param("rgb_fps", _cfg.rgb_fps);
-  get_param("depth_height", _cfg.depth_height);
-  get_param("depth_fps", _cfg.depth_fps);
-  get_param("shaves", _cfg.shaves);
-  get_param("cmx_slices", _cfg.cmx_slices);
-  get_param("nn_engines", _cfg.nn_engines);
-  get_param("camera_param_uri", _cfg.camera_param_uri);
-  get_param("camera_name", _cfg.camera_name);
-  get_param("queue_size", _cfg.queue_size);
+  using namespace ros_agnostic;
+  get_param(p_nh, "calibration_file", _cfg.calib_file);
+  get_param(p_nh, "blob_file", _cfg.blob_file);
+  get_param(p_nh, "blob_file_config", _cfg.blob_file_config);
+  get_param(p_nh, "stream_list", _cfg.stream_list);
+  get_param(p_nh, "depthai_block_read", _cfg.depthai_block_read);
+  get_param(p_nh, "enable_sync", _cfg.sync_video_meta);
+  get_param(p_nh, "full_fov_nn", _cfg.full_fov_nn);
+  get_param(p_nh, "disable_depth", _cfg.compute_bbox_depth);
+  get_param(p_nh, "force_usb2", _cfg.force_usb2);
+  get_param(p_nh, "rgb_height", _cfg.rgb_height);
+  get_param(p_nh, "rgb_fps", _cfg.rgb_fps);
+  get_param(p_nh, "depth_height", _cfg.depth_height);
+  get_param(p_nh, "depth_fps", _cfg.depth_fps);
+  get_param(p_nh, "shaves", _cfg.shaves);
+  get_param(p_nh, "cmx_slices", _cfg.cmx_slices);
+  get_param(p_nh, "nn_engines", _cfg.nn_engines);
+  get_param(p_nh, "camera_param_uri", _cfg.camera_param_uri);
+  get_param(p_nh, "camera_name", _cfg.camera_name);
+  get_param(p_nh, "queue_size", _cfg.queue_size);
 
   if (_cfg.camera_param_uri.back() != '/')
     _cfg.camera_param_uri += "/";
@@ -247,14 +230,19 @@ DepthAICommon::DepthAICommon(
   // Service to Trigger default camera param
   _camera_info_default.create_service<TriggerSrv>(
     _node_handle, ResetCameraServiceName,
-    [this](
+    [&](
       const std::shared_ptr<TriggerSrv::Request> req,
       std::shared_ptr<TriggerSrv::Response> res)
     {
       const auto& name = req->name;
-      // std::cout << "find jibaiing::  " << jibai << std::endl;
       res->success = this->set_camera_info_manager(name, "default/");
-      res->message = "booya";
+    });
+
+  // periodic callback timer to publish stream packets
+  _camera_read_timer.create_timer(_node_handle, 1. / 500,
+    [&]()
+    {
+      this->process_and_publish_packets();
     });
 }
 

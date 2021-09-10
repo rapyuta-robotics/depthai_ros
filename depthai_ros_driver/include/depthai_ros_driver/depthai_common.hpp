@@ -243,10 +243,11 @@ private:
   std::array<CameraInfoPub, Stream::IMAGE_END> _camera_info_publishers;
   std::array<CameraInfoManagerPtr, Stream::IMAGE_END> _camera_info_managers;
 
-  // service and subscriptions
+  // service, subscriptions and timer
   ros_agnostic::Service _camera_info_default;
   ros_agnostic::Subscription _af_ctrl_sub;
   ros_agnostic::Subscription _disparity_conf_sub;
+  ros_agnostic::Timer _camera_read_timer;
 };
 
 //==============================================================================
