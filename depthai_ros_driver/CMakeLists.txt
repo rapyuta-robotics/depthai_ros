@@ -153,3 +153,6 @@ install (DIRECTORY launch resources scripts urdf params
 install (FILES
   nodelet_plugins.xml pipeline_plugins.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
+  install(DIRECTORY include/${PROJECT_NAME}/
+        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
