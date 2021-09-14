@@ -83,7 +83,7 @@ macro(add_ros_node name)
   cmake_parse_arguments(_ARG
     "SKIP_PACKAGE_SEARCH"
     "PROJECT_NAME;ROS2_COMPONENT_CLASS"
-    "SOURCES;ROS1_SOURCES;ROS2_SOURCES;ROS1_COMPONENT_SOURCES;ROS1_EXE_SOURCES;ROS2_EXE_SOURCES;DIRECTORIES;INCLUDE_DIRS;SYSTEM_DEPS;PKG_DEPS;TARGET_DEPS"
+    "SOURCES;ROS1_SOURCES;ROS2_SOURCES;ROS1_EXE_SOURCES;ROS2_EXE_SOURCES;DIRECTORIES;INCLUDE_DIRS;SYSTEM_DEPS;PKG_DEPS;TARGET_DEPS"
     ${ARGN})
   if(_ARG_UNPARSED_ARGUMENTS)
     message(FATAL_ERROR
@@ -102,7 +102,7 @@ macro(add_ros_node name)
 
     catkin_package (
       INCLUDE_DIRS ${_ARG_INCLUDE_DIRS}
-        LIBRARIES ${name}_nodelet
+        LIBRARIES ${name}_lib
         CATKIN_DEPENDS ${_ARG_PKG_DEPS}
         DEPENDS ${_ARG_SYSTEM_DEPS}
     )
@@ -125,13 +125,14 @@ macro(add_ros_node name)
     add_dependencies(${name}_lib
       ${${name}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-    add_library(${name}_nodelet ${_ARG_ROS1_COMPONENT_SOURCES})
-    target_link_libraries(${name}_nodelet ${name}_lib)
+    # TODO: just place nodelet in _lib
+    # add_library(${name}_nodelet ${_ARG_ROS1_COMPONENT_SOURCES})
+    # target_link_libraries(${name}_nodelet ${name}_lib)
 
     add_executable(${name} ${_ARG_ROS1_EXE_SOURCES})
     target_link_libraries(${name} ${name}_lib)
 
-    install(TARGETS ${name}_lib ${name}_nodelet ${name}
+    install(TARGETS ${name}_lib ${name}
       ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
       LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
       RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

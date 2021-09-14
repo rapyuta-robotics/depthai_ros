@@ -28,13 +28,6 @@
 #include <depthai/nnet/nnet_packet.hpp>
 #include <depthai/pipeline/cnn_host_pipeline.hpp>
 
-// std includes
-#include <algorithm>
-#include <array>
-#include <memory>
-#include <string>
-#include <variant>
-
 #include <depthai_ros_driver/ros_agnostic.hpp>
 
 #if defined(USE_ROS2)
@@ -55,9 +48,6 @@ using AutoFocusCtrlMsg = depthai_ros_msgs::msg::AutoFocusCtrl;
 using Float32Msg = std_msgs::msg::Float32;
 using TriggerSrv = depthai_ros_msgs::srv::TriggerNamed;
 
-using RosTime = rclcpp::Time;
-using RosDuration = rclcpp::Duration;
-
 #else
   #include <std_msgs/Float32.h>
   #include <sensor_msgs/Image.h>
@@ -75,9 +65,6 @@ using HeaderMsg = std_msgs::Header;
 using AutoFocusCtrlMsg = depthai_ros_msgs::AutoFocusCtrl;
 using Float32Msg = std_msgs::Float32;
 using TriggerSrv = depthai_ros_msgs::TriggerNamed;
-
-using RosTime = ros::Time;
-using RosDuration = ros::Duration;
 #endif
 
 using CameraInfoPub = std::shared_ptr<rr::ros_agnostic::Publisher>;

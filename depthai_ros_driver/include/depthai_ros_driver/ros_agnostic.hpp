@@ -22,11 +22,14 @@
   #include <rclcpp/node.hpp>
   #define ROS_LOGGER(...) RCUTILS_LOG_WARN_NAMED("depthai_ros", __VA_ARGS__)
 using ROSNodeHandle = std::shared_ptr<rclcpp::Node>;
-
+using RosTime = rclcpp::Time;
+using RosDuration = rclcpp::Duration;
 #else
   #include <ros/ros.h>
   #define ROS_LOGGER(...) ROS_WARN_NAMED("depthai_ros", __VA_ARGS__)
 using ROSNodeHandle = std::shared_ptr<ros::NodeHandle>;
+using RosTime = ros::Time;
+using RosDuration = ros::Duration;
 #endif
 
 namespace rr {

@@ -34,3 +34,9 @@ void DepthAIBase<Node>::onInit()
 template class DepthAIBase<ROS1Node<>>;
 template class DepthAIBase<nodelet::Nodelet>;
 }  // namespace rr
+
+//==============================================================================
+#include <pluginlib/class_list_macros.h>
+#include <depthai_ros_driver/depthai_base.hpp>
+
+PLUGINLIB_EXPORT_CLASS(rr::DepthAINodelet, nodelet::Nodelet);

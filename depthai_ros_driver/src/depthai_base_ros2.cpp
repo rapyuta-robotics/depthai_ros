@@ -15,7 +15,6 @@
  *
 */
 
-#include <chrono>
 #include <depthai_ros_driver/depthai_base_ros2.hpp>
 
 namespace rr {

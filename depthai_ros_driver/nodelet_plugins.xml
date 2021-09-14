@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<library path="lib/libdepthai_ros_driver_nodelet">
+<library path="lib/libdepthai_ros_driver_lib">
     <class name="depthai_ros_driver/DepthAI" type="rr::DepthAINodelet" base_class_type="nodelet::Nodelet">
         <description>
         Nodelet to run the host driver of DepthAI

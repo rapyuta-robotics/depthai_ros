@@ -504,6 +504,8 @@ const bool DepthAICommon::set_camera_info_manager(
     return false;
 
   const auto idx = std::distance(_topic_names.cbegin(), it);
+
+  /// Check if camera info manager is initialized
   if (_camera_info_managers[idx])
   {
     return _camera_info_managers[idx]->setCameraName(name) &&
@@ -511,11 +513,14 @@ const bool DepthAICommon::set_camera_info_manager(
   }
   else
   {
-    #if defined(USE_ROS2)
-    auto lnh = _node_handle->create_sub_node(name).get();
+    #if defined(USE_ROS2)   
+    const ROSNodeHandle& nh_ptr = _node_handle->create_sub_node(name);
+    auto lnh = nh_ptr.get();
     #else
     auto lnh = ros::NodeHandle{*_node_handle, name};
     #endif
+    
+    /// input arg: lnh is nodehandle for ros1, and raw node ptr in ros2
     _camera_info_managers[idx] =
       std::make_shared<camera_info_manager::CameraInfoManager>(lnh, name, uri);
     return true;
