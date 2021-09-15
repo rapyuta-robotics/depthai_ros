@@ -25,6 +25,7 @@
 // message headers
 #include <depthai_datatype_msgs/datatype_msgs.h>
 #include <depthai_ros_msgs/TriggerNamed.h>
+#include <depthai_ros_msgs/StreamState.h>
 
 namespace rr {
 /**
@@ -140,7 +141,10 @@ public:
             : Base(args...)
             , _pub_nh(nh)
             , _sub_nh(nh) {
-        _camera_info_default = nh.advertiseService("reset_camera_info", &DeviceROS::defaultCameraInfo, this);
+        // @TODO: make the service per stream. Needs refactoring to change to:
+        // Map<StreamVariables> instead of Map<Variable>...
+        _activation_service = nh.advertiseService("/set_stream_state", &DeviceROS::_set_activation_status, this);
+        _camera_info_default = nh.advertiseService("reset_camera_info", &DeviceROS::_defaultCameraInfo, this);
     }
 
     void closeImpl() override {
@@ -176,13 +180,17 @@ protected:
         if constexpr (std::is_same_v<MsgType, depthai_datatype_msgs::RawImgFrame>) {
             _camera_info_manager[name] = pub.info_manager_ptr;
         }
+        _enabled.try_emplace(name, std::make_unique<std::atomic<bool>>(true));
 
-        const auto pub_lambda = [this, pub, name]() {
+        const auto pub_lambda = [this, pub, name, enabled = _enabled[name].get()]() {
             auto conn = this->getConnection();
             auto stream = dai::XLinkStream(*conn, name, 1);  // no writing happens, so 1 is sufficient
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             while (this->_running) {
+                if (!enabled->load()) {
+                    ros::Duration(0.25).sleep();
+                }
                 // block till data is read
                 PacketReader reader{stream};
 
@@ -275,6 +283,20 @@ protected:
         }
     }
 
+    bool _set_activation_status(
+            depthai_ros_msgs::StreamState::Request& req, depthai_ros_msgs::StreamState::Response& res) {
+        const auto& name = req.stream;
+        auto it = _enabled.find(name);
+        if (it == _enabled.cend()) {
+            res.success = false;
+            res.message = "No such stream found: " + name;
+            return false;
+        }
+        it->second->store(req.status);
+        res.success = true;
+        return true;
+    }
+
     void _setup_subscribers(const dai::Pipeline& pipeline) {
         // get all XLinkIn
         const auto& in_links = getAllOutputs(pipeline);
@@ -326,13 +348,13 @@ protected:
         }
     }
 
-    bool defaultCameraInfo(
+    bool _defaultCameraInfo(
             depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res) {
         const auto& name = req.name;
         const auto it = _camera_info_manager.find(name);
         if (it == _camera_info_manager.cend()) {
             res.success = false;
-            res.message = "No such camera known";
+            res.message = "No such camera known: " + name;
             return true;
         }
 
@@ -358,12 +380,13 @@ protected:
     Map<ros::Subscriber> _sub;
     Map<std::shared_ptr<camera_info_manager::CameraInfoManager>> _camera_info_manager;
     Map<std::unique_ptr<dai::XLinkStream>> _streams;
+    Map<std::unique_ptr<std::atomic<bool>>> _enabled;
 
     Map<msgpack::sbuffer> _serial_bufs;           // buffer for deserializing subscribed messages
     Map<std::vector<std::uint8_t>> _writer_bufs;  // buffer for writing to xLinkIn
 
     std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;
-    ros::ServiceServer _camera_info_default;
+    ros::ServiceServer _activation_service, _camera_info_default;
 
     // shared ptr for the callbacks to be called
     std::shared_ptr<std::uint8_t> _active;
