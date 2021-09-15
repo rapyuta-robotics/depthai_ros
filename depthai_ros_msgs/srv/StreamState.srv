@@ -1,0 +1,5 @@
+string stream
+bool status
+---
+bool success
+string message

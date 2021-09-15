@@ -25,6 +25,7 @@
 // message headers
 #include <depthai_datatype_msgs/datatype_msgs.h>
 #include <depthai_ros_msgs/TriggerNamed.h>
+#include <depthai_ros_msgs/StreamState.h>
 
 namespace rr {
 /**
@@ -140,11 +141,13 @@ public:
             : Base(args...)
             , _pub_nh(nh)
             , _sub_nh(nh) {
-        _camera_info_default = nh.advertiseService("reset_camera_info", &DeviceROS::defaultCameraInfo, this);
-
         ros::NodeHandle private_nh("~");
         private_nh.param<int>("pub_queue_size", _pub_queue_size, 10);
         private_nh.param<int>("sub_queue_size", _sub_queue_size, 10);
+        // @TODO: make the service per stream. Needs refactoring to change to:
+        // Map<StreamVariables> instead of Map<Variable>...
+        _activation_service = nh.advertiseService("/set_stream_state", &DeviceROS::_set_activation_status, this);
+        _camera_info_default = nh.advertiseService("reset_camera_info", &DeviceROS::_defaultCameraInfo, this);
     }
 
     void closeImpl() override {
@@ -159,8 +162,9 @@ protected:
         auto conn = this->getConnection();
         _streams[name] = std::make_unique<dai::XLinkStream>(*conn, name, dai::XLINK_USB_BUFFER_MAX_SIZE);
 
-        const auto core_sub_lambda = [&stream = _streams[name], serial_buf = std::vector<std::uint8_t>(), writer_buf = std::vector<std::uint8_t>()]
-                (const boost::shared_ptr<MsgType const>& msg) mutable {
+        const auto core_sub_lambda = [&stream = _streams[name], serial_buf = std::vector<std::uint8_t>(),
+                                             writer_buf = std::vector<std::uint8_t>()](
+                                             const boost::shared_ptr<MsgType const>& msg) mutable {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             // convert msg to data
@@ -184,13 +188,17 @@ protected:
         if constexpr (std::is_same_v<MsgType, depthai_datatype_msgs::RawImgFrame>) {
             _camera_info_manager[name] = pub.info_manager_ptr;
         }
+        _enabled.try_emplace(name, std::make_unique<std::atomic<bool>>(true));
 
-        const auto pub_lambda = [this, pub, name]() {
+        const auto pub_lambda = [this, pub, name, enabled = _enabled[name].get()]() {
             auto conn = this->getConnection();
             auto stream = dai::XLinkStream(*conn, name, 1);  // no writing happens, so 1 is sufficient
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             while (this->_running) {
+                if (!enabled->load()) {
+                    ros::Duration(0.25).sleep();
+                }
                 // block till data is read
                 PacketReader reader{stream};
 
@@ -252,16 +260,16 @@ protected:
                 case dai::DatatypeEnum::ImageManipConfig:
                     break;
                 case dai::DatatypeEnum::ImgDetections:
-                    _pub_t[name] = std::thread{
-                            generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(_pub_nh, name, _pub_queue_size)};
+                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(
+                            _pub_nh, name, _pub_queue_size)};
                     break;
                 case dai::DatatypeEnum::ImgFrame:
-                    _pub_t[name] =
-                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, name, _pub_queue_size)};
+                    _pub_t[name] = std::thread{
+                            generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, name, _pub_queue_size)};
                     break;
                 case dai::DatatypeEnum::NNData:
-                    _pub_t[name] =
-                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, _pub_queue_size)};
+                    _pub_t[name] = std::thread{
+                            generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, _pub_queue_size)};
                     break;
                 case dai::DatatypeEnum::SpatialImgDetections:
                     break;
@@ -272,13 +280,27 @@ protected:
                 case dai::DatatypeEnum::SystemInformation:
                     break;
                 case dai::DatatypeEnum::Tracklets:
-                    _pub_t[name] =
-                            std::thread{generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, _pub_queue_size)};
+                    _pub_t[name] = std::thread{
+                            generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, _pub_queue_size)};
                     break;
                 default:
                     break;
             }
         }
+    }
+
+    bool _set_activation_status(
+            depthai_ros_msgs::StreamState::Request& req, depthai_ros_msgs::StreamState::Response& res) {
+        const auto& name = req.stream;
+        auto it = _enabled.find(name);
+        if (it == _enabled.cend()) {
+            res.success = false;
+            res.message = "No such stream found: " + name;
+            return false;
+        }
+        it->second->store(req.status);
+        res.success = true;
+        return true;
     }
 
     void _setup_subscribers(const dai::Pipeline& pipeline) {
@@ -298,7 +320,8 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
-                    _sub[name] = _sub_nh.subscribe(name, _sub_queue_size, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>(name));
+                    _sub[name] = _sub_nh.subscribe(
+                            name, _sub_queue_size, generate_cb_lambda<depthai_datatype_msgs::RawCameraControl>(name));
                     break;
                 case dai::DatatypeEnum::IMUData:
                     break;
@@ -326,13 +349,13 @@ protected:
         }
     }
 
-    bool defaultCameraInfo(
+    bool _defaultCameraInfo(
             depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res) {
         const auto& name = req.name;
         const auto it = _camera_info_manager.find(name);
         if (it == _camera_info_manager.cend()) {
             res.success = false;
-            res.message = "No such camera known";
+            res.message = "No such camera known: " + name;
             return true;
         }
 
@@ -358,9 +381,10 @@ protected:
     Map<ros::Subscriber> _sub;
     Map<std::shared_ptr<camera_info_manager::CameraInfoManager>> _camera_info_manager;
     Map<std::unique_ptr<dai::XLinkStream>> _streams;
+    Map<std::unique_ptr<std::atomic<bool>>> _enabled;
 
     std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;
-    ros::ServiceServer _camera_info_default;
+    ros::ServiceServer _activation_service, _camera_info_default;
 
     // shared ptr for the callbacks to be called
     std::shared_ptr<std::uint8_t> _active;

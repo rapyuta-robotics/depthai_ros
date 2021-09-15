@@ -12,13 +12,18 @@ find_package (catkin REQUIRED COMPONENTS
 ## Declare ROS messages, services and actions ##
 ################################################
 ## Generate messages in the 'msg' folder
-# add_message_files (
-#   FILES
-# )
+add_message_files (
+  FILES
+  # BoundingBox.msg
+  # Object.msg
+  # Objects.msg
+  # AutoFocusCtrl.msg
+)
 
 ## Generate services in the 'srv' folder
 add_service_files (
   FILES
+  StreamState.srv
   TriggerNamed.srv
 )
 
@@ -32,6 +37,5 @@ generate_messages (
 ## catkin specific configuration ##
 ###################################
 catkin_package (
-  CATKIN_DEPENDS message_runtime
-  # sensor_msgs std_msgs
+  CATKIN_DEPENDS message_runtime sensor_msgs std_msgs
 )
