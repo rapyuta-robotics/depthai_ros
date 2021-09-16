@@ -8,9 +8,8 @@
 #include <pluginlib/class_loader.h>
 #include <ros/ros.h>
 
-
 int main(int argc, char** argv) {
-    ros::init(argc, argv, "temp");
+    ros::init(argc, argv, "depthai");
 
     ros::NodeHandle private_nh("~");
 
@@ -24,7 +23,7 @@ int main(int argc, char** argv) {
     plugin->configure(private_nh);
     dai::Pipeline p = plugin->getPipeline();
 
-    rr::DeviceROS driver(p.getOpenVINOVersion());
+    rr::DeviceROS driver(ros::NodeHandle(ros::this_node::getNamespace()), p.getOpenVINOVersion());
     driver.startPipeline(p);
 
     ros::spin();

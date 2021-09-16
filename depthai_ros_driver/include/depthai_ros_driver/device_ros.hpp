@@ -190,6 +190,8 @@ protected:
             while (this->_running) {
                 if (!enabled->load()) {
                     ros::Duration(0.25).sleep();
+                    ROS_INFO_STREAM_THROTTLE(2, "Stream " << name << " is not enabled");
+                    continue;
                 }
                 // block till data is read
                 PacketReader reader{stream};
@@ -223,7 +225,9 @@ protected:
         _setup_publishers(pipeline);
         _setup_subscribers(pipeline);
 
-        return Base::startPipelineImpl(pipeline);
+        bool status = Base::startPipelineImpl(pipeline);
+        ROS_INFO_STREAM("DepthAI Driver pipeline started with status:" << status);
+        return status;
     }
 
     void _setup_publishers(const dai::Pipeline& pipeline) {
