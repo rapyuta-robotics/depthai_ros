@@ -146,7 +146,7 @@ public:
         private_nh.param<int>("sub_queue_size", _sub_queue_size, 10);
         // @TODO: make the service per stream. Needs refactoring to change to:
         // Map<StreamVariables> instead of Map<Variable>...
-        _activation_service = nh.advertiseService("/set_stream_state", &DeviceROS::_set_activation_status, this);
+        _activation_service = nh.advertiseService("set_stream_state", &DeviceROS::_set_activation_status, this);
         _camera_info_default = nh.advertiseService("reset_camera_info", &DeviceROS::_defaultCameraInfo, this);
     }
 
@@ -293,7 +293,7 @@ protected:
             depthai_ros_msgs::StreamState::Request& req, depthai_ros_msgs::StreamState::Response& res) {
         const auto& name = req.stream;
         auto it = _enabled.find(name);
-        if (it == _enabled.cend()) {
+        if (it == _enabled.end()) {
             res.success = false;
             res.message = "No such stream found: " + name;
             return false;
