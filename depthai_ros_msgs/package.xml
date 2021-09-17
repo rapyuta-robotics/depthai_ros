@@ -7,9 +7,10 @@
   <maintainer email="kunal.tyagi@rapyuta-robotics.com">Kunal Tyagi</maintainer>
   <license>MPLv2</license>
   <author>Kunal Tyagi</author>
-  
+
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>depthai_cmake</depend>
 
   <!-- classic ros1 compilation -->
   <buildtool_depend condition="$ROS_VERSION == 1">catkin</buildtool_depend>

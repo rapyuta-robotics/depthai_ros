@@ -19,6 +19,7 @@
   <depend condition="$ROS_VERSION == 2">rclcpp</depend>
 
   <depend>depthai_ros_msgs</depend>
+  <depend>depthai_cmake</depend>
   <depend condition="$ROS_VERSION == 1">node_interface</depend>
 
   <depend>boost</depend>

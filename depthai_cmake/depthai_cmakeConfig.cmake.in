@@ -1,0 +1,5 @@
+@PACKAGE_INIT@
+
+include("@PACKAGE_INSTALL_CMAKE_DIR@/depthai_cmake_macros.cmake")
+
+check_required_components("depthai_cmake")
