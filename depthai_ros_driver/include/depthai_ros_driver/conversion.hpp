@@ -50,7 +50,7 @@ struct adapt_dai2ros {
 
     // by default, use ros::Publisher
     static ros::Publisher create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t q_size) {
-        auto result = nh.advertise<OutputType>(name, q_size);
+        auto result = nh.advertise<OutputType>("", q_size);
         return result;
     }
 };
@@ -129,17 +129,16 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
 
     static ImagePublishers create_publisher(ros::NodeHandle& nh, const std::string& name, std::size_t q_size) {
         ImagePublishers pubs;
-        pubs.raw_image_pub = nh.advertise<OutputType>(name + "/image_raw", q_size);
-        pubs.compressed_image_pub = nh.advertise<OutputType>(name + "/image_raw/compressed", q_size);
-        pubs.camera_info_pub = nh.advertise<sensor_msgs::CameraInfo>(name + "/camera_info", q_size);
+        pubs.raw_image_pub = nh.advertise<OutputType>("image_raw", q_size);
+        pubs.compressed_image_pub = nh.advertise<OutputType>("image_raw/compressed", q_size);
+        pubs.camera_info_pub = nh.advertise<sensor_msgs::CameraInfo>("camera_info", q_size);
 
         std::string camera_name = "default";
         if (!nh.getParam("camera_name", camera_name)) {
             nh.setParam("camera_name", camera_name);
         }
         const auto uri = camera_param_uri + "/" + camera_name + "/" + name + ".yaml";
-        pubs.info_manager_ptr =
-                std::make_shared<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, name}, name, uri);
+        pubs.info_manager_ptr = std::make_shared<camera_info_manager::CameraInfoManager>(nh, name, uri);
         return pubs;
     }
 };
