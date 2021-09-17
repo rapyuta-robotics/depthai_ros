@@ -17,6 +17,7 @@
 // lib headers
 #include <range/v3/algorithm/find.hpp>
 #include <range/v3/view.hpp>
+#include <boost/bind/bind.hpp>
 
 // std headers
 #include <memory>
@@ -24,8 +25,8 @@
 
 // message headers
 #include <depthai_datatype_msgs/datatype_msgs.h>
-#include <depthai_ros_msgs/TriggerNamed.h>
-#include <depthai_ros_msgs/StreamState.h>
+#include <std_srvs/SetBool.h>
+#include <std_srvs/Trigger.h>
 
 namespace rr {
 /**
@@ -146,8 +147,6 @@ public:
         private_nh.param<int>("sub_queue_size", _sub_queue_size, 10);
         // @TODO: make the service per stream. Needs refactoring to change to:
         // Map<StreamVariables> instead of Map<Variable>...
-        _activation_service = nh.advertiseService("set_stream_state", &DeviceROS::_set_activation_status, this);
-        _camera_info_default = nh.advertiseService("reset_camera_info", &DeviceROS::_defaultCameraInfo, this);
     }
 
     void closeImpl() override {
@@ -239,6 +238,7 @@ protected:
     }
 
     void _setup_publishers(const dai::Pipeline& pipeline) {
+        namespace ph = boost::placeholders;
         // get all XLinkOut
         const auto& out_links = getAllInputs(pipeline);
         ROS_INFO_STREAM("Required publishers: " << out_links.size());
@@ -246,6 +246,8 @@ protected:
             const auto& node = node_links.node_to;
             // get name for publisher
             const auto& name = node->getStreamName();
+
+            auto nh = ros::NodeHandle{_pub_nh, name};
 
             auto common_type = getCommonType(node_links.out_from);
             ROS_INFO_STREAM(name << " (pub): " << static_cast<int>(common_type));
@@ -255,25 +257,30 @@ protected:
                 case dai::DatatypeEnum::Buffer:
                     break;
                 case dai::DatatypeEnum::CameraControl:
+                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawCameraControl>(nh,
+                    // name, _pub_queue_size)};
                     break;
                 case dai::DatatypeEnum::IMUData:
                     // @TODO: support IMU
-                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawIMUData>(_pub_nh, name,
-                    // 10)}; // Not supported
+                    // _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawIMUData>(nh, name,
+                    // _pub_queue_size)}; // Not supported
                     break;
                 case dai::DatatypeEnum::ImageManipConfig:
                     break;
                 case dai::DatatypeEnum::ImgDetections:
-                    _pub_t[name] = std::thread{generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(
-                            _pub_nh, name, _pub_queue_size)};
-                    break;
-                case dai::DatatypeEnum::ImgFrame:
                     _pub_t[name] = std::thread{
-                            generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(_pub_nh, name, _pub_queue_size)};
+                            generate_pub_lambda<depthai_datatype_msgs::RawImgDetections>(nh, name, _pub_queue_size)};
                     break;
+                case dai::DatatypeEnum::ImgFrame: {
+                    _pub_t[name] = std::thread{
+                            generate_pub_lambda<depthai_datatype_msgs::RawImgFrame>(nh, name, _pub_queue_size)};
+                    boost::function<bool(std_srvs::Trigger::Request&, std_srvs::Trigger::Response&)> fn =
+                            boost::bind(&DeviceROS::_defaultCameraInfo, this, name, ph::_1, ph::_2);
+                    _camera_info_default_srvs[name] = nh.advertiseService("reset_camera_info", fn);
+                } break;
                 case dai::DatatypeEnum::NNData:
                     _pub_t[name] = std::thread{
-                            generate_pub_lambda<depthai_datatype_msgs::RawNNData>(_pub_nh, name, _pub_queue_size)};
+                            generate_pub_lambda<depthai_datatype_msgs::RawNNData>(nh, name, _pub_queue_size)};
                     break;
                 case dai::DatatypeEnum::SpatialImgDetections:
                     break;
@@ -285,24 +292,22 @@ protected:
                     break;
                 case dai::DatatypeEnum::Tracklets:
                     _pub_t[name] = std::thread{
-                            generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(_pub_nh, name, _pub_queue_size)};
+                            generate_pub_lambda<depthai_datatype_msgs::RawTracklets>(nh, name, _pub_queue_size)};
                     break;
                 default:
                     break;
             }
+            boost::function<bool(std_srvs::SetBool::Request&, std_srvs::SetBool::Response&)> fn =
+                    boost::bind(&DeviceROS::_set_activation_status, this, name, ph::_1, ph::_2);
+            _activation_srvs[name] = nh.advertiseService("set_state", fn);
         }
     }
 
     bool _set_activation_status(
-            depthai_ros_msgs::StreamState::Request& req, depthai_ros_msgs::StreamState::Response& res) {
-        const auto& name = req.stream;
+            const std::string& name, std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res) {
         auto it = _enabled.find(name);
-        if (it == _enabled.end()) {
-            res.success = false;
-            res.message = "No such stream found: " + name;
-            return false;
-        }
-        it->second->store(req.status);
+        assert(it != _enabled.end());
+        it->second->store(req.data);
         res.success = true;
         return true;
     }
@@ -354,14 +359,9 @@ protected:
     }
 
     bool _defaultCameraInfo(
-            depthai_ros_msgs::TriggerNamed::Request& req, depthai_ros_msgs::TriggerNamed::Response& res) {
-        const auto& name = req.name;
+            const std::string& name, std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
         const auto it = _camera_info_manager.find(name);
-        if (it == _camera_info_manager.cend()) {
-            res.success = false;
-            res.message = "No such camera known: " + name;
-            return true;
-        }
+        assert(it != _camera_info_manager.end());
 
         const auto uri = camera_param_uri + "/default/" + name + ".yaml";
         if (_defaultManager == nullptr) {
@@ -386,9 +386,10 @@ protected:
     Map<std::shared_ptr<camera_info_manager::CameraInfoManager>> _camera_info_manager;
     Map<std::unique_ptr<dai::XLinkStream>> _streams;
     Map<std::unique_ptr<std::atomic<bool>>> _enabled;
+    Map<ros::ServiceServer> _camera_info_default_srvs, _activation_srvs;
 
     std::unique_ptr<camera_info_manager::CameraInfoManager> _defaultManager;
-    ros::ServiceServer _activation_service, _camera_info_default;
+    // ros::ServiceServer _activation_service, _camera_info_default;
 
     // shared ptr for the callbacks to be called
     std::shared_ptr<std::uint8_t> _active;
