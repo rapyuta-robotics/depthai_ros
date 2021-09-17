@@ -210,8 +210,8 @@ protected:
                 obj.convert(msg);
                 msg.data = reader.bufferData();
 
-                // publish data
-                publish(pub, msg, name);
+                // publish data, with frame_id base as the driver node name
+                publish(pub, msg, ros::this_node::getName() + "/" + name);
             }
 
             guard.disable();
