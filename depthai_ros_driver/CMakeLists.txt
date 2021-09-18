@@ -52,7 +52,6 @@ pkg_check_modules(libudev libudev)
 
 catkin_package (
     INCLUDE_DIRS include
-    LIBRARIES ${PROJECT_NAME}_nodelet
     CATKIN_DEPENDS camera_info_manager cv_bridge
     depthai_common_msgs depthai_datatype_msgs depthai_ros_msgs
     image_transport nodelet roscpp sensor_msgs node_interface
@@ -154,3 +153,6 @@ install (DIRECTORY launch resources scripts urdf params
 install (FILES
   nodelet_plugins.xml pipeline_plugins.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
