@@ -61,19 +61,18 @@ find_dependent_packages(${PKG_DEPS})
 add_subdirectory(${DEPTHAI_CORE} depthai-core)
 
 add_ros_node(depthai_ros_driver
-  SKIP_PACKAGE_SEARCH
   PROJECT_NAME ${PROJECT_NAME}
-  ROS2_COMPONENT_CLASS "rr::DepthAIBaseRos2"
   SOURCES src/depthai_common.cpp
   ROS1_SOURCES src/depthai_base.cpp
   ROS2_SOURCES src/depthai_base_ros2.cpp
-  # ROS1_COMPONENT_SOURCES src/depthai_base.cpp # TODO remove
   ROS1_EXE_SOURCES src/depthai_node.cpp
   ROS2_EXE_SOURCES src/depthai_node_ros2.cpp
+  ROS2_COMPONENT_CLASS "rr::DepthAIBaseRos2"
   DIRECTORIES launch resources scripts urdf params
   INCLUDE_DIRS include
   SYSTEM_DEPS OpenCV Boost
   PKG_DEPS ${PKG_DEPS}
+  SKIP_PACKAGE_SEARCH
   TARGET_DEPS depthai-core)
 
 if($ENV{ROS_VERSION} STREQUAL 1)
