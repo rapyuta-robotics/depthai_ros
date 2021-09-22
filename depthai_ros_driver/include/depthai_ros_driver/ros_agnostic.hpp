@@ -51,45 +51,39 @@ class Timer;
 class NodeInterface
 {
 public:
-  NodeInterface(ROSNodeHandle nh): _nh(nh){};
+  NodeInterface(ROSNodeHandle nh)
+  : _nh(nh) {}
 
-  /// Create publisher
+  /// @brief Create publisher
   template<class Msg>
   Publisher create_publisher(
     const std::string& topic_name,
     const uint32_t queue_size);
 
-  /// Create Subsriber
+  /// @brief Create Subsriber
   template<class Msg, typename Callback>
   Subscription create_subscription(
     const std::string& topic_name,
     const uint32_t queue_size,
     const Callback& callback);
 
-  /// Create Service
+  /// @brief Create Service
   template<class Msg, typename Callback>
   Service create_service(
     const std::string& srv_name,
     const Callback& callback);
 
-  /// Create Timer
+  /// @brief Create Timer
   template<typename Callback>
   Timer create_timer(
     const double period_sec,
     const Callback& callback);
 
-  /// get ROSNodeHandle
-  ROSNodeHandle get_node_handle(){ return _nh; };
+  /// @brief get ROSNodeHandle
+  ROSNodeHandle get_node_handle() { return _nh; }
 
-  /// Get current ros time
-  const RosTime current_time()
-  {
-    #if defined(USE_ROS2)
-    return _nh->now();
-    #else
-    return RosTime::now();
-    #endif
-  };
+  /// @brief Get current ros time
+  inline const RosTime current_time();
 
 private:
   ROSNodeHandle _nh;
@@ -100,7 +94,7 @@ private:
 /// @brief Get ROS param
 template<typename Param>
 void get_param(
-  ROSNodeHandle node_handle, 
+  ROSNodeHandle node_handle,
   const std::string& name,
   Param& variable);
 

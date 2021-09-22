@@ -15,6 +15,9 @@
  *
 */
 
+#ifndef DEPTHAI_ROS_DRIVER__IMPL__ROS_AGNOSTIC_HPP
+#define DEPTHAI_ROS_DRIVER__IMPL__ROS_AGNOSTIC_HPP
+
 #include <depthai_ros_driver/ros_agnostic.hpp>
 
 namespace rr {
@@ -22,7 +25,7 @@ namespace ros_agnostic {
 
 /*
  * Here we will keep all details implemntaion of within ros_agnostic ns. This
- * includes: Publisher, Subscription
+ * includes: Publisher, Subscription, Server, Timer...
  */
 
 //==============================================================================
@@ -174,11 +177,10 @@ Publisher NodeInterface::create_publisher(
   const std::string& topic_name,
   const uint32_t queue_size)
 {
-  /// TODO: double check this impl
   Publisher pub;
   pub.create_publisher<Msg>(_nh, topic_name, queue_size);
   return pub;
-};
+}
 
 //==============================================================================
 template<class Msg, typename Callback>
@@ -190,7 +192,7 @@ Subscription NodeInterface::create_subscription(
   Subscription sub;
   sub.create_subscription<Msg>(_nh, topic_name, queue_size, callback);
   return sub;
-};
+}
 
 //==============================================================================
 template<class Msg, typename Callback>
@@ -201,7 +203,7 @@ Service NodeInterface::create_service(
   Service srv;
   srv.create_service<Msg>(_nh, srv_name, callback);
   return srv;
-};
+}
 
 //==============================================================================
 template<typename Callback>
@@ -212,7 +214,17 @@ Timer NodeInterface::create_timer(
   Timer timer;
   timer.create_timer(_nh, period_sec, callback);
   return timer;
-};
+}
+
+//==============================================================================
+const RosTime NodeInterface::current_time()
+{
+  #if defined(USE_ROS2)
+  return _nh->now();
+  #else
+  return RosTime::now();
+  #endif
+}
 
 //==============================================================================
 template<typename Param>
@@ -233,3 +245,5 @@ void get_param(
 
 }  // namespace ros_agnostic
 }  // namespace rr
+
+#endif // DEPTHAI_ROS_DRIVER__IMPL__ROS_AGNOSTIC_HPP

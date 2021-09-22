@@ -176,8 +176,8 @@ const std::string DepthAICommon::create_pipeline_config()
 
 //==============================================================================
 DepthAICommon::DepthAICommon(
-  const ROSNodeHandle nh, const ROSNodeHandle p_nh):
-  _node_interface(nh)
+  const ROSNodeHandle nh, const ROSNodeHandle p_nh)
+: _node_interface(nh)
 {
   using namespace ros_agnostic;
   get_param(p_nh, "calibration_file", _cfg.calib_file);
@@ -239,10 +239,10 @@ DepthAICommon::DepthAICommon(
 
   // periodic callback timer to publish stream packets
   _camera_read_timer = _node_interface.create_timer(1. / 500,
-    [&]()
-    {
-      this->process_and_publish_packets();
-    });
+      [&]()
+      {
+        this->process_and_publish_packets();
+      });
 }
 
 //==============================================================================
@@ -257,7 +257,7 @@ void DepthAICommon::create_stream_publishers()
       {
         // set camera info publisher
         auto pub = _node_interface.create_publisher<CameraInfoMsg>(
-            topic_name + "/camera_info", _cfg.queue_size);
+          topic_name + "/camera_info", _cfg.queue_size);
         _camera_info_publishers[id] =
           std::make_shared<ros_agnostic::Publisher>(pub);
         set_camera_info_manager(topic_name, _cfg.camera_name + "/");
@@ -267,7 +267,7 @@ void DepthAICommon::create_stream_publishers()
       }
 
       using type = decltype(msg_type);
-            auto pub = _node_interface.create_publisher<type>(
+      auto pub = _node_interface.create_publisher<type>(
         topic_name + suffix, _cfg.queue_size);
       _stream_publishers[id] = std::make_shared<ros_agnostic::Publisher>(pub);
     };
@@ -513,13 +513,13 @@ const bool DepthAICommon::set_camera_info_manager(
   else
   {
     auto node_handle = _node_interface.get_node_handle();
-    #if defined(USE_ROS2)   
+    #if defined(USE_ROS2)
     const ROSNodeHandle& nh_ptr = node_handle->create_sub_node(name);
     auto lnh = nh_ptr.get();
     #else
     auto lnh = ros::NodeHandle{*node_handle, name};
     #endif
-    
+
     /// input arg: lnh is nodehandle for ros1, and raw node ptr in ros2
     _camera_info_managers[idx] =
       std::make_shared<camera_info_manager::CameraInfoManager>(lnh, name, uri);
