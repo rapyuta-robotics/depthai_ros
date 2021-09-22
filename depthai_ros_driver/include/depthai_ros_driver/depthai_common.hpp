@@ -29,6 +29,7 @@
 #include <depthai/pipeline/cnn_host_pipeline.hpp>
 
 #include <depthai_ros_driver/ros_agnostic.hpp>
+#include <depthai_ros_driver/impl/ros_agnostic.hpp>
 
 #if defined(USE_ROS2)
   #include <std_msgs/msg/float32.hpp>
@@ -224,13 +225,12 @@ private:
   RosTime _stamp;
   double _depthai_init_ts = -1;  // sadly, we don't have a way of measuring drift
 
-  ROSNodeHandle _node_handle;
-
   std::array<StreamPub, Stream::END> _stream_publishers;
   std::array<CameraInfoPub, Stream::IMAGE_END> _camera_info_publishers;
   std::array<CameraInfoManagerPtr, Stream::IMAGE_END> _camera_info_managers;
 
   // service, subscriptions and timer
+  ros_agnostic::NodeInterface _node_interface;
   ros_agnostic::Service _camera_info_default;
   ros_agnostic::Subscription _af_ctrl_sub;
   ros_agnostic::Subscription _disparity_conf_sub;
