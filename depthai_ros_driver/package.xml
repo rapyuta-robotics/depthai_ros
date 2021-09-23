@@ -19,7 +19,7 @@
   <depend>cv_bridge</depend>
   <depend>depthai_common_msgs</depend>
   <depend>depthai_datatype_msgs</depend>
-  <depend>depthai_ros_msgs</depend>
+  <!-- <depend>depthai_ros_msgs</depend> -->
   <depend>image_transport</depend>
   <depend>message_generation</depend>
   <depend>message_runtime</depend>
@@ -27,6 +27,7 @@
   <depend>nodelet</depend>
   <depend>roscpp</depend>
   <depend>sensor_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>xacro</depend>
 
   <exec_depend>robot_state_publisher</exec_depend>
