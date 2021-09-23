@@ -43,7 +43,6 @@ protected:
 
 public:
     std::size_t count;
-    std::size_t length = 0;
 
     std::uint8_t* advance(std::size_t len) {
         auto old_count = count;
