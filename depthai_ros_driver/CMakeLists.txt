@@ -32,6 +32,8 @@ set (PKG_DEPS
     roscpp
     sensor_msgs
     std_msgs
+    std_srvs
+    topic_tools
     node_interface
 )
 

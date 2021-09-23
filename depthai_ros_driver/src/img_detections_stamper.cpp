@@ -1,9 +1,11 @@
-#include <depthai_ros_driver/impl/img_detections_stamper.hpp>
+#include <depthai_ros_driver/img_detections_stamper.hpp>
 
 #include <node_interface/ros1_node_interface.hpp>
 #include <nodelet/nodelet.h>
 
 namespace rr {
-template class ImgDetectionsStamper<ROS1Node<>>;
-template class ImgDetectionsStamper<nodelet::Nodelet>;
+template class ConverterAndStamper<depthai_datatype_msgs::ImgDetectionsStamped,
+        ROS1Node<>>;  // ImgDetectionsStamper<ROS1Node<>>;
+template class ConverterAndStamper<depthai_datatype_msgs::ImgDetectionsStamped,
+        nodelet::Nodelet>;  // ImgDetectionsStamper<nodelet::Nodelet>;
 }  // namespace rr

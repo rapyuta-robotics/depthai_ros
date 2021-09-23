@@ -27,6 +27,8 @@
   <depend>nodelet</depend>
   <depend>roscpp</depend>
   <depend>sensor_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>topic_tools</depend>
   <depend>xacro</depend>
 
   <exec_depend>robot_state_publisher</exec_depend>
