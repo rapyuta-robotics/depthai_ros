@@ -98,6 +98,9 @@ private:
     }
 
     void unstamped_callback(const ShapeShifterConstPtr& unstamped_message) {
+        if (stamped_buffer_.empty()) {
+            return;
+        }
         const auto header_len = find_header_length(stamped_buffer_.data());
 
         const auto total_len = unstamped_message->size() + header_len;
