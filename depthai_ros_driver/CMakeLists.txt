@@ -111,14 +111,14 @@ target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai range-v3)
 add_executable(gen2_ros_driver src/depthai_loader.cpp)
 target_link_libraries(gen2_ros_driver gen2_ros_queue gen2_ros_pipeline_loader gen2_ros_conversion)
 
-add_library(img_detections_stamper src/img_detections_stamper.cpp)
-target_link_libraries(img_detections_stamper ${catkin_LIBRARIES})
+add_library(common_stampers src/common_stampers.cpp)
+target_link_libraries(common_stampers ${catkin_LIBRARIES} depthai-core)
 
-add_library(img_detections_stamper_nodelet src/img_detections_stamper_nodelet.cpp)
-target_link_libraries(img_detections_stamper_nodelet img_detections_stamper)
+add_library(common_stamper_nodelets src/common_stamper_nodelets.cpp)
+target_link_libraries(common_stamper_nodelets common_stampers)
 
 add_executable(img_detections_stamper_node src/img_detections_stamper_node.cpp)
-target_link_libraries(img_detections_stamper_node img_detections_stamper)
+target_link_libraries(img_detections_stamper_node common_stampers)
 
 catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
 catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
@@ -141,7 +141,7 @@ endif()
 #############
 
 install (TARGETS gen2_ros_conversion gen2_ros_pipeline_loader gen2_ros_queue 
-  gen2_ros_driver img_detections_stamper img_detections_stamper_nodelet 
+  gen2_ros_driver common_stampers common_stamper_nodelets
   img_detections_stamper_node ${PROJECT_NAME}_pipelines
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
