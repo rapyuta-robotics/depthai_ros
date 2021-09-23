@@ -18,7 +18,6 @@ add_message_files (
   FILES
   ImgDetection.msg
   RawImgDetections.msg
-  ImgDetectionsStamped.msg
 
   # TrackingStatus.msg
   Tracklet.msg
@@ -68,7 +67,7 @@ generate_messages (
 ###################################
 catkin_package (
   INCLUDE_DIRS include ${MSGPACK}/include
-  CATKIN_DEPENDS message_runtime
+  CATKIN_DEPENDS message_runtime depthai_common_msgs
 )
 
 include_directories (SYSTEM
