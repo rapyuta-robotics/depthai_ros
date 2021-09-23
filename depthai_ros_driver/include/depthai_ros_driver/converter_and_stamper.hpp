@@ -49,7 +49,6 @@ public:
         auto old_count = count;
         count += len;
         if (data->size() < count) {
-            data->reserve(2 * count);
             data->resize(count);
         }
         return data->data() + old_count;
