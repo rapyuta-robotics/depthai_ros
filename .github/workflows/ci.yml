@@ -36,7 +36,7 @@ jobs:
       shell: bash
       run: |
         apt update
-        apt install -y git libusb-1.0-0{,-dev}
+        apt install -y git libusb-1.0-0{,-dev} libudev{1,-dev}
     - uses: actions/download-artifact@v2
       with:
         name: workspace
