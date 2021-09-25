@@ -52,8 +52,8 @@
     </node>
     <node pkg="nodelet" type="nodelet" name="img_detections_stamper" args="load depthai_ros_driver/ImgDetectionsStamper $(arg manager_name)">
       <remap from="unstamped" to="/depthai/nn" />
-      <remap from="stamped" to="/depthai/preview/image_raw" />
-      <remap from="output" to="/depthai/nn_stamped" />
+      <remap from="stamp_source" to="/depthai/preview/image_raw" />
+      <remap from="stamped" to="/depthai/nn_stamped" />
     </node>
   </group>
 
