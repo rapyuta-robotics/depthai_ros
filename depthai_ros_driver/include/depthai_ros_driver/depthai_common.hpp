@@ -28,7 +28,6 @@
 #include <depthai/nnet/nnet_packet.hpp>
 #include <depthai/pipeline/cnn_host_pipeline.hpp>
 
-#include <depthai_ros_driver/ros_agnostic.hpp>
 #include <depthai_ros_driver/impl/ros_agnostic.hpp>
 
 #if defined(USE_ROS2)
@@ -38,17 +37,6 @@
   #include <depthai_ros_msgs/msg/objects.hpp>
   #include <depthai_ros_msgs/msg/auto_focus_ctrl.hpp>
   #include <camera_info_manager/camera_info_manager.hpp>
-
-using ImageMsg = sensor_msgs::msg::Image;
-using CompressedImageMsg = sensor_msgs::msg::CompressedImage;
-using ObjectsMsg = depthai_ros_msgs::msg::Objects;
-using ObjectMsg = depthai_ros_msgs::msg::Object;
-using CameraInfoMsg = sensor_msgs::msg::CameraInfo;
-using HeaderMsg = std_msgs::msg::Header;
-using AutoFocusCtrlMsg = depthai_ros_msgs::msg::AutoFocusCtrl;
-using Float32Msg = std_msgs::msg::Float32;
-using TriggerSrv = depthai_ros_msgs::srv::TriggerNamed;
-
 #else
   #include <std_msgs/Float32.h>
   #include <sensor_msgs/Image.h>
@@ -56,17 +44,18 @@ using TriggerSrv = depthai_ros_msgs::srv::TriggerNamed;
   #include <depthai_ros_msgs/Objects.h>
   #include <depthai_ros_msgs/TriggerNamed.h>
   #include <camera_info_manager/camera_info_manager.h>
-
-using ImageMsg = sensor_msgs::Image;
-using CompressedImageMsg = sensor_msgs::CompressedImage;
-using ObjectsMsg = depthai_ros_msgs::Objects;
-using ObjectMsg = depthai_ros_msgs::Object;
-using CameraInfoMsg = sensor_msgs::CameraInfo;
-using HeaderMsg = std_msgs::Header;
-using AutoFocusCtrlMsg = depthai_ros_msgs::AutoFocusCtrl;
-using Float32Msg = std_msgs::Float32;
-using TriggerSrv = depthai_ros_msgs::TriggerNamed;
 #endif
+
+/// ROS Msg Srv
+using Float32Msg = ROS_MSG_TYPE(std_msgs, Float32);
+using ObjectsMsg = ROS_MSG_TYPE(depthai_ros_msgs, Objects);
+using ObjectMsg = ROS_MSG_TYPE(depthai_ros_msgs, Object);
+using HeaderMsg = ROS_MSG_TYPE(std_msgs, Header);
+using CameraInfoMsg = ROS_MSG_TYPE(sensor_msgs, CameraInfo);
+using ImageMsg = ROS_MSG_TYPE(sensor_msgs, Image);
+using CompressedImageMsg = ROS_MSG_TYPE(sensor_msgs, CompressedImage);
+using AutoFocusCtrlMsg = ROS_MSG_TYPE(depthai_ros_msgs, AutoFocusCtrl);
+using TriggerSrv = ROS_SRV_TYPE(depthai_ros_msgs, TriggerNamed);
 
 using CameraInfoPub = std::shared_ptr<rr::ros_agnostic::Publisher>;
 using StreamPub = std::shared_ptr<rr::ros_agnostic::Publisher>;
@@ -151,7 +140,7 @@ public:
   /// \param private_nh
   ///    private nodehandle for setting param, use when private ns is needed
   ///    else, provide the same nh to here.
-  DepthAICommon(const ROSNodeHandle nh, const ROSNodeHandle private_nh);
+  DepthAICommon(const RosNodeHandle nh, const RosNodeHandle private_nh);
 
   /// @brief get and process packets
   void process_and_publish_packets();

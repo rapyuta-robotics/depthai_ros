@@ -176,7 +176,7 @@ const std::string DepthAICommon::create_pipeline_config()
 
 //==============================================================================
 DepthAICommon::DepthAICommon(
-  const ROSNodeHandle nh, const ROSNodeHandle p_nh)
+  const RosNodeHandle nh, const RosNodeHandle p_nh)
 : _node_interface(nh)
 {
   using namespace ros_agnostic;
@@ -512,9 +512,9 @@ const bool DepthAICommon::set_camera_info_manager(
   }
   else
   {
-    auto node_handle = _node_interface.get_node_handle();
+    auto node_handle = _node_interface.get_node();
     #if defined(USE_ROS2)
-    const ROSNodeHandle& nh_ptr = node_handle->create_sub_node(name);
+    const RosNodeHandle& nh_ptr = node_handle->create_sub_node(name);
     auto lnh = nh_ptr.get();
     #else
     auto lnh = ros::NodeHandle{*node_handle, name};

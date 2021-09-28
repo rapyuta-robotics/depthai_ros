@@ -21,13 +21,17 @@
 #if defined(USE_ROS2)
   #include <rclcpp/node.hpp>
   #define ROS_LOGGER(...) RCUTILS_LOG_WARN_NAMED("depthai_ros", __VA_ARGS__)
-using ROSNodeHandle = std::shared_ptr<rclcpp::Node>;
+  #define ROS_MSG_TYPE(PACKAGE, NAME) PACKAGE::msg::NAME
+  #define ROS_SRV_TYPE(PACKAGE, NAME) PACKAGE::srv::NAME
+using RosNodeHandle = std::shared_ptr<rclcpp::Node>;
 using RosTime = rclcpp::Time;
 using RosDuration = rclcpp::Duration;
 #else
   #include <ros/ros.h>
   #define ROS_LOGGER(...) ROS_WARN_NAMED("depthai_ros", __VA_ARGS__)
-using ROSNodeHandle = std::shared_ptr<ros::NodeHandle>;
+  #define ROS_MSG_TYPE(PACKAGE, NAME) PACKAGE::NAME
+  #define ROS_SRV_TYPE(PACKAGE, NAME) PACKAGE::NAME
+using RosNodeHandle = std::shared_ptr<ros::NodeHandle>;
 using RosTime = ros::Time;
 using RosDuration = ros::Duration;
 #endif
@@ -51,7 +55,7 @@ class Timer;
 class NodeInterface
 {
 public:
-  NodeInterface(ROSNodeHandle nh)
+  NodeInterface(RosNodeHandle nh)
   : _nh(nh) {}
 
   /// @brief Create publisher
@@ -79,14 +83,17 @@ public:
     const double period_sec,
     const Callback& callback);
 
-  /// @brief get ROSNodeHandle
-  ROSNodeHandle get_node_handle() { return _nh; }
+  /// @brief get node
+  RosNodeHandle get_node() { return _nh; }
+
+  /// @brief Get sub node
+  inline RosNodeHandle get_sub_node(const std::string& ns);
 
   /// @brief Get current ros time
   inline const RosTime current_time();
 
 private:
-  ROSNodeHandle _nh;
+  RosNodeHandle _nh;
 };
 
 //==============================================================================
@@ -94,7 +101,7 @@ private:
 /// @brief Get ROS param
 template<typename Param>
 void get_param(
-  ROSNodeHandle node_handle,
+  RosNodeHandle node_handle,
   const std::string& name,
   Param& variable);
 

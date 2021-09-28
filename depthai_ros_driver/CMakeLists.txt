@@ -19,7 +19,8 @@ set(HUNTER_CONFIGURATION_TYPES "Release"
 HunterGate(
   URL "https://github.com/cpp-pm/hunter/archive/v0.23.258.tar.gz"
   SHA1 "062a19ab13ce8dffa9a882b6ce3e43bdabdf75d3"
-  FILEPATH ${DEPTHAI_CORE}/cmake/Hunter/config.cmake # Add depthai-core config  (hunter limitation)
+  # Add depthai-core config  (hunter limitation)
+  FILEPATH ${DEPTHAI_CORE}/cmake/Hunter/config.cmake
 )
 
 project(depthai_ros_driver VERSION 0.1.0 LANGUAGES CXX)

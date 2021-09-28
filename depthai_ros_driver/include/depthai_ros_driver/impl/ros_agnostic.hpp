@@ -50,8 +50,8 @@ public:
 private:
   /// @brief Create ros publisher
   template<class Msg>
-  void create_publisher(
-    ROSNodeHandle node_handle,
+  inline void create_publisher(
+    RosNodeHandle node_handle,
     const std::string& topic_name,
     const uint32_t queue_size)
   {
@@ -78,8 +78,8 @@ class Subscription
 private:
   /// @brief Create ros subscription
   template<class Msg, typename Callback>
-  void create_subscription(
-    ROSNodeHandle node_handle,
+  inline void create_subscription(
+    RosNodeHandle node_handle,
     const std::string& topic_name,
     const uint32_t queue_size,
     const Callback& callback)
@@ -109,20 +109,22 @@ private:
   /// @brief Create ros service
   template<class Msg, typename Callback>
   void create_service(
-    ROSNodeHandle node_handle,
+    RosNodeHandle node_handle,
     const std::string& srv_name,
     const Callback& callback)
   {
     #if defined(USE_ROS2)
     _ptr = node_handle->create_service<Msg>(srv_name, callback);
     #else
+    /// Note: This is internal impl of converting ref to ptr is to ensure
+    /// the api consistency between ros1 and ros2, which both uses ptr as the
+    /// ros_agnostic callback args for Req and Res
     using RequestMsg = typename Msg::Request;
     using ResponseMsg = typename Msg::Response;
     _srv = node_handle->advertiseService<RequestMsg, ResponseMsg>(
       srv_name,
       [callback = std::move(callback)](const RequestMsg& req, ResponseMsg& res)
       {
-        // internally convert ref to ptr
         auto res_ptr = std::make_shared<ResponseMsg>();
         callback(std::make_shared<RequestMsg>(req), res_ptr);
         res = *res_ptr;
@@ -147,7 +149,7 @@ private:
   /// @brief Create ros timer
   template<typename Callback>
   void create_timer(
-    ROSNodeHandle node_handle,
+    RosNodeHandle node_handle,
     const double period_sec,
     const Callback& callback)
   {
@@ -155,6 +157,8 @@ private:
     const auto period = std::chrono::duration<double>(period_sec);
     _timer = node_handle->create_wall_timer(period, callback);
     #else
+    /// Note: the create_timer wrapper function hides the ros::TimerEvent arg
+    /// of the callback function, provides consistency between the ros1&2 api
     _timer = node_handle->createTimer(ros::Duration(period_sec),
         [callback = std::move(callback)](const ros::TimerEvent&)
         {
@@ -217,6 +221,16 @@ Timer NodeInterface::create_timer(
 }
 
 //==============================================================================
+RosNodeHandle NodeInterface::get_sub_node(const std::string& ns)
+{
+  #if defined(USE_ROS2)
+  return _nh->create_sub_node(ns);
+  #else
+  return std::make_shared<ros::NodeHandle>(ros::NodeHandle{*_nh, ns});
+  #endif
+}
+
+//==============================================================================
 const RosTime NodeInterface::current_time()
 {
   #if defined(USE_ROS2)
@@ -229,7 +243,7 @@ const RosTime NodeInterface::current_time()
 //==============================================================================
 template<typename Param>
 void get_param(
-  ROSNodeHandle node_handle, const std::string& name, Param& variable)
+  RosNodeHandle node_handle, const std::string& name, Param& variable)
 {
 #if defined(USE_ROS2)
   using var_type = std::remove_reference_t<decltype(variable)>;
