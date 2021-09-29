@@ -105,7 +105,7 @@ macro(add_ros_node name)
 
     catkin_package (
       INCLUDE_DIRS ${_ARG_INCLUDE_DIRS}
-        LIBRARIES ${name}_lib
+        LIBRARIES ${name}
         CATKIN_DEPENDS ${_ARG_PKG_DEPS}
         DEPENDS ${_ARG_SYSTEM_DEPS}
     )
@@ -116,22 +116,22 @@ macro(add_ros_node name)
       include_directories(SYSTEM ${${sys_dep}_INCLUDE_DIRS})
     endforeach()
 
-    add_library(${name}_lib ${_ARG_SOURCES} ${_ARG_ROS1_SOURCES})
-    target_link_libraries(${name}_lib ${catkin_LIBRARIES})
+    add_library(${name} ${_ARG_SOURCES} ${_ARG_ROS1_SOURCES})
+    target_link_libraries(${name} ${catkin_LIBRARIES})
     foreach(sys_dep ${_ARG_SYSTEM_DEPS})
-      target_link_libraries(${name}_lib ${${sys_dep}_LIBRARIES})
+      target_link_libraries(${name} ${${sys_dep}_LIBRARIES})
     endforeach()
     foreach(target_dep ${_ARG_TARGET_DEPS})
-      target_link_libraries(${name}_lib ${target_dep})
+      target_link_libraries(${name} ${target_dep})
     endforeach()
 
-    add_dependencies(${name}_lib
+    add_dependencies(${name}
       ${${name}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
     add_executable(${PROJECT_NAME}_${name}_node ${_ARG_ROS1_EXE_SOURCES})
-    target_link_libraries(${PROJECT_NAME}_${name}_node ${name}_lib)
+    target_link_libraries(${PROJECT_NAME}_${name}_node ${name})
 
-    install(TARGETS ${name}_lib ${PROJECT_NAME}_${name}_node
+    install(TARGETS ${name} ${PROJECT_NAME}_${name}_node
       ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
       LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
       RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
@@ -160,22 +160,23 @@ macro(add_ros_node name)
 
     include_directories(${_ARG_INCLUDE_DIRS})
 
-    add_library(${name}_lib SHARED ${_ARG_SOURCES} ${_ARG_ROS2_SOURCES})
+    add_library(${name} SHARED ${_ARG_SOURCES} ${_ARG_ROS2_SOURCES})
     foreach(sys_dep ${_ARG_SYSTEM_DEPS})
-      target_link_libraries(${name}_lib PUBLIC ${${sys_dep}_LIBRARIES})
+      target_link_libraries(${name} PUBLIC ${${sys_dep}_LIBRARIES})
     endforeach()
     foreach(target_dep ${_ARG_TARGET_DEPS})
-      target_link_libraries(${name}_lib PUBLIC ${target_dep})
+      target_link_libraries(${name} PUBLIC ${target_dep})
     endforeach()
-    ament_target_dependencies(${name}_lib PUBLIC ${_ARG_PKG_DEPS})
+    ament_target_dependencies(${name} PUBLIC ${_ARG_PKG_DEPS})
 
-    rclcpp_components_register_nodes(${name}_lib ${_ARG_ROS2_COMPONENT_CLASS})
+    # register lib as component
+    rclcpp_components_register_nodes(${name} ${_ARG_ROS2_COMPONENT_CLASS})
 
     add_executable(${PROJECT_NAME}_${name}_node ${_ARG_ROS2_EXE_SOURCES})
-    target_link_libraries(${PROJECT_NAME}_${name}_node PUBLIC ${name}_lib)
+    target_link_libraries(${PROJECT_NAME}_${name}_node PUBLIC ${name})
 
     install(TARGETS
-      ${name}_lib
+      ${name}
       ARCHIVE DESTINATION lib
       LIBRARY DESTINATION lib
       RUNTIME DESTINATION bin)
