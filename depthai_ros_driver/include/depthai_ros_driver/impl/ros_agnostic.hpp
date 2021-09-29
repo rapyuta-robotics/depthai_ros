@@ -23,157 +23,100 @@
 namespace rr {
 namespace ros_agnostic {
 
-/*
- * Here we will keep all details implemntaion of within ros_agnostic ns. This
- * includes: Publisher, Subscription, Server, Timer...
- */
-
 //==============================================================================
-class Publisher
+template<typename Msg>
+void Publisher::publish(Msg& msg)
 {
-public:
-  /// @brief Publish ros msg
-  template<typename Msg>
-  void publish(Msg& msg)
-  {
-    #if defined(USE_ROS2)
-    // move the ptr and subscriber check here
-    auto pub = std::static_pointer_cast<rclcpp::Publisher<Msg>>(_ptr);
-    if (pub && pub->get_subscription_count() > 0)
-      pub->publish(msg);
-    #else
-    if (_pub.getNumSubscribers() > 0);
+  #if defined(USE_ROS2)
+  // move the ptr and subscriber check here
+  auto pub = std::static_pointer_cast<rclcpp::Publisher<Msg>>(_pub);
+  if (pub && pub->get_subscription_count() > 0)
+    pub->publish(msg);
+  #else
+  if (_pub.getNumSubscribers() > 0)
     _pub.publish(msg);
-    #endif
-  }
-
-private:
-  /// @brief Create ros publisher
-  template<class Msg>
-  inline void create_publisher(
-    RosNodeHandle node_handle,
-    const std::string& topic_name,
-    const uint32_t queue_size)
-  {
-    #if defined(USE_ROS2)
-    // using qos: KeepLast(QueueSize)
-    _ptr = node_handle->create_publisher<Msg>(topic_name, queue_size);
-    #else
-    _pub = node_handle->advertise<Msg>(topic_name, queue_size);
-    #endif
-  }
-
-  #if defined(USE_ROS2)
-  std::shared_ptr<void> _ptr;
-  #else
-  ros::Publisher _pub;
   #endif
-
-  friend class NodeInterface;
-};
+}
 
 //==============================================================================
-class Subscription
+template<class Msg>
+void Publisher::create_publisher(
+  RosNodeHandle node_handle,
+  const std::string& topic_name,
+  const uint32_t queue_size)
 {
-private:
-  /// @brief Create ros subscription
-  template<class Msg, typename Callback>
-  inline void create_subscription(
-    RosNodeHandle node_handle,
-    const std::string& topic_name,
-    const uint32_t queue_size,
-    const Callback& callback)
-  {
-    #if defined(USE_ROS2)
-    // using qos: KeepLast(QueueSize)
-    _ptr = node_handle->create_subscription<Msg>(topic_name, queue_size,
-        callback);
-    #else
-    _sub = node_handle->subscribe<Msg>(topic_name, queue_size, callback);
-    #endif
-  }
-
   #if defined(USE_ROS2)
-  std::shared_ptr<void> _ptr;
+  // using qos: KeepLast(QueueSize)
+  _pub = node_handle->create_publisher<Msg>(topic_name, queue_size);
   #else
-  ros::Subscriber _sub;
+  _pub = node_handle->advertise<Msg>(topic_name, queue_size);
   #endif
-
-  friend class NodeInterface;
-};
+}
 
 //==============================================================================
-class Service
+template<class Msg, typename Callback>
+void Subscription::create_subscription(
+  RosNodeHandle node_handle,
+  const std::string& topic_name,
+  const uint32_t queue_size,
+  const Callback& callback)
 {
-private:
-  /// @brief Create ros service
-  template<class Msg, typename Callback>
-  void create_service(
-    RosNodeHandle node_handle,
-    const std::string& srv_name,
-    const Callback& callback)
-  {
-    #if defined(USE_ROS2)
-    _ptr = node_handle->create_service<Msg>(srv_name, callback);
-    #else
-    /// Note: This is internal impl of converting ref to ptr is to ensure
-    /// the api consistency between ros1 and ros2, which both uses ptr as the
-    /// ros_agnostic callback args for Req and Res
-    using RequestMsg = typename Msg::Request;
-    using ResponseMsg = typename Msg::Response;
-    _srv = node_handle->advertiseService<RequestMsg, ResponseMsg>(
-      srv_name,
-      [callback = std::move(callback)](const RequestMsg& req, ResponseMsg& res)
+  #if defined(USE_ROS2)
+  // using qos: KeepLast(QueueSize)
+  _sub = node_handle->create_subscription<Msg>(topic_name, queue_size,
+      callback);
+  #else
+  _sub = node_handle->subscribe<Msg>(topic_name, queue_size, callback);
+  #endif
+}
+
+//==============================================================================
+template<class Msg, typename Callback>
+void Service::create_service(
+  RosNodeHandle node_handle,
+  const std::string& srv_name,
+  const Callback& callback)
+{
+  #if defined(USE_ROS2)
+  _srv = node_handle->create_service<Msg>(srv_name, callback);
+  #else
+  /// Note: This is internal impl of converting ref to ptr is to ensure
+  /// the api consistency between ros1 and ros2, which both uses ptr as the
+  /// ros_agnostic callback args for Req and Res
+  using RequestMsg = typename Msg::Request;
+  using ResponseMsg = typename Msg::Response;
+  _srv = node_handle->advertiseService<RequestMsg, ResponseMsg>(
+    srv_name,
+    [callback = std::move(callback)](const RequestMsg& req, ResponseMsg& res)
+    {
+      auto res_ptr = std::make_shared<ResponseMsg>();
+      callback(std::make_shared<RequestMsg>(req), res_ptr);
+      res = *res_ptr;
+      return true;
+    });
+  #endif
+}
+
+//==============================================================================
+template<typename Callback>
+void Timer::create_timer(
+  RosNodeHandle node_handle,
+  const double period_sec,
+  const Callback& callback)
+{
+  #if defined(USE_ROS2)
+  const auto period = std::chrono::duration<double>(period_sec);
+  _timer = node_handle->create_wall_timer(period, callback);
+  #else
+  /// Note: the create_timer wrapper function hides the ros::TimerEvent arg
+  /// of the callback function, provides consistency between the ros1&2 api
+  _timer = node_handle->createTimer(ros::Duration(period_sec),
+      [callback = std::move(callback)](const ros::TimerEvent&)
       {
-        auto res_ptr = std::make_shared<ResponseMsg>();
-        callback(std::make_shared<RequestMsg>(req), res_ptr);
-        res = *res_ptr;
-        return true;
+        callback();
       });
-    #endif
-  }
-
-  #if defined(USE_ROS2)
-  std::shared_ptr<void> _ptr;
-  #else
-  ros::ServiceServer _srv;
   #endif
-
-  friend class NodeInterface;
-};
-
-//==============================================================================
-class Timer
-{
-private:
-  /// @brief Create ros timer
-  template<typename Callback>
-  void create_timer(
-    RosNodeHandle node_handle,
-    const double period_sec,
-    const Callback& callback)
-  {
-    #if defined(USE_ROS2)
-    const auto period = std::chrono::duration<double>(period_sec);
-    _timer = node_handle->create_wall_timer(period, callback);
-    #else
-    /// Note: the create_timer wrapper function hides the ros::TimerEvent arg
-    /// of the callback function, provides consistency between the ros1&2 api
-    _timer = node_handle->createTimer(ros::Duration(period_sec),
-        [callback = std::move(callback)](const ros::TimerEvent&)
-        {
-          callback();
-        });
-    #endif
-  }
-  #if defined(USE_ROS2)
-  rclcpp::TimerBase::SharedPtr _timer;
-  #else
-  ros::Timer _timer;
-  #endif
-
-  friend class NodeInterface;
-};
+}
 
 //==============================================================================
 template<class Msg>

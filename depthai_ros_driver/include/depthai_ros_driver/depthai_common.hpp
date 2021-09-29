@@ -28,7 +28,7 @@
 #include <depthai/nnet/nnet_packet.hpp>
 #include <depthai/pipeline/cnn_host_pipeline.hpp>
 
-#include <depthai_ros_driver/impl/ros_agnostic.hpp>
+#include <depthai_ros_driver/ros_agnostic.hpp>
 
 #if defined(USE_ROS2)
   #include <std_msgs/msg/float32.hpp>

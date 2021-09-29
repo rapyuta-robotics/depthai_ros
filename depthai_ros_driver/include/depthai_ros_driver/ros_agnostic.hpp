@@ -26,6 +26,10 @@
 using RosNodeHandle = std::shared_ptr<rclcpp::Node>;
 using RosTime = rclcpp::Time;
 using RosDuration = rclcpp::Duration;
+using RosPub = std::shared_ptr<void>;
+using RosSub = std::shared_ptr<void>;
+using RosSrv = std::shared_ptr<void>;
+using RosTimer = rclcpp::TimerBase::SharedPtr;
 #else
   #include <ros/ros.h>
   #define ROS_LOGGER(...) ROS_WARN_NAMED("depthai_ros", __VA_ARGS__)
@@ -34,6 +38,10 @@ using RosDuration = rclcpp::Duration;
 using RosNodeHandle = std::shared_ptr<ros::NodeHandle>;
 using RosTime = ros::Time;
 using RosDuration = ros::Duration;
+using RosPub = ros::Publisher;
+using RosSub = ros::Subscriber;
+using RosSrv = ros::ServiceServer;
+using RosTimer = ros::Timer;
 #endif
 
 namespace rr {
@@ -46,10 +54,70 @@ namespace rr {
 namespace ros_agnostic {
 
 //==============================================================================
-class Publisher;
-class Subscription;
-class Service;
-class Timer;
+class Publisher
+{
+public:
+  /// @brief Publish ros msg
+  template<typename Msg>
+  void publish(Msg& msg);
+
+private:
+  /// @brief Create ros publisher
+  template<class Msg>
+  inline void create_publisher(
+    RosNodeHandle node_handle,
+    const std::string& topic_name,
+    const uint32_t queue_size);
+
+  RosPub _pub;
+  friend class NodeInterface;
+};
+
+//==============================================================================
+class Subscription
+{
+private:
+  /// @brief Create ros subscription
+  template<class Msg, typename Callback>
+  inline void create_subscription(
+    RosNodeHandle node_handle,
+    const std::string& topic_name,
+    const uint32_t queue_size,
+    const Callback& callback);
+
+  RosSub _sub;
+  friend class NodeInterface;
+};
+
+//==============================================================================
+class Service
+{
+private:
+  /// @brief Create ros service
+  template<class Msg, typename Callback>
+  void create_service(
+    RosNodeHandle node_handle,
+    const std::string& srv_name,
+    const Callback& callback);
+
+  RosSrv _srv;
+  friend class NodeInterface;
+};
+
+//==============================================================================
+class Timer
+{
+private:
+  /// @brief Create ros timer
+  template<typename Callback>
+  void create_timer(
+    RosNodeHandle node_handle,
+    const double period_sec,
+    const Callback& callback);
+
+  RosTimer _timer;
+  friend class NodeInterface;
+};
 
 //==============================================================================
 class NodeInterface
@@ -107,5 +175,7 @@ void get_param(
 
 }  // namespace ros_agnostic
 }  // namespace rr
+
+#include <depthai_ros_driver/impl/ros_agnostic.hpp>
 
 #endif // DEPTHAI_ROS_DRIVER__ROS_AGNOSTIC_HPP
