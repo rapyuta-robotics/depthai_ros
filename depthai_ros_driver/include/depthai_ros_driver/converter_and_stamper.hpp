@@ -131,9 +131,3 @@ private:
     ros::Subscriber sub_unstamped_;
 };
 }  // namespace rr
-
-// #include <node_interface/ros1_node_interface.hpp>
-// #include <nodelet/nodelet.h>
-// namespace rr {
-// using ConverterAndStamperNode = ConverterAndStamper<ROS1Node<>>;
-// using ConverterAndStamperNodelet = ConverterAndStamper<nodelet::Nodelet>;
