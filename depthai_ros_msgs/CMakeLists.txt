@@ -4,17 +4,20 @@ project (depthai_ros_msgs VERSION 1.0.0)
 
 find_package (catkin REQUIRED COMPONENTS
   message_generation
-  # sensor_msgs
-  # std_msgs
+  depthai_datatype_msgs
+  sensor_msgs
+  std_msgs
 )
 
 ################################################
 ## Declare ROS messages, services and actions ##
 ################################################
 ## Generate messages in the 'msg' folder
-# add_message_files (
-#   FILES
-# )
+add_message_files (
+  FILES
+  ImgDetectionsStamped.msg
+  NNStamped.msg
+)
 
 ## Generate services in the 'srv' folder
 add_service_files (
@@ -25,7 +28,7 @@ add_service_files (
 ## Generate added messages and services with any dependencies listed here
 generate_messages (
   DEPENDENCIES
-  # sensor_msgs std_msgs
+  depthai_datatype_msgs sensor_msgs std_msgs
 )
 
 ###################################
@@ -33,5 +36,5 @@ generate_messages (
 ###################################
 catkin_package (
   CATKIN_DEPENDS message_runtime
-  # sensor_msgs std_msgs
+  depthai_datatype_msgs sensor_msgs std_msgs
 )

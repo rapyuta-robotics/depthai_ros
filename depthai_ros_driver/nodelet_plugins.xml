@@ -7,8 +7,13 @@
         </description>
     </class>
 </library>
-<library path="lib/libimg_detections_stamper_nodelet">
-    <class name="depthai_ros_driver/ImgDetectionsStamper" type="rr::ImgDetectionsStamperNodelet" base_class_type="nodelet::Nodelet" >
-        <description>Nodelet to stamp the ImgDetection(NN) based on the image timestamp</description>
+<library path="lib/libcommon_stamper_nodelets">
+    <class name="depthai_ros_driver/ImgDetectionsStamper" type="rr::ImgDetectionsStamperNodelet" base_class_type="nodelet::Nodelet">
+        <description>Nodelet to stamp the ImgDetection(NN) based on the input timestamp</description>
+    </class>
+</library>
+<library path="lib/libcommon_stamper_nodelets">
+    <class name="depthai_ros_driver/NNStamper" type="rr::NNStamperNodelet" base_class_type="nodelet::Nodelet">
+        <description>Nodelet to stamp the NN tensor output based on the input timestamp</description>
     </class>
 </library>
