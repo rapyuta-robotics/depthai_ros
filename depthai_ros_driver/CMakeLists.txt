@@ -19,7 +19,8 @@ set(HUNTER_CONFIGURATION_TYPES "Release"
 HunterGate(
   URL "https://github.com/cpp-pm/hunter/archive/v0.23.258.tar.gz"
   SHA1 "062a19ab13ce8dffa9a882b6ce3e43bdabdf75d3"
-  FILEPATH ${DEPTHAI_CORE}/cmake/Hunter/config.cmake # Add depthai-core config  (hunter limitation)
+  # Add depthai-core config  (hunter limitation)
+  FILEPATH ${DEPTHAI_CORE}/cmake/Hunter/config.cmake
 )
 
 project(depthai_ros_driver VERSION 0.1.0 LANGUAGES CXX)
@@ -61,19 +62,18 @@ find_dependent_packages(${PKG_DEPS})
 add_subdirectory(${DEPTHAI_CORE} depthai-core)
 
 add_ros_node(depthai_ros_driver
-  SKIP_PACKAGE_SEARCH
   PROJECT_NAME ${PROJECT_NAME}
-  ROS2_COMPONENT_CLASS "rr::DepthAIBaseRos2"
   SOURCES src/depthai_common.cpp
   ROS1_SOURCES src/depthai_base.cpp
   ROS2_SOURCES src/depthai_base_ros2.cpp
-  ROS1_COMPONENT_SOURCES src/depthai_nodelet.cpp
   ROS1_EXE_SOURCES src/depthai_node.cpp
   ROS2_EXE_SOURCES src/depthai_node_ros2.cpp
+  ROS2_COMPONENT_CLASS "rr::DepthAIBaseRos2"
   DIRECTORIES launch resources scripts urdf params
   INCLUDE_DIRS include
   SYSTEM_DEPS OpenCV Boost
   PKG_DEPS ${PKG_DEPS}
+  SKIP_PACKAGE_SEARCH
   TARGET_DEPS depthai-core)
 
 if($ENV{ROS_VERSION} STREQUAL 1)

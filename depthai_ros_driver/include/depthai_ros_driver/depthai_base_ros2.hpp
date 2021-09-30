@@ -22,11 +22,6 @@
 #include <depthai_ros_driver/depthai_common.hpp>
 #include <depthai_ros_driver/visibility_control.h>
 
-using namespace std::chrono_literals;
-using TriggerSrv = depthai_ros_msgs::srv::TriggerNamed;
-using AutoFocusCtrlMsg = depthai_ros_msgs::msg::AutoFocusCtrl;
-using Float32Msg = std_msgs::msg::Float32;
-
 namespace rr {
 
 //==============================================================================
@@ -37,10 +32,6 @@ public:
   explicit DepthAIBaseRos2(const rclcpp::NodeOptions& options);
 
 private:
-  rclcpp::TimerBase::SharedPtr _cameraReadTimer;
-  rclcpp::Subscription<Float32Msg>::SharedPtr _disparity_conf_sub;
-  rclcpp::Subscription<AutoFocusCtrlMsg>::SharedPtr _af_ctrl_sub;
-  rclcpp::Service<TriggerSrv>::SharedPtr _camera_info_default;
   std::unique_ptr<DepthAICommon> _depthai_common;
 };
 

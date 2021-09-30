@@ -28,12 +28,7 @@
 #include <depthai/nnet/nnet_packet.hpp>
 #include <depthai/pipeline/cnn_host_pipeline.hpp>
 
-// std includes
-#include <algorithm>
-#include <array>
-#include <memory>
-#include <string>
-#include <variant>
+#include <depthai_ros_driver/ros_agnostic.hpp>
 
 #if defined(USE_ROS2)
   #include <std_msgs/msg/float32.hpp>
@@ -42,28 +37,6 @@
   #include <depthai_ros_msgs/msg/objects.hpp>
   #include <depthai_ros_msgs/msg/auto_focus_ctrl.hpp>
   #include <camera_info_manager/camera_info_manager.hpp>
-  #include <rclcpp/node.hpp>
-
-  #define ROS_LOGGER(...) RCUTILS_LOG_WARN_NAMED("depthai_common", __VA_ARGS__)
-
-using ImageMsg = sensor_msgs::msg::Image;
-using CompressedImageMsg = sensor_msgs::msg::CompressedImage;
-using ObjectsMsg = depthai_ros_msgs::msg::Objects;
-using ObjectMsg = depthai_ros_msgs::msg::Object;
-using CameraInfoMsg = sensor_msgs::msg::CameraInfo;
-using HeaderMsg = std_msgs::msg::Header;
-using ROSNodeHandle = std::shared_ptr<rclcpp::Node>;
-
-using ObjectPubPtr = rclcpp::Publisher<ObjectMsg>::SharedPtr;
-using ObjectsPubPtr = rclcpp::Publisher<ObjectsMsg>::SharedPtr;
-using ImagePubPtr = rclcpp::Publisher<ImageMsg>::SharedPtr;
-using ComImagePubPtr = rclcpp::Publisher<CompressedImageMsg>::SharedPtr;
-using StreamPub = std::variant<ObjectsPubPtr, ObjectPubPtr,
-    ImagePubPtr, ComImagePubPtr>;
-using CameraInfoPub = rclcpp::Publisher<CameraInfoMsg>::SharedPtr;
-using RosTime = rclcpp::Time;
-using RosDuration = rclcpp::Duration;
-
 #else
   #include <std_msgs/Float32.h>
   #include <sensor_msgs/Image.h>
@@ -71,23 +44,21 @@ using RosDuration = rclcpp::Duration;
   #include <depthai_ros_msgs/Objects.h>
   #include <depthai_ros_msgs/TriggerNamed.h>
   #include <camera_info_manager/camera_info_manager.h>
-
-  #define ROS_LOGGER(...) ROS_WARN_NAMED("depthai_common", __VA_ARGS__)
-
-using ImageMsg = sensor_msgs::Image;
-using CompressedImageMsg = sensor_msgs::CompressedImage;
-using ObjectsMsg = depthai_ros_msgs::Objects;
-using ObjectMsg = depthai_ros_msgs::Object;
-using CameraInfoMsg = sensor_msgs::CameraInfo;
-using HeaderMsg = std_msgs::Header;
-
-using ROSNodeHandle = std::shared_ptr<ros::NodeHandle>;
-using StreamPub = std::unique_ptr<ros::Publisher>;
-using CameraInfoPub = std::unique_ptr<ros::Publisher>;
-using RosTime = ros::Time;
-using RosDuration = ros::Duration;
 #endif
 
+/// ROS Msg Srv
+using Float32Msg = ROS_MSG_TYPE(std_msgs, Float32);
+using ObjectsMsg = ROS_MSG_TYPE(depthai_ros_msgs, Objects);
+using ObjectMsg = ROS_MSG_TYPE(depthai_ros_msgs, Object);
+using HeaderMsg = ROS_MSG_TYPE(std_msgs, Header);
+using CameraInfoMsg = ROS_MSG_TYPE(sensor_msgs, CameraInfo);
+using ImageMsg = ROS_MSG_TYPE(sensor_msgs, Image);
+using CompressedImageMsg = ROS_MSG_TYPE(sensor_msgs, CompressedImage);
+using AutoFocusCtrlMsg = ROS_MSG_TYPE(depthai_ros_msgs, AutoFocusCtrl);
+using TriggerSrv = ROS_SRV_TYPE(depthai_ros_msgs, TriggerNamed);
+
+using CameraInfoPub = std::shared_ptr<rr::ros_agnostic::Publisher>;
+using StreamPub = std::shared_ptr<rr::ros_agnostic::Publisher>;
 using CameraInfoManagerPtr =
   std::shared_ptr<camera_info_manager::CameraInfoManager>;
 
@@ -169,7 +140,7 @@ public:
   /// \param private_nh
   ///    private nodehandle for setting param, use when private ns is needed
   ///    else, provide the same nh to here.
-  DepthAICommon(const ROSNodeHandle nh, const ROSNodeHandle private_nh);
+  DepthAICommon(const RosNodeHandle nh, const RosNodeHandle private_nh);
 
   /// @brief get and process packets
   void process_and_publish_packets();
@@ -226,20 +197,6 @@ private:
   /// get camera info msg
   CameraInfoMsg get_camera_info_msg(const Stream& id);
 
-  // check if publisher is valid (ros1 api)
-  template<typename T>
-  auto is_pub_valid(T pub) -> decltype(pub->getNumSubscribers(), bool())
-  {
-    return pub && pub->getNumSubscribers() > 0;
-  }
-
-  // check if publisher is valid (ros2 api)
-  template<typename T>
-  auto is_pub_valid(T pub) -> decltype(pub->get_subscription_count(), bool())
-  {
-    return pub && pub->get_subscription_count() > 0;
-  }
-
   DepthAICommonConfig _cfg;
   std::unique_ptr<Device> _depthai;
   std::shared_ptr<CNNHostPipeline> _pipeline;
@@ -257,11 +214,16 @@ private:
   RosTime _stamp;
   double _depthai_init_ts = -1;  // sadly, we don't have a way of measuring drift
 
-  ROSNodeHandle _node_handle;
-
   std::array<StreamPub, Stream::END> _stream_publishers;
   std::array<CameraInfoPub, Stream::IMAGE_END> _camera_info_publishers;
   std::array<CameraInfoManagerPtr, Stream::IMAGE_END> _camera_info_managers;
+
+  // service, subscriptions and timer
+  ros_agnostic::NodeInterface _node_interface;
+  ros_agnostic::Service _camera_info_default;
+  ros_agnostic::Subscription _af_ctrl_sub;
+  ros_agnostic::Subscription _disparity_conf_sub;
+  ros_agnostic::Timer _camera_read_timer;
 };
 
 //==============================================================================

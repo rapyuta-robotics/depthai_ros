@@ -15,7 +15,6 @@
  *
 */
 
-#include <chrono>
 #include <depthai_ros_driver/depthai_base_ros2.hpp>
 
 namespace rr {
@@ -24,47 +23,8 @@ namespace rr {
 DepthAIBaseRos2::DepthAIBaseRos2(const rclcpp::NodeOptions& options)
 : Node("depthai_node", options)
 {
-  // TODO use shared pointer
-  const auto node = this->create_sub_node("");
+  const auto node = this->create_sub_node(""); // private?
   _depthai_common = std::make_unique<DepthAICommon>(node, node);
-
-  _cameraReadTimer = this->create_wall_timer(0.002s,
-      [&]()
-      {
-        _depthai_common->process_and_publish_packets();
-      });
-
-  /// ros2 dds qos profile
-  const auto qos = rclcpp::ServicesQoS().best_effort();
-
-  // create Trigger default camera param service
-  _camera_info_default = this->create_service<TriggerSrv>(
-    ResetCameraServiceName,
-    [this](
-      const std::shared_ptr<TriggerSrv::Request> req,
-      std::shared_ptr<TriggerSrv::Response> res)
-    {
-      const auto& name = req->name;
-      res->success = _depthai_common->set_camera_info_manager(name, "default/");
-    }
-  );
-
-  // disparity_confidence 'service' subscriber
-  _disparity_conf_sub = this->create_subscription<Float32Msg>(
-    SetDisparityTopicName, qos,
-    [&](const Float32Msg::UniquePtr msg)
-    {
-      _depthai_common->set_disparity(msg->data);
-    });
-
-  // autofocus 'service' subscriber
-  _af_ctrl_sub = this->create_subscription<AutoFocusCtrlMsg>(
-    SetAutoFocusTopicName, qos,
-    [&](const AutoFocusCtrlMsg::UniquePtr msg)
-    {
-      _depthai_common->set_autofocus(
-        msg->trigger_auto_focus, msg->auto_focus_mode);
-    });
 }
 }  // namespace rr
 

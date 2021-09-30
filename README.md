@@ -95,3 +95,17 @@ This package consists of a node and a nodelet version of the ROS driver. It also
 
 ## `node_interface`
 This package contains some utilities used to reduce code duplication between the node and the nodelet version in `depthai_ros_driver`.
+
+# Notes (TO REMOVE)
+
+Interface test
+```bash
+#ros1 (with ns)
+rosservice call /depthai/reset_camera_info  {}
+rostopic pub /depthai/auto_focus_ctrl depthai_ros_msgs/AutoFocusCtrl {} --once
+
+#ros2
+ros2 topic pub /disparity_confidence std_msgs/msg/Float32 {} --once
+ros2 topic pub /auto_focus_ctrl depthai_ros_msgs/msg/AutoFocusCtrl {} --once
+ros2 service call /reset_camera_info depthai_ros_msgs/srv/TriggerNamed {}
+```

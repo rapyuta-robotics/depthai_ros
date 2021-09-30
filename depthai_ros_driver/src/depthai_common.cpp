@@ -176,47 +176,29 @@ const std::string DepthAICommon::create_pipeline_config()
 
 //==============================================================================
 DepthAICommon::DepthAICommon(
-  const ROSNodeHandle nh, const ROSNodeHandle private_nh)
+  const RosNodeHandle nh, const RosNodeHandle p_nh)
+: _node_interface(nh)
 {
-  _node_handle = std::move(nh);
-
-  ///    lambda std::function<void(string, auto)>, in which the auto should
-  ///    support static types of: bool, string, int, vector<string>
-  auto get_param = [&](const std::string& name, auto& variable)
-    {
-      using var_type = std::remove_reference_t<decltype(variable)>;
-      // Get param method
-    #if defined(USE_ROS2)
-      private_nh->declare_parameter<var_type>(name, variable);
-      private_nh->get_parameter(name, variable);
-    #else
-      if (private_nh->hasParam(name))
-        private_nh->getParam(name, variable);
-      else
-        private_nh->setParam(name, variable);
-    #endif
-      // std::cout <<" | param: " << name << " : " << variable << std::endl;
-    };
-
-  get_param("calibration_file", _cfg.calib_file);
-  get_param("blob_file", _cfg.blob_file);
-  get_param("blob_file_config", _cfg.blob_file_config);
-  get_param("stream_list", _cfg.stream_list);
-  get_param("depthai_block_read", _cfg.depthai_block_read);
-  get_param("enable_sync", _cfg.sync_video_meta);
-  get_param("full_fov_nn", _cfg.full_fov_nn);
-  get_param("disable_depth", _cfg.compute_bbox_depth);
-  get_param("force_usb2", _cfg.force_usb2);
-  get_param("rgb_height", _cfg.rgb_height);
-  get_param("rgb_fps", _cfg.rgb_fps);
-  get_param("depth_height", _cfg.depth_height);
-  get_param("depth_fps", _cfg.depth_fps);
-  get_param("shaves", _cfg.shaves);
-  get_param("cmx_slices", _cfg.cmx_slices);
-  get_param("nn_engines", _cfg.nn_engines);
-  get_param("camera_param_uri", _cfg.camera_param_uri);
-  get_param("camera_name", _cfg.camera_name);
-  get_param("queue_size", _cfg.queue_size);
+  using namespace ros_agnostic;
+  get_param(p_nh, "calibration_file", _cfg.calib_file);
+  get_param(p_nh, "blob_file", _cfg.blob_file);
+  get_param(p_nh, "blob_file_config", _cfg.blob_file_config);
+  get_param(p_nh, "stream_list", _cfg.stream_list);
+  get_param(p_nh, "depthai_block_read", _cfg.depthai_block_read);
+  get_param(p_nh, "enable_sync", _cfg.sync_video_meta);
+  get_param(p_nh, "full_fov_nn", _cfg.full_fov_nn);
+  get_param(p_nh, "disable_depth", _cfg.compute_bbox_depth);
+  get_param(p_nh, "force_usb2", _cfg.force_usb2);
+  get_param(p_nh, "rgb_height", _cfg.rgb_height);
+  get_param(p_nh, "rgb_fps", _cfg.rgb_fps);
+  get_param(p_nh, "depth_height", _cfg.depth_height);
+  get_param(p_nh, "depth_fps", _cfg.depth_fps);
+  get_param(p_nh, "shaves", _cfg.shaves);
+  get_param(p_nh, "cmx_slices", _cfg.cmx_slices);
+  get_param(p_nh, "nn_engines", _cfg.nn_engines);
+  get_param(p_nh, "camera_param_uri", _cfg.camera_param_uri);
+  get_param(p_nh, "camera_name", _cfg.camera_name);
+  get_param(p_nh, "queue_size", _cfg.queue_size);
 
   if (_cfg.camera_param_uri.back() != '/')
     _cfg.camera_param_uri += "/";
@@ -227,6 +209,40 @@ DepthAICommon::DepthAICommon(
   const auto _pipeline_config_json = create_pipeline_config();
   _pipeline = _depthai->create_pipeline(_pipeline_config_json);
   this->create_stream_publishers();
+
+  // autofocus 'service' subscriber
+  _af_ctrl_sub = _node_interface.create_subscription<AutoFocusCtrlMsg>(
+    SetAutoFocusTopicName, _cfg.queue_size,
+    [&](const AutoFocusCtrlMsg::ConstPtr msg)
+    {
+      this->set_autofocus(msg->trigger_auto_focus, msg->auto_focus_mode);
+    });
+
+  // disparity_confidence 'service' subscriber
+  _disparity_conf_sub = _node_interface.create_subscription<Float32Msg>(
+    SetDisparityTopicName, _cfg.queue_size,
+    [&](const Float32Msg::ConstPtr msg)
+    {
+      this->set_disparity(msg->data);
+    });
+
+  // Service to Trigger default camera param
+  _camera_info_default = _node_interface.create_service<TriggerSrv>(
+    ResetCameraServiceName,
+    [&](
+      const std::shared_ptr<TriggerSrv::Request> req,
+      std::shared_ptr<TriggerSrv::Response> res)
+    {
+      const auto& name = req->name;
+      res->success = this->set_camera_info_manager(name, "default/");
+    });
+
+  // periodic callback timer to publish stream packets
+  _camera_read_timer = _node_interface.create_timer(1. / 500,
+      [&]()
+      {
+        this->process_and_publish_packets();
+      });
 }
 
 //==============================================================================
@@ -240,15 +256,10 @@ void DepthAICommon::create_stream_publishers()
       if (id < Stream::IMAGE_END)
       {
         // set camera info publisher
-        _camera_info_publishers[id] =
-      #if defined(USE_ROS2)
-          _node_handle->create_publisher<CameraInfoMsg>(
+        auto pub = _node_interface.create_publisher<CameraInfoMsg>(
           topic_name + "/camera_info", _cfg.queue_size);
-      #else
-          std::make_unique<ros::Publisher>(_node_handle->advertise<CameraInfoMsg>(
-              topic_name + "/camera_info",
-              _cfg.queue_size));
-      #endif
+        _camera_info_publishers[id] =
+          std::make_shared<ros_agnostic::Publisher>(pub);
         set_camera_info_manager(topic_name, _cfg.camera_name + "/");
         // set stream topic name
         suffix =
@@ -256,14 +267,9 @@ void DepthAICommon::create_stream_publishers()
       }
 
       using type = decltype(msg_type);
-      _stream_publishers[id] =
-    #if defined(USE_ROS2)
-        _node_handle->create_publisher<type>(
+      auto pub = _node_interface.create_publisher<type>(
         topic_name + suffix, _cfg.queue_size);
-    #else
-        std::make_unique<ros::Publisher>(_node_handle->advertise<type>(
-            topic_name + suffix, _cfg.queue_size));
-    #endif
+      _stream_publishers[id] = std::make_shared<ros_agnostic::Publisher>(pub);
     };
 
   // loop through selected stream list and create stream
@@ -371,14 +377,10 @@ void DepthAICommon::publishObjectInfoMsg(
   const dai::Detections& detections, const RosTime& stamp)
 {
   const auto pubPtr =
-  #if defined(USE_ROS2)
-    std::get<ObjectsPubPtr>(_stream_publishers[Stream::META_OUT]);
-  #else
-    _stream_publishers[Stream::META_OUT].get();
-  #endif
+    _stream_publishers[Stream::META_OUT]; // TODO .get()?
 
-  if (!is_pub_valid(pubPtr))
-    return;// No subscribers
+  if (!pubPtr)
+    return;// Not avail
 
   auto msg = convert(detections);
   msg.header.stamp = stamp;
@@ -393,14 +395,8 @@ void DepthAICommon::publishImageMsg(
   header.stamp = stamp;
   header.frame_id = packet.stream_name;
 
-  #if defined(USE_ROS2)
   const auto camInfoPubPtr = _camera_info_publishers[type];
-  #else
-  const auto camInfoPubPtr = _camera_info_publishers[type].get();
-  #endif
-
-  // publish camera info
-  if (is_pub_valid(camInfoPubPtr))
+  if (camInfoPubPtr)
   {
     auto msg = get_camera_info_msg(type);
     msg.header = header;
@@ -410,15 +406,10 @@ void DepthAICommon::publishImageMsg(
   // check if to publish it out as Compressed or ImageMsg
   if (type == Stream::JPEG_OUT || type == Stream::VIDEO)
   {
+    const auto pubPtr = _stream_publishers[type];
 
-    #if defined(USE_ROS2)
-    const auto pubPtr = std::get<ComImagePubPtr>(_stream_publishers[type]);
-    #else
-    const auto pubPtr = _stream_publishers[type].get();
-    #endif
-
-    if (!is_pub_valid(pubPtr))
-      return;// No subscribers
+    if (!pubPtr)
+      return;// Not avail
 
     const auto img = std::make_shared<CompressedImageMsg>();
     img->header = std::move(header);
@@ -429,14 +420,10 @@ void DepthAICommon::publishImageMsg(
   }
   else
   {
-    #if defined(USE_ROS2)
-    const auto pubPtr = std::get<ImagePubPtr>(_stream_publishers[type]);
-    #else
-    const auto pubPtr = _stream_publishers[type].get();
-    #endif
+    const auto pubPtr = _stream_publishers[type];
 
-    if (!is_pub_valid(pubPtr))
-      return;// No subscribers
+    if (!pubPtr)
+      return;// Not avail
 
     const auto img_data = get_image_data(packet, type);
     if (img_data.first.empty())
@@ -516,6 +503,8 @@ const bool DepthAICommon::set_camera_info_manager(
     return false;
 
   const auto idx = std::distance(_topic_names.cbegin(), it);
+
+  /// Check if camera info manager is initialized
   if (_camera_info_managers[idx])
   {
     return _camera_info_managers[idx]->setCameraName(name) &&
@@ -523,11 +512,15 @@ const bool DepthAICommon::set_camera_info_manager(
   }
   else
   {
+    auto node_handle = _node_interface.get_node();
     #if defined(USE_ROS2)
-    auto lnh = _node_handle->create_sub_node(name).get();
+    const RosNodeHandle& nh_ptr = node_handle->create_sub_node(name);
+    auto lnh = nh_ptr.get();
     #else
-    auto lnh = ros::NodeHandle{*_node_handle, name};
+    auto lnh = ros::NodeHandle{*node_handle, name};
     #endif
+
+    /// input arg: lnh is nodehandle for ros1, and raw node ptr in ros2
     _camera_info_managers[idx] =
       std::make_shared<camera_info_manager::CameraInfoManager>(lnh, name, uri);
     return true;
@@ -553,11 +546,7 @@ const RosTime DepthAICommon::get_rostime(const double camera_ts)
   if (_depthai_init_ts == -1)
   {
     _depthai_init_ts = camera_ts;
-    #if defined(USE_ROS2)
-    _stamp = _node_handle->now();
-    #else
-    _stamp = RosTime::now();
-    #endif
+    _stamp = _node_interface.current_time();
   }
   return _stamp + RosDuration(camera_ts - _depthai_init_ts);
 }
