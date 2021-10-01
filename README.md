@@ -61,7 +61,7 @@ Sample models are available [here](https://github.com/luxonis/depthai/tree/main/
     Note: `colcon build` will also work with ROS1
 1. Run the Nodelet
     ```bash
-    ros2 run depthai_ros_driver depthai_ros_driver_node
+    ros2 run depthai_ros_driver depthai_ros_driver_depthai_ros_driver_node
     ```
 2. Or, Run: ROS2 `composition`. Similar concept of `nodelet`. To run it:
     ```bash
@@ -96,7 +96,7 @@ This package consists of a node and a nodelet version of the ROS driver. It also
 ## `node_interface`
 This package contains some utilities used to reduce code duplication between the node and the nodelet version in `depthai_ros_driver`.
 
-# Notes (TO REMOVE)
+## Notes (TO REMOVE)
 
 Interface test
 ```bash

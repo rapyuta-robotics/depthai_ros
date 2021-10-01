@@ -53,8 +53,8 @@
   <arg name="stream_list" default="[left, right, metaout, previewout, disparity, disparity_color, depth, video]"/>
 
   <group>
-    <node pkg="depthai_ros_driver" exec="depthai_ros_driver_node" name="$(var node_name)"
-      output="screen" launch-prefix="$(var launch_prefix)">
+    <node pkg="depthai_ros_driver" exec="depthai_ros_driver_depthai_ros_driver_node"
+          name="$(var node_name)" output="screen" launch-prefix="$(var launch_prefix)">
       <param name="camera_name" value="$(var camera_name)"/>
 
       <param name="cmd_file" value="$(var cmd_file)"/>
