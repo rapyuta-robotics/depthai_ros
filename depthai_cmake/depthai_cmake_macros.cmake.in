@@ -128,10 +128,10 @@ macro(add_ros_node name)
     add_dependencies(${name}
       ${${name}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-    add_executable(${PROJECT_NAME}_${name}_node ${_ARG_ROS1_EXE_SOURCES})
-    target_link_libraries(${PROJECT_NAME}_${name}_node ${name})
+    add_executable(${name}_node ${_ARG_ROS1_EXE_SOURCES})
+    target_link_libraries(${name}_node ${name})
 
-    install(TARGETS ${name} ${PROJECT_NAME}_${name}_node
+    install(TARGETS ${name} ${name}_node
       ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
       LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
       RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
@@ -172,8 +172,8 @@ macro(add_ros_node name)
     # register lib as component
     rclcpp_components_register_nodes(${name} ${_ARG_ROS2_COMPONENT_CLASS})
 
-    add_executable(${PROJECT_NAME}_${name}_node ${_ARG_ROS2_EXE_SOURCES})
-    target_link_libraries(${PROJECT_NAME}_${name}_node PUBLIC ${name})
+    add_executable(${name}_node ${_ARG_ROS2_EXE_SOURCES})
+    target_link_libraries(${name}_node PUBLIC ${name})
 
     install(TARGETS
       ${name}
@@ -182,7 +182,7 @@ macro(add_ros_node name)
       RUNTIME DESTINATION bin)
 
     install(TARGETS
-      ${PROJECT_NAME}_${name}_node
+      ${name}_node
       DESTINATION lib/${_ARG_PROJECT_NAME})
 
     install(DIRECTORY ${_ARG_DIRECTORIES}

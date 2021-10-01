@@ -61,7 +61,6 @@ find_dependent_packages(${PKG_DEPS})
 
 add_subdirectory(${DEPTHAI_CORE} depthai-core)
 
-# exe_name is named as ${PROJECT_NAME}_${name}_node
 add_ros_node(depthai_ros_driver
   PROJECT_NAME ${PROJECT_NAME}
   SOURCES src/depthai_common.cpp

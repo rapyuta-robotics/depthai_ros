@@ -50,7 +50,7 @@
 
   <!-- Launch the Depthai node -->
   <group ns="$(arg ns)">
-    <node pkg="depthai_ros_driver" type="depthai_ros_driver_depthai_ros_driver_node"
+    <node pkg="depthai_ros_driver" type="depthai_ros_driver_node"
           name="$(arg node_name)" output="screen" launch-prefix="$(arg launch_prefix)">
 
       <param name="camera_name" value="$(arg camera_name)"/>
