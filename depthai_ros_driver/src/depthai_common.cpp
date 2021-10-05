@@ -548,7 +548,7 @@ const RosTime DepthAICommon::get_rostime(const double camera_ts)
     _depthai_init_ts = camera_ts;
     _stamp = _node_interface.current_time();
   }
-  return _stamp + RosDuration(camera_ts - _depthai_init_ts);
+  return _stamp + ros_agnostic::from_seconds(camera_ts - _depthai_init_ts);
 }
 
 }  // namespace rr

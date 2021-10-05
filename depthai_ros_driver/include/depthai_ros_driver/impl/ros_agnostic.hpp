@@ -200,6 +200,16 @@ void get_param(
 #endif
 }
 
+//==============================================================================
+RosDuration from_seconds(const double ts_sec)
+{
+  #if defined(USE_ROS2)
+  return RosDuration(ts_sec*1e9);
+  #else
+  return RosDuration(ts_sec);
+  #endif
+}
+
 }  // namespace ros_agnostic
 }  // namespace rr
 
