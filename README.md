@@ -96,7 +96,7 @@ This package consists of a node and a nodelet version of the ROS driver. It also
 ## `node_interface`
 This package contains some utilities used to reduce code duplication between the node and the nodelet version in `depthai_ros_driver`.
 
-# Notes (TO REMOVE)
+## Notes (TO REMOVE)
 
 Interface test
 ```bash

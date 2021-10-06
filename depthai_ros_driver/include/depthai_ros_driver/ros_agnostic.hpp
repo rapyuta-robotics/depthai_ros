@@ -173,6 +173,11 @@ void get_param(
   const std::string& name,
   Param& variable);
 
+//==============================================================================
+
+/// @brief convert sec to rosduration
+inline RosDuration from_seconds(const double ts_sec);
+
 }  // namespace ros_agnostic
 }  // namespace rr
 
