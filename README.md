@@ -71,6 +71,7 @@ Sample models are available [here](https://github.com/luxonis/depthai/tree/main/
     ros2 component load /ComponentManager depthai_ros_driver rr::DepthAIBaseRos2
     ```
 3. Or, ros2 launch: `ros2 launch depthai_ros_driver depthai_node.launch.xml`
+4. Or, ros2 launch with composition: `ros2 launch depthai_ros_driver depthai_composition.py`
 
 # Trouble shooting
 If you see an error similar to this:
