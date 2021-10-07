@@ -78,28 +78,29 @@ def generate_launch_description():
                 ComposableNode(
                     package='depthai_ros_driver',
                     plugin='rr::DepthAIBaseRos2',
-                    name='driver'),
+                    name='depthai_node',
+                    parameters=[{
+                        "camera_name": camera_name,
+                        "calibration_file": calibration_file,
+                        "blob_file": blob_file,
+                        "blob_file_config": blob_file_config,
+                        "stream_list": stream_list,
+                        "sync_video_meta": sync_video_meta,
+                        "compute_bbox_depth": compute_bbox_depth,
+                        "full_fov_nn": full_fov_nn,
+                        "force_usb2": force_usb2,
+                        "depth_fps": depth_fps,
+                        "depth_height": depth_height,
+                        "rgb_fps": rgb_fps,
+                        "rgb_height": rgb_height,
+                        "shaves": shaves,
+                        "cmx_slices": cmx_slices,
+                        "nn_engines": nn_engines,
+                        "queue_size": queue_size,
+                    }]
+                )
             ],
             output='screen',
-            parameters=[{
-                "camera_name": camera_name,
-                "calibration_file": calibration_file,
-                "blob_file": blob_file,
-                "blob_file_config": blob_file_config,
-                "stream_list": stream_list,
-                "sync_video_meta": sync_video_meta,
-                "compute_bbox_depth": compute_bbox_depth,
-                "full_fov_nn": full_fov_nn,
-                "force_usb2": force_usb2,
-                "depth_fps": depth_fps,
-                "depth_height": depth_height,
-                "rgb_fps": rgb_fps,
-                "rgb_height": rgb_height,
-                "shaves": shaves,
-                "cmx_slices": cmx_slices,
-                "nn_engines": nn_engines,
-                "queue_size": queue_size,
-            }]
     )
 
     robot_state_pub = Node(
