@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     plugin->configure(private_nh);
     dai::Pipeline p = plugin->getPipeline();
 
-    rr::DeviceROS driver(p.getOpenVINOVersion());
+    rr::DeviceROS driver(ros::NodeHandle{}, p.getOpenVINOVersion());
     driver.startPipeline(p);
 
     ros::spin();
