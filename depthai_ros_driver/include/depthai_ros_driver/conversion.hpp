@@ -101,7 +101,7 @@ ros::Duration delta_ros_time_to_steady_time() {
  * @return ros::Time
  */
 ros::Time timestamp_dai2ros(const depthai_common_msgs::Timestamp& ts) {
-    static ros::Duration delta = delta_ros_time_to_steady_time();
+    ros::Duration delta = delta_ros_time_to_steady_time();
     // dai uses steady_clock, so add delta to convert it to ros time
     return ros::Time(ts.sec, ts.nsec) + delta;
 }
