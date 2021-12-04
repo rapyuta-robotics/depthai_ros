@@ -17,7 +17,7 @@ HunterGate (
     FILEPATH ${DEPTHAI_CORE}/cmake/Hunter/config.cmake # Add depthai-core config  (hunter limitation)
 )
 
-cmake_policy (SET CMP0048 NEW)
+cmake_policy (SET CMP0048 NEW)  # let us provide version in the project command
 project (depthai_ros_driver VERSION 0.1.0 LANGUAGES C CXX)  # C needed for dependencies
 
 set (PKG_DEPS
@@ -82,15 +82,6 @@ target_link_libraries (${PROJECT_NAME}_pipelines PRIVATE
     depthai-core
 )
 
-# add_library (${PROJECT_NAME}_nodelet src/depthai_nodelet.cpp)
-# target_link_libraries (${PROJECT_NAME}_nodelet
-#     ${PROJECT_NAME}_lib
-# )
-# add_executable (${PROJECT_NAME} src/depthai_node.cpp)
-# target_link_libraries (${PROJECT_NAME}
-#     ${PROJECT_NAME}_lib
-# )
-
 add_library(depthai INTERFACE)
 target_link_libraries(depthai INTERFACE depthai-core ${libudev_LIBRARIES})
 target_include_directories(depthai SYSTEM INTERFACE
@@ -118,18 +109,18 @@ target_link_libraries(img_detections_stamper_nodelet img_detections_stamper)
 add_executable(img_detections_stamper_node src/img_detections_stamper_node.cpp)
 target_link_libraries(img_detections_stamper_node img_detections_stamper)
 
-catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
-catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
-catkin_add_gtest(${PROJECT_NAME}_conversion test/conversion.cpp)
-if(TARGET ${PROJECT_NAME}_depthai_api)
+if (CATKIN_ENABLE_TESTING)
+    catkin_add_gtest(${PROJECT_NAME}_depthai_api test/depthai_api.cpp)
+    catkin_add_gtest(${PROJECT_NAME}_dai_utils test/dai_utils.cpp)
+    catkin_add_gtest(${PROJECT_NAME}_conversion test/conversion.cpp)
+
     target_link_libraries(${PROJECT_NAME}_depthai_api gen2_ros_queue gtest_main)
     target_compile_options(${PROJECT_NAME}_depthai_api PRIVATE "-g")
-endif()
-if(TARGET ${PROJECT_NAME}_dai_utils)
+
+
     target_link_libraries(${PROJECT_NAME}_dai_utils gen2_ros_queue gtest_main)
     target_compile_options(${PROJECT_NAME}_dai_utils PRIVATE "-g")
-endif()
-if(TARGET ${PROJECT_NAME}_conversion)
+
     target_link_libraries(${PROJECT_NAME}_conversion gen2_ros_conversion gtest_main)
     target_compile_options(${PROJECT_NAME}_conversion PRIVATE "-g")
 endif()
@@ -147,8 +138,12 @@ install (TARGETS gen2_ros_conversion gen2_ros_pipeline_loader gen2_ros_queue
 )
 
 # Not installing the headers because this is not a library package
-install (DIRECTORY launch resources scripts urdf params
+install (DIRECTORY launch resources urdf params
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+
+install(DIRECTORY scripts
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
   USE_SOURCE_PERMISSIONS
 )
 
