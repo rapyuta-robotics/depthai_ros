@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>depthai_datatype_msgs</name>
+  <version>1.0.0</version>
+  <description>Package for DepthAI datatype messages</description>
+
+  <maintainer email="kota.mogami@rapyuta-robotics.com">Kota Mogami</maintainer>
+
+  <license>MPLv2</license>
+
+  <author>Kota Mogami</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>message_generation</build_depend>
+  <depend>depthai_common_msgs</depend>
+  <depend>std_msgs</depend>
+
+  <exec_depend>msgpack-c</exec_depend>
+  <exec_depend>message_runtime</exec_depend>
+</package>

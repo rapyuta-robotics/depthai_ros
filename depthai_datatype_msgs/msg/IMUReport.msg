@@ -1,0 +1,3 @@
+int32 sequence
+uint8 accuracy
+depthai_common_msgs/Timestamp timestamp
