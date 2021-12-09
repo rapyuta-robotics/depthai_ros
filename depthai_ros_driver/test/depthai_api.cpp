@@ -34,7 +34,7 @@ TEST_F(SimplePipeline, FilterByName) {
     std::vector<NodeConstPtr> nodes = filterNodesByName(p, "ColorCamera");
     EXPECT_EQ(nodes.size(), 1);
 
-    nodes = filterNodesByName(p, "ColorCamer");
+    nodes = filterNodesByName(p, "ColorCamera");
     EXPECT_TRUE(nodes.empty());
 }
 
