@@ -21,7 +21,7 @@ protected:
      */
     void onConfigure(ros::NodeHandle& nh) {
         std::string blob_file = "./mobilenet-ssd.blob";
-        int openvino_version = static_cast<int>(_pipeline.getOpenVINOVersion());
+        int openvino_version = 0;
 
         rr::sync_ros_param<std::string>(nh, "blob_file", blob_file);
         rr::sync_ros_param<int>(nh, "mobilenetssd_openvino_version", openvino_version);

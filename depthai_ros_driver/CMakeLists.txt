@@ -2,19 +2,15 @@ cmake_minimum_required (VERSION 3.10.2)  # CMake version in Ubuntu 18.04 LTS
 
 set (CMAKE_CXX_STANDARD 17)
 
-get_filename_component (DEPTHAI_CORE "${CMAKE_CURRENT_LIST_DIR}/../external/depthai-core" REALPATH)
-get_filename_component (DEPTHAI_SHARED "${CMAKE_CURRENT_LIST_DIR}/../external/depthai-core/shared/depthai-shared" REALPATH)
-
-include ("${DEPTHAI_CORE}/cmake/HunterGate.cmake")
+include ("cmake/HunterGate.cmake")
 
 set (CMAKE_POSITION_INDEPENDENT_CODE ON)
 set (HUNTER_CONFIGURATION_TYPES "Release" CACHE STRING "Hunter dependencies list of build configurations")
 set (MSGPACK_CXX17 ON)
 
-HunterGate (
-    URL "https://github.com/cpp-pm/hunter/archive/v0.23.304.tar.gz"
-    SHA1 "cae9026e69d7d8333897663688a11f4232fb8826"
-    FILEPATH ${DEPTHAI_CORE}/cmake/Hunter/config.cmake # Add depthai-core config  (hunter limitation)
+HunterGate(
+    URL "https://github.com/cpp-pm/hunter/archive/v0.23.319.tar.gz"
+    SHA1 "b49fec606e576406d6d652cb1e0c1c1eccf3655c"
 )
 
 cmake_policy (SET CMP0048 NEW)  # let us provide version in the project command
@@ -37,14 +33,12 @@ set (PKG_DEPS
 
 find_package (catkin REQUIRED COMPONENTS ${PKG_DEPS})
 
+find_package (depthai CONFIG REQUIRED)
 find_package (OpenCV REQUIRED)
 find_package (Boost REQUIRED COMPONENTS system)
 
 hunter_add_package(range-v3)
 find_package(range-v3 REQUIRED)
-
-# Add depthai-core dependency
-add_subdirectory (${DEPTHAI_CORE} depthai-core)
 
 # needed for conda-forge
 find_package(PkgConfig)
@@ -69,6 +63,7 @@ include_directories (SYSTEM
     ${Boost_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
     ${catkin_INCLUDE_DIRS}
+    ${depthai_INCLUDE_DIRS}
 )
 
 add_library (${PROJECT_NAME}_pipelines
@@ -79,11 +74,11 @@ add_library (${PROJECT_NAME}_pipelines
 )
 target_link_libraries (${PROJECT_NAME}_pipelines PRIVATE
     ${catkin_LIBRARIES}
-    depthai-core
+    depthai::core
 )
 
 add_library(depthai INTERFACE)
-target_link_libraries(depthai INTERFACE depthai-core ${libudev_LIBRARIES})
+target_link_libraries(depthai INTERFACE depthai::core  ${libudev_LIBRARIES})
 target_include_directories(depthai SYSTEM INTERFACE
     ${libudev_INCLUDE_DIRS}
 )
@@ -92,7 +87,7 @@ add_library(gen2_ros_conversion src/conversion.cpp)
 target_link_libraries(gen2_ros_conversion ${catkin_LIBRARIES} depthai ${OpenCV_LIBS})
 
 add_library(gen2_ros_pipeline_loader src/pipeline_loader.cpp)
-target_link_libraries(gen2_ros_pipeline_loader ${catkin_LIBRARIES} depthai-core)
+target_link_libraries(gen2_ros_pipeline_loader ${catkin_LIBRARIES} depthai::core )
 
 add_library(gen2_ros_queue src/dai_utils.cpp)
 target_link_libraries(gen2_ros_queue ${catkin_LIBRARIES} depthai range-v3)

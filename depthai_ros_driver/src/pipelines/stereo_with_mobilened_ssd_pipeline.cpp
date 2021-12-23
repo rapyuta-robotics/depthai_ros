@@ -21,7 +21,7 @@ protected:
      */
     void onConfigure(ros::NodeHandle& nh) {
         std::string blob_file = "./mobilenet-ssd.blob";
-        int openvino_version = static_cast<int>(_pipeline.getOpenVINOVersion());
+        int openvino_version = 0;
         bool with_depth = true;
         bool stereo_lrcheck = true;
         bool stereo_extended = false;
