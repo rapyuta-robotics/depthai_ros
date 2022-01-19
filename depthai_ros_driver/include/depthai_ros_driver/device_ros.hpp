@@ -193,7 +193,7 @@ protected:
 
         const auto pub_lambda = [this, pub, name]() {
             auto conn = this->getConnection();
-            auto stream = dai::XLinkStream(*conn, name, 1);  // no writing happens, so 1 is sufficient
+            auto stream = dai::XLinkStream(std::move(conn), name, 1);  // no writing happens, so 1 is sufficient
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
             while (this->_running) {
