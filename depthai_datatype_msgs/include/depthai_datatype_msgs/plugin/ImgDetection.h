@@ -1,11 +1,12 @@
-#include <depthai_common_msgs/msgpack.hpp>
+#include <depthai_common_msgs/libnop.hpp>
 
 #define DEPTHAI_DATATYPE_MSGS_MESSAGE_IMGDETECTION_PLUGIN_CLASS_BODY \
-    MSGPACK_DEFINE(\
+    NOP_STRUCTURE(\
+        ImgDetection_,\
         label,\
         confidence,\
         xmin,\
         ymin,\
         xmax,\
         ymax\
-    )
+    );

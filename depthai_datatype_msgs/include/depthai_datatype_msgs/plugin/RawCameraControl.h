@@ -1,18 +1,19 @@
-#include <depthai_common_msgs/msgpack.hpp>
+#include <depthai_common_msgs/libnop.hpp>
 
 #include <depthai-shared/datatype/RawCameraControl.hpp>
 
-MSGPACK_ADD_ENUM(dai::RawCameraControl::AutoFocusMode);
-MSGPACK_ADD_ENUM(dai::RawCameraControl::AutoWhiteBalanceMode);
-MSGPACK_ADD_ENUM(dai::RawCameraControl::SceneMode);
-MSGPACK_ADD_ENUM(dai::RawCameraControl::AntiBandingMode);
-MSGPACK_ADD_ENUM(dai::RawCameraControl::EffectMode);
-MSGPACK_ADD_ENUM(dai::RawCameraControl::Command);
-MSGPACK_ADD_ENUM(dai::RawCameraControl::ControlMode);
-MSGPACK_ADD_ENUM(dai::RawCameraControl::CaptureIntent);
+// MSGPACK_ADD_ENUM(dai::RawCameraControl::AutoFocusMode);
+// MSGPACK_ADD_ENUM(dai::RawCameraControl::AutoWhiteBalanceMode);
+// MSGPACK_ADD_ENUM(dai::RawCameraControl::SceneMode);
+// MSGPACK_ADD_ENUM(dai::RawCameraControl::AntiBandingMode);
+// MSGPACK_ADD_ENUM(dai::RawCameraControl::EffectMode);
+// MSGPACK_ADD_ENUM(dai::RawCameraControl::Command);
+// MSGPACK_ADD_ENUM(dai::RawCameraControl::ControlMode);
+// MSGPACK_ADD_ENUM(dai::RawCameraControl::CaptureIntent);
 
 #define DEPTHAI_DATATYPE_MSGS_MESSAGE_RAWCAMERACONTROL_PLUGIN_CLASS_BODY \
-    MSGPACK_DEFINE(\
+    NOP_STRUCTURE(\
+        RawCameraControl_,\
         cmdMask,\
         autoFocusMode,\
         lensPosition,\
@@ -32,4 +33,4 @@ MSGPACK_ADD_ENUM(dai::RawCameraControl::CaptureIntent);
         sharpness,\
         lumaDenoise,\
         chromaDenoise\
-    )
+    );

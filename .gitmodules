@@ -3,6 +3,3 @@
 	# using relative path to preseve ssh/https clone
 	url = https://github.com/luxonis/depthai-core
 	branch = main
-[submodule "external/msgpack-c"]
-	path = external/msgpack-c
-	url = https://github.com/msgpack/msgpack-c.git

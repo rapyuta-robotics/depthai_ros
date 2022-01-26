@@ -1,7 +1,8 @@
-#include <depthai_common_msgs/msgpack.hpp>
+#include <depthai_common_msgs/libnop.hpp>
 
 #define DEPTHAI_DATATYPE_MSGS_MESSAGE_RAWIMGFRAMESPECS_PLUGIN_CLASS_BODY \
-    MSGPACK_DEFINE(\
+    NOP_STRUCTURE(\
+        RawImgFrameSpecs_,\
         type,\
         width,\
         height,\
@@ -10,4 +11,4 @@
         p1Offset,\
         p2Offset,\
         p3Offset\
-    )
+    );

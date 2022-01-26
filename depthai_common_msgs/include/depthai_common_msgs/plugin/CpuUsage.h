@@ -1,7 +1,8 @@
-#include <depthai_common_msgs/msgpack.hpp>
+#include <depthai_common_msgs/libnop.hpp>
 
-#define DEPTHAI_COMMON_MSGS_MESSAGEDAICPUUSAGE_PLUGIN_CLASS_BODY \
-    MSGPACK_DEFINE(\
+#define DEPTHAI_COMMON_MSGS_MESSAGE_CPUUSAGE_PLUGIN_CLASS_BODY \
+    NOP_STRUCTURE(\
+        CpuUsage_,\
         average,\
         msTime\
-    )
+    );

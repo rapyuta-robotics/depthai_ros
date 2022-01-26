@@ -1,10 +1,11 @@
-#include <depthai_common_msgs/msgpack.hpp>
+#include <depthai_common_msgs/libnop.hpp>
 
 #define DEPTHAI_COMMON_MSGS_MESSAGE_CHIPTEMPERATURE_PLUGIN_CLASS_BODY \
-    MSGPACK_DEFINE(\
+    NOP_STRUCTURE(\
+        ChipTemperature_,\
         css,\
         mss,\
         upa,\
         dss,\
         average\
-    )
+    );
