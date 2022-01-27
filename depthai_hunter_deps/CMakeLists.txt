@@ -40,7 +40,21 @@ catkin_package(
 
 ## Declare a C++ library
 add_library(${PROJECT_NAME} INTERFACE)
-target_link_libraries(${PROJECT_NAME} INTERFACE libnop depthai-opencv)
+target_link_libraries(${PROJECT_NAME} INTERFACE libnop)
+target_include_directories(${PROJECT_NAME} SYSTEM INTERFACE ${libnop_INCLUDE_DIRS})
+
+install(TARGETS ${PROJECT_NAME}
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+)
+
+message(WARN ${libnop_INCLUDE_DIRS} ${libnop_LIBRARIES} ${libnop_DIR})
+message(WARN ${nop_INCLUDE_DIRS} ${nop_LIBRARIES} ${nop_DIR})
+
+install(DIRECTORY ${libnop_INCLUDE_DIRS}
+    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}/../
+)
 
 #############
 ## Install ##

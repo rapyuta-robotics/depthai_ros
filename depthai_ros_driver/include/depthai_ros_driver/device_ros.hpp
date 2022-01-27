@@ -101,6 +101,8 @@ protected:
         const auto core_sub_lambda = [&stream, &sbuf, &writer_buf](const boost::shared_ptr<MsgType const>& msg) {
             Guard guard([] { ROS_ERROR("Communication failed: Device error or misconfiguration."); });
 
+            PacketWriter writer(*stream);
+
             // convert msg to data
             nop::Serializer<VectorWriter> serializer{std::move(sbuf)};
             auto status = serializer.Write(*msg);
@@ -111,6 +113,7 @@ protected:
 
             using DataTypeT = std::underlying_type_t<dai::DatatypeEnum>;
             const auto serialized_datatype = static_cast<DataTypeT>(DataType);
+
             writer.write(msg->data.data(), msg->data.size(), reinterpret_cast<std::uint8_t*>(sbuf.data()), sbuf.size(),
                     serialized_datatype, writer_buf);
 

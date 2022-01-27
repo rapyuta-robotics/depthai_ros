@@ -19,26 +19,25 @@ class PacketReader {
 public:
     PacketReader(dai::XLinkStream& stream)
             : _stream(stream) {
-        _packet = _stream.readRaw();  // blocking read
+        _packet = _stream.readMove();  // blocking read
 
-        _serialized_size = static_cast<std::uint32_t>(fromLE(_packet->data + _packet->length - 4));
-        if (_serialized_size > _packet->length) {
+        _serialized_size = static_cast<std::uint32_t>(fromLE(_packet.data + _packet.length - 4));
+        if (_serialized_size > _packet.length) {
             throw std::runtime_error("Bad packet, couldn't parse");
         }
 
-        _buf_size = _packet->length - 8 - _serialized_size;
+        _buf_size = _packet.length - 8 - _serialized_size;
     }
-    ~PacketReader() { _stream.readRawRelease(); }
 
     auto packet() { return _packet; }
 
     std::uint32_t serializedSize() { return _serialized_size; };
 
-    std::uint8_t* serializedDataBeginPtr() { return _packet->data + _buf_size; }
+    std::uint8_t* serializedDataBeginPtr() { return _packet.data + _buf_size; }
 
     auto bufferData() {
         // copy data part
-        std::vector<std::uint8_t> data(_packet->data, _packet->data + _buf_size);
+        std::vector<std::uint8_t> data(_packet.data, _packet.data + _buf_size);
         return data;
     }
 
@@ -52,7 +51,7 @@ private:
     };
 
     dai::XLinkStream& _stream;
-    streamPacketDesc_t* _packet;
+    streamPacketDesc_t _packet;
 
     std::uint32_t _serialized_size;
     std::uint32_t _buf_size;

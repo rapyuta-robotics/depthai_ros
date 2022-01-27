@@ -25,6 +25,7 @@ set (PKG_DEPS
     cv_bridge
     depthai_common_msgs
     depthai_datatype_msgs
+    depthai_hunter_deps
     depthai_ros_msgs
     image_transport
     message_generation
@@ -74,6 +75,7 @@ include_directories (SYSTEM
 )
 
 message(STATUS ${depthai_INCLUDE_DIRS})
+message(ERROR ${catkin_INCLUDE_DIRS})
 
 add_library (${PROJECT_NAME}_pipelines
     src/pipelines/preview_pipeline.cpp

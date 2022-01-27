@@ -4,9 +4,8 @@ project (depthai_common_msgs VERSION 1.0.0)
 
 find_package (catkin REQUIRED COMPONENTS
   message_generation
+  depthai_hunter_deps
 )
-
-get_filename_component (MSGPACK "${CMAKE_CURRENT_LIST_DIR}/../external/msgpack-c" REALPATH)
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -37,14 +36,13 @@ generate_messages ()
 ## catkin specific configuration ##
 ###################################
 catkin_package (
-  INCLUDE_DIRS include ${MSGPACK}/include
-  CATKIN_DEPENDS message_runtime
+  INCLUDE_DIRS include
+  CATKIN_DEPENDS message_runtime depthai_hunter_deps
 )
 
 include_directories (include)
 
 include_directories (SYSTEM
-  ${MSGPACK}/include
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -53,9 +51,4 @@ include_directories (SYSTEM
 #############
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
-)
-install(DIRECTORY ${MSGPACK}/include/
-  DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
 )
