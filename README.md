@@ -36,7 +36,7 @@ For older versions of git, one of the following processes might be needed:
 Sample models are available [here](https://github.com/luxonis/depthai/tree/main/resources/nn)
 
 # Usage
-0. Compile using `catkin build depthai_ros` or `catkin_make_isolated --build depthai_ros`. `catkin_make` will **not build** the package successfully.
+0. Compile using `colcon build --cmake-args -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON` or `catkin_make_isolated --build depthai_ros`. `catkin_make` will **not build** the package successfully.
 1. Execute `./deploy_udev_rules.sh` present in `~/depthai_ros/depthai_ros_driver/scripts`.
 2. Launch the node or nodelet by appropriately choosing the correct launch file and parameters:
     ```
