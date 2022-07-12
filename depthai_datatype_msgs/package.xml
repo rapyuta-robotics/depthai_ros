@@ -16,6 +16,6 @@
   <depend>depthai_common_msgs</depend>
   <depend>std_msgs</depend>
 
-  <exec_depend>msgpack-c</exec_depend>
+  <exec_depend>msgpack</exec_depend>
   <exec_depend>message_runtime</exec_depend>
 </package>
