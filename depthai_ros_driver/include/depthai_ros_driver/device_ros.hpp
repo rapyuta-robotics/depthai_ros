@@ -141,6 +141,19 @@ public:
             , _pub_nh(nh)
             , _sub_nh(nh) {
         _camera_info_default = nh.advertiseService("reset_camera_info", &DeviceROS::defaultCameraInfo, this);
+
+        if (nh.getParam("camera_param_uri", _camera_param_uri)) {
+            // we have user input. Validate it
+            if (_camera_param_uri.back() != '/') {
+                // always end with a slash
+                _camera_param_uri += "/";
+            }
+        }
+        nh.setParam("camera_param_uri", _camera_param_uri);
+
+        if (!nh.getParam("camera_name", _camera_name)) {
+            nh.setParam("camera_name", _camera_name);
+        }
     }
 
     void closeImpl() override {
@@ -174,6 +187,7 @@ protected:
     auto generate_pub_lambda(ros::NodeHandle& nh, std::string name, std::size_t q_size) {  // name: copied
         auto pub = create_publisher<MsgType>(nh, name, q_size);
         if constexpr (std::is_same_v<MsgType, depthai_datatype_msgs::RawImgFrame>) {
+            pub.info_manager_ptr->loadCameraInfo(_camera_param_uri + _camera_name + "/" + name + ".yaml");
             _camera_info_manager[name] = pub.info_manager_ptr;
         }
 
@@ -336,7 +350,7 @@ protected:
             return true;
         }
 
-        const auto uri = camera_param_uri + "/default/" + name + ".yaml";
+        const auto uri = _camera_param_uri + "default/" + name + ".yaml";
         if (_defaultManager == nullptr) {
             _defaultManager = std::make_unique<camera_info_manager::CameraInfoManager>(
                     ros::NodeHandle{_pub_nh, "_default"}, name, uri);
@@ -370,6 +384,9 @@ protected:
 
     ros::CallbackQueue _pub_q, _sub_q;
     ros::NodeHandle _pub_nh, _sub_nh;
+
+    std::string _camera_name = "default";
+    std::string _camera_param_uri = "package://depthai_ros_driver/params/camera/";
 
     std::atomic<bool> _running = true;
 };

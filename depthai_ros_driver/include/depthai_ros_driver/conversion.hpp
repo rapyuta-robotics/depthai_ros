@@ -24,8 +24,6 @@ namespace rr {
 template <typename T>
 using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
 
-const static std::string camera_param_uri{"package://depthai_ros_driver/params/camera"};
-
 struct ImagePublishers {
     ros::Publisher raw_image_pub, compressed_image_pub, camera_info_pub;
     // needs to be shared_ptr since:
@@ -86,10 +84,10 @@ cv::Mat interleaved2planar(const cv::Mat& mat);
 
 /**
  * @brief Compute the difference between ros::Time::now() and ros::SteadyTime::now()
- * 
- * @return ros::Duration 
+ *
+ * @return ros::Duration
  */
-ros::Duration delta_ros_time_to_steady_time(){
+ros::Duration delta_ros_time_to_steady_time() {
     auto ros_time = ros::Time::now();
     auto steady_time = ros::SteadyTime::now();
     auto steady_time_as_ros_time = ros::Time(steady_time.sec, steady_time.nsec);
@@ -98,12 +96,12 @@ ros::Duration delta_ros_time_to_steady_time(){
 }
 /**
  * @brief Convert dai timestamp to ros::Time
- * 
- * @param ts dai timestamp 
- * @return ros::Time 
+ *
+ * @param ts dai timestamp
+ * @return ros::Time
  */
 ros::Time timestamp_dai2ros(const depthai_common_msgs::Timestamp& ts) {
-    static ros::Duration delta = delta_ros_time_to_steady_time();
+    ros::Duration delta = delta_ros_time_to_steady_time();
     // dai uses steady_clock, so add delta to convert it to ros time
     return ros::Time(ts.sec, ts.nsec) + delta;
 }
@@ -113,7 +111,6 @@ template <>
 struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
     using InputType = depthai_datatype_msgs::RawImgFrame;
     using OutputType = sensor_msgs::Image;
-
     static void publish(const ImagePublishers& pub, InputType& input, const std::string& frame_id) {
         cv_bridge::CvImage bridge;
         bridge.header.frame_id = frame_id + "_optical_frame";
@@ -156,13 +153,8 @@ struct adapt_dai2ros<depthai_datatype_msgs::RawImgFrame> {
         pubs.compressed_image_pub = nh.advertise<OutputType>(name + "/image_raw/compressed", q_size);
         pubs.camera_info_pub = nh.advertise<sensor_msgs::CameraInfo>(name + "/camera_info", q_size);
 
-        std::string camera_name = "default";
-        if (!nh.getParam("camera_name", camera_name)) {
-            nh.setParam("camera_name", camera_name);
-        }
-        const auto uri = camera_param_uri + "/" + camera_name + "/" + name + ".yaml";
         pubs.info_manager_ptr =
-                std::make_shared<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, name}, name, uri);
+                std::make_shared<camera_info_manager::CameraInfoManager>(ros::NodeHandle{nh, name}, name);
         return pubs;
     }
 };

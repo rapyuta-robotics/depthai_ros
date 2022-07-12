@@ -20,7 +20,7 @@
 
   <!-- for MobilenetSSDPipeline -->
   <arg name="blob_file" default="$(find depthai_ros_driver)/resources/mobilenet_ssd.blob"/>
-  <arg name="mobilenetssd_openvino_version" default="2" doc="integer corresponding to dai::OpenVINO::Version"/>
+  <arg name="mobilenetssd_openvino_version" default="0" doc="integer corresponding to dai::OpenVINO::Version"/>
   <arg name="preview_keep_aspect_ratio" default="false" />
 
   <!-- launching parameters -->
